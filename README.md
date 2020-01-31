@@ -251,10 +251,10 @@ To test and start your newly built docker container locally (optionally, not nec
 ## How to use API
 Standard scenarios of using REST api:
 
-###FIRST RUN
+### FIRST RUN
 - GET key pair via ssh/keys/public download and register it on your OpenStack
 
-###DEPLOY
+### DEPLOY
 Standard scenarios of using REST api:
 
 - upload blueprint with POST to /manage
