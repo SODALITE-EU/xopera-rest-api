@@ -66,7 +66,7 @@ or run stages separately:
 See [manual installation](#Instructions-for-manual-installation-and-run).
 
 ## API
-Check [swagger docs](REST_API/Documentation/swagger.json) or visit http://localhost:5000/
+Check [swagger docs](REST_API/Documentation/swagger.json).
 
 ## How to use API
 Standard scenarios of using REST api:
@@ -114,7 +114,7 @@ Check help:
 
 ### Structure of JSON deployment format  
     
-The general format is structured like shown below. The ID can be anything alphanumeric, but note that
+The general format is structured like shown below:
 
     {
         "blueprint_id": "ID"
@@ -162,6 +162,7 @@ If get_input field name is set to `xopera-key-name`, rest api will automatically
 It can also be configured to custom get_input field name, but in this case, user must provide his own file with inputs.
 
     curl -X "POST" -F "inputs_file=@path/to/file.yaml" localhost:5000/deploy/567858fc-a1e8-43b4-91f5-cb04ec8be90b
+    
 See [api calls](REST_API/Documentation/requests.http) for more help.
 
 ### Using non default user
