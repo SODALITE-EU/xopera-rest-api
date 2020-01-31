@@ -1,0 +1,4 @@
+firstdeploy/*
+storage/
+*openrc.sh
+.pytest_cache

@@ -1,0 +1,579 @@
+{
+  "swagger": "2.0",
+  "basePath": "/",
+  "paths": {
+    "/deploy/{blueprint_token}": {
+      "parameters": [
+        {
+          "in": "path",
+          "description": "token of blueprint",
+          "name": "blueprint_token",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "delete": {
+        "responses": {
+          "202": {
+            "description": "Undeploy job accepted",
+            "schema": {
+              "$ref": "#/definitions/blueprint_metadata"
+            }
+          },
+          "404": {
+            "description": "Did not find blueprint",
+            "schema": {
+              "$ref": "#/definitions/just_message"
+            }
+          }
+        },
+        "operationId": "delete_deploy",
+        "parameters": [
+          {
+            "name": "inputs_file",
+            "in": "formData",
+            "type": "file",
+            "description": "File with inputs for TOSCA template"
+          },
+          {
+            "name": "timestamp",
+            "in": "query",
+            "type": "string",
+            "format": "date-time",
+            "description": "timestamp of blueprint version"
+          },
+          {
+            "name": "version_id",
+            "in": "query",
+            "type": "integer",
+            "description": "id of blueprint version"
+          }
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "tags": [
+          "deploy"
+        ]
+      },
+      "post": {
+        "responses": {
+          "202": {
+            "description": "Deploy job accepted",
+            "schema": {
+              "$ref": "#/definitions/blueprint_metadata"
+            }
+          },
+          "404": {
+            "description": "Did not find blueprint",
+            "schema": {
+              "$ref": "#/definitions/just_message"
+            }
+          }
+        },
+        "operationId": "post_deploy",
+        "parameters": [
+          {
+            "name": "inputs_file",
+            "in": "formData",
+            "type": "file",
+            "description": "File with inputs for TOSCA template"
+          },
+          {
+            "name": "timestamp",
+            "in": "query",
+            "type": "string",
+            "format": "date-time",
+            "description": "timestamp of blueprint version"
+          },
+          {
+            "name": "version_id",
+            "in": "query",
+            "type": "integer",
+            "description": "id of blueprint version"
+          }
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "tags": [
+          "deploy"
+        ]
+      }
+    },
+    "/info/log": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Log file not found",
+            "schema": {
+              "$ref": "#/definitions/just_message"
+            }
+          }
+        },
+        "operationId": "get_log",
+        "parameters": [
+          {
+            "in": "query",
+            "description": "token of blueprint",
+            "name": "blueprint_token",
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "description": "token of session",
+            "name": "session_token",
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "info"
+        ]
+      }
+    },
+    "/info/status": {
+      "get": {
+        "responses": {
+          "201": {
+            "description": "Job accepted, still running"
+          },
+          "202": {
+            "description": "Job done"
+          },
+          "500": {
+            "description": "Job failed"
+          }
+        },
+        "operationId": "get_status",
+        "parameters": [
+          {
+            "in": "query",
+            "description": "long or short",
+            "name": "format",
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "description": "session_token",
+            "name": "token",
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "info"
+        ]
+      }
+    },
+    "/manage": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Successfully saved blueprint to database",
+            "schema": {
+              "$ref": "#/definitions/blueprint_metadata"
+            }
+          },
+          "406": {
+            "description": "Format not acceptable",
+            "schema": {
+              "$ref": "#/definitions/just_message"
+            }
+          }
+        },
+        "operationId": "post_new_blueprint",
+        "parameters": [
+          {
+            "name": "payload",
+            "required": true,
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/blueprint"
+            }
+          }
+        ],
+        "tags": [
+          "manage"
+        ]
+      }
+    },
+    "/manage/{blueprint_token}": {
+      "parameters": [
+        {
+          "in": "path",
+          "description": "token of blueprint",
+          "name": "blueprint_token",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "delete": {
+        "responses": {
+          "200": {
+            "description": "Successfully removed",
+            "schema": {
+              "$ref": "#/definitions/delete_metadata"
+            }
+          },
+          "403": {
+            "description": "Did not undeploy yet, not allowed",
+            "schema": {
+              "$ref": "#/definitions/just_message"
+            }
+          },
+          "404": {
+            "description": "Blueprint not found",
+            "schema": {
+              "$ref": "#/definitions/delete_metadata"
+            }
+          }
+        },
+        "operationId": "delete_manage",
+        "parameters": [
+          {
+            "in": "query",
+            "description": "force delete (bool)",
+            "name": "force",
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "description": "version_id of blueprint",
+            "name": "version_id",
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "description": "timestamp of blueprint",
+            "name": "timestamp",
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "manage"
+        ]
+      },
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Blueprint found, returned",
+            "schema": {
+              "$ref": "#/definitions/blueprint"
+            }
+          },
+          "404": {
+            "description": "Blueprint not found",
+            "schema": {
+              "$ref": "#/definitions/just_message"
+            }
+          }
+        },
+        "operationId": "get_manage",
+        "parameters": [
+          {
+            "in": "query",
+            "description": "version_id of blueprint",
+            "name": "version_id",
+            "type": "string"
+          },
+          {
+            "in": "query",
+            "description": "timestamp of blueprint",
+            "name": "timestamp",
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "manage"
+        ]
+      },
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Successfully saved blueprint to database",
+            "schema": {
+              "$ref": "#/definitions/blueprint_metadata"
+            }
+          },
+          "404": {
+            "description": "Blueprint token not found",
+            "schema": {
+              "$ref": "#/definitions/just_message"
+            }
+          },
+          "406": {
+            "description": "Format not acceptable",
+            "schema": {
+              "$ref": "#/definitions/just_message"
+            }
+          }
+        },
+        "operationId": "post_manage",
+        "parameters": [
+          {
+            "name": "payload",
+            "required": true,
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/blueprint"
+            }
+          }
+        ],
+        "tags": [
+          "manage"
+        ]
+      }
+    },
+    "/ssh/keys/public": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/openstack key pair"
+            }
+          },
+          "404": {
+            "description": "ssh key pair missing",
+            "schema": {
+              "$ref": "#/definitions/just_message"
+            }
+          }
+        },
+        "operationId": "get_public_key",
+        "tags": [
+          "ssh"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "xOpera REST api",
+    "version": "beta",
+    "description": "Standard scenarios of using REST api:\n\nFIRST RUN\n- GET key pair via ssh/keys/public download and register it on your openstack\n\nDEPLOY\n1) upload blueprint with POST to /manage\n - new version of existing one must be POSTed to /manage/{blueprint_token}\n - save blueprint_metadata, returned by API call -> it is the only way of accessing your blueprint afterwards\n 2) deploy last version of blueprint with POST to /deploy/{blueprint_token}\n- optionally, inputs file to be used with template must also be uploaded within same API call\n- another version can be specified by version_id or timestamp\n- save session_token\n3) using status_token from with GET to /info/status check status of your job\n4) After completion, check logs with GET to /info/log\n\nUNDEPLOY\n1) undeploy blueprint with DELETE to /deploy/{blueprint_token}\n- optionally, inputs file to be used with template must also be uploaded within same API call\n - optionally also in combination with version_id or timestamp\n - save session_token\n 2) using status_token with GET to /info/status check status of your job\n3) After completion, check logs with GET to /info/log\n4) Delete all versions of blueprint from database with DELETE to /manage/{blueprint_token}\n- to delete just specific version, use version_id or timestamp\n- if deployment from template has not been undeployed yet, blueprint cannot be deleted-> use 'force' to override\n"
+  },
+  "produces": [
+    "application/json"
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "tags": [
+    {
+      "name": "ssh",
+      "description": "SSH key management"
+    },
+    {
+      "name": "manage",
+      "description": "save or view blueprint"
+    },
+    {
+      "name": "deploy",
+      "description": "deploy or undeploy blueprint"
+    },
+    {
+      "name": "info",
+      "description": "information about deployment"
+    }
+  ],
+  "definitions": {
+    "openstack key pair": {
+      "required": [
+        "key_pair_name",
+        "public_key"
+      ],
+      "properties": {
+        "key_pair_name": {
+          "type": "string",
+          "description": "Name of xOpera REST API's  private/public key pair"
+        },
+        "public_key": {
+          "type": "string",
+          "description": "Rest api's public key"
+        }
+      },
+      "type": "object"
+    },
+    "just_message": {
+      "required": [
+        "message"
+      ],
+      "properties": {
+        "message": {
+          "type": "string",
+          "description": "return message"
+        }
+      },
+      "type": "object"
+    },
+    "blueprint": {
+      "required": [
+        "ansible_definition",
+        "blueprint_id",
+        "timestamp",
+        "tosca_definition"
+      ],
+      "properties": {
+        "blueprint_id": {
+          "type": "string",
+          "description": "name of blueprint"
+        },
+        "tosca_definition": {
+          "description": "TOSCA file",
+          "allOf": [
+            {
+              "$ref": "#/definitions/tosca_definition"
+            }
+          ]
+        },
+        "ansible_definition": {
+          "description": "Ansible file or folder",
+          "allOf": [
+            {
+              "$ref": "#/definitions/ansible_definition"
+            }
+          ]
+        },
+        "config_script": {
+          "type": "string",
+          "description": "Vendor configuration script (openrc.sh)"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "timestamp of blueprint"
+        }
+      },
+      "type": "object"
+    },
+    "tosca_definition": {
+      "required": [
+        "content",
+        "name",
+        "type"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name of file with TOSCA definition"
+        },
+        "type": {
+          "type": "string",
+          "description": "must be set to \"file\" "
+        },
+        "content": {
+          "type": "string",
+          "description": "Content of file with TOSCA definition"
+        }
+      },
+      "type": "object"
+    },
+    "ansible_definition": {
+      "required": [
+        "content",
+        "name",
+        "type"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name of folder or file with ansible playbooks"
+        },
+        "type": {
+          "type": "string",
+          "description": "must be set to \"dir\" or \"file\""
+        },
+        "content": {
+          "type": "object",
+          "description": "Content of file / dir"
+        }
+      },
+      "type": "object"
+    },
+    "delete_metadata": {
+      "required": [
+        "blueprint_token",
+        "deleted_database_entries",
+        "force",
+        "message",
+        "timestamp",
+        "version_id"
+      ],
+      "properties": {
+        "message": {
+          "type": "string",
+          "description": "return message"
+        },
+        "blueprint_token": {
+          "type": "string",
+          "description": "token of blueprint"
+        },
+        "version_id": {
+          "type": "integer",
+          "description": "id of current version of blueprint"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "timestamp of database entry"
+        },
+        "deleted_database_entries": {
+          "type": "integer",
+          "description": "Number of deleted entries"
+        },
+        "force": {
+          "type": "boolean",
+          "description": "did we do it with force or not"
+        }
+      },
+      "type": "object"
+    },
+    "blueprint_metadata": {
+      "required": [
+        "blueprint_token",
+        "id",
+        "message",
+        "timestamp",
+        "version_id"
+      ],
+      "properties": {
+        "message": {
+          "type": "string",
+          "description": "return message"
+        },
+        "id": {
+          "type": "string",
+          "description": "id of blueprint"
+        },
+        "blueprint_token": {
+          "type": "string",
+          "description": "token of blueprint"
+        },
+        "session_token": {
+          "type": "string",
+          "description": "token of deploying session"
+        },
+        "version_id": {
+          "type": "integer",
+          "description": "id of current version of blueprint"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "timestamp of database entry"
+        }
+      },
+      "type": "object"
+    }
+  },
+  "responses": {
+    "ParseError": {
+      "description": "When a mask can't be parsed"
+    },
+    "MaskError": {
+      "description": "When any error occurs on mask"
+    }
+  }
+}

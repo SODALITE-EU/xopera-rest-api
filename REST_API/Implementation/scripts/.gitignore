@@ -1,0 +1,4 @@
+openrc.sh
+*.pem
+*.key
+*.pub
