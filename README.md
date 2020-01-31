@@ -68,6 +68,42 @@ See [manual installation](#Instructions-for-manual-installation-and-run).
 ## API
 Check [swagger docs](REST_API/Documentation/swagger.json) or visit http://localhost:5000/
 
+## How to use API
+Standard scenarios of using REST api:
+
+### FIRST RUN
+- GET key pair via ssh/keys/public download and register it on your OpenStack
+
+### DEPLOY
+Standard scenarios of using REST api:
+
+- upload blueprint with POST to /manage
+    - new version of existing one must be POSTed to /manage/{blueprint_token}
+    - save blueprint_metadata, returned by API call -> it is the only way of accessing your blueprint afterwards
+- deploy last version of blueprint with POST to /deploy/{blueprint_token}
+    - optionally, inputs file to be used with template must also be uploaded within same API call
+    - another version can be specified by version_id or timestamp
+    - save session_token
+
+- using status_token from with GET to /info/status check status of your job
+- After completion, check logs with GET to /info/log
+
+### UNDEPLOY
+- undeploy blueprint with DELETE to /deploy/{blueprint_token}
+    - optionally, inputs file to be used with template must also be uploaded within same API call
+    - optionally also in combination with version_id or timestamp
+    - save session_token
+- using status_token with GET to /info/status check status of your job
+- After completion, check logs with GET to /info/log
+- Delete all versions of blueprint from database with DELETE to /manage/{blueprint_token}
+    - to delete just specific version, use version_id or timestamp
+    - if deployment from template has not been undeployed yet, blueprint cannot be deleted-> use ‘force’ to override
+    
+Check [HTTP requests](REST_API/Documentation/requests.http) for exact API calls.
+
+
+
+
 ## JSON deployment format
 
 ### Converting deployment to JSON
@@ -140,7 +176,7 @@ If some non default user must be used, his credentials can be submitted wit inpu
     
 ## Instructions for manual installation and run
 
-### 1. Installation
+### Installation
 
 #### Ubuntu
 
@@ -173,7 +209,7 @@ When prompted, make sure you provide the following script with correct OpenStack
 
 ##### Default settings
 Default settings are stored in [default_settings.json](REST_API/Implementation/settings/default_settings.json).
-### 2. Run
+### Run
 #### Docker run REST API
 To run docker with REST_API, simply run:
 
@@ -232,7 +268,7 @@ The file structure should now look similar to this:
 
 See [docker docs](https://docs.docker.com/engine/security/certificates/) for more details.
 
-### 3. Building Docker Images
+### Building Docker Images
 
 #### Build
 
@@ -247,38 +283,4 @@ Command will make `xopera_rest.tar` image in `Builds` dir. The content of this d
 To test and start your newly built docker container locally (optionally, not necessary), run the following command:
 
     docker run -it xopera_rest
-
-## How to use API
-Standard scenarios of using REST api:
-
-### FIRST RUN
-- GET key pair via ssh/keys/public download and register it on your OpenStack
-
-### DEPLOY
-Standard scenarios of using REST api:
-
-- upload blueprint with POST to /manage
-    - new version of existing one must be POSTed to /manage/{blueprint_token}
-    - save blueprint_metadata, returned by API call -> it is the only way of accessing your blueprint afterwards
-- deploy last version of blueprint with POST to /deploy/{blueprint_token}
-    - optionally, inputs file to be used with template must also be uploaded within same API call
-    - another version can be specified by version_id or timestamp
-    - save session_token
-
-- using status_token from with GET to /info/status check status of your job
-- After completion, check logs with GET to /info/log
-
-### UNDEPLOY
-- undeploy blueprint with DELETE to /deploy/{blueprint_token}
-    - optionally, inputs file to be used with template must also be uploaded within same API call
-    - optionally also in combination with version_id or timestamp
-    - save session_token
-- using status_token with GET to /info/status check status of your job
-- After completion, check logs with GET to /info/log
-- Delete all versions of blueprint from database with DELETE to /manage/{blueprint_token}
-    - to delete just specific version, use version_id or timestamp
-    - if deployment from template has not been undeployed yet, blueprint cannot be deleted-> use ‘force’ to override
-    
-Check [HTTP requests](REST_API/Documentation/requests.http) for exact API calls.
-
 
