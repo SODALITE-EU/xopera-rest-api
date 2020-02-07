@@ -285,6 +285,12 @@ class Manage(Resource):
             pass
 
         deployment = Deployment.from_dict(blueprint_token=blueprint_token, dictionary=json_input)
+
+        invalid_tosca, response = deployment_io.validate_tosca(deployment)
+        if invalid_tosca:
+            return {
+                       "message": f"Invalid TOSCA: {response}"}, 406
+
         if deployment is not None:
             version_id = database.get_max_version_id(blueprint_token) + 1
             database.add_revision(deploy=deployment, version_id=version_id)
@@ -360,6 +366,10 @@ class NewBlueprint(Resource):
             pass
 
         deployment = Deployment.from_dict(blueprint_token=blueprint_token, dictionary=json_input)
+        invalid_tosca, response = deployment_io.validate_tosca(deployment)
+        if invalid_tosca:
+            return {
+                       "message": f"Invalid TOSCA: {response}"}, 406
 
         if deployment is not None:
             database.add_revision(deploy=deployment, version_id=version_id)

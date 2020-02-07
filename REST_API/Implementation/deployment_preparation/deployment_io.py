@@ -824,7 +824,7 @@ def configure_ssh_keys():
 
 
 def clean_deployment_data():
-    shutil.rmtree(Settings.deployment_data)
+    shutil.rmtree(Settings.deployment_data, ignore_errors=True)
     os.mkdir(Settings.deployment_data)
     with open(Settings.deployment_data + ".gitignore", "w") as file:
         file.write("*")
@@ -865,3 +865,12 @@ def replace_username_and_password(rc_file_path: str, username, password):
 def validate_blueprint_name(name: str):
     response = _validate_dns_format(name)
     return response is not None, response
+
+
+def validate_tosca(deployment: Deployment):
+    tmp_location = f"/tmp/xopera/{uuid.uuid4()}"
+    Path(tmp_location).mkdir(parents=True, exist_ok=True)
+    TOSCA_path = deployment.tosca.write(tmp_location + "/")
+    print(TOSCA_path)
+    # requests.post()
+    return False, "tosca_validation not implemented"
