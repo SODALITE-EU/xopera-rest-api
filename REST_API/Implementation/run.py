@@ -158,8 +158,8 @@ class Status(Resource):
     @info.param('token', 'session_token')
     @info.param('format', 'long or short')
     @info.response(500, "Job failed")
-    @info.response(201, 'Job accepted, still running')  # , log_model)
-    @info.response(202, 'Job done')  # , log_model)
+    @info.response(201, 'Job done')  # , log_model)
+    @info.response(202, 'Job accepted, still running')  # , log_model)
     def get(self):
         session_token = request.args.get('token')
         return_format = request.args.get('format')
