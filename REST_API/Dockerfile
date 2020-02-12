@@ -17,9 +17,9 @@ RUN echo "**** install Python ****" && \
 # Install build prerequisites and build
 RUN apk update && \
     apk add py-virtualenv gcc python3-dev musl-dev linux-headers libffi-dev libressl-dev postgresql-dev bash openssh-client && \
-    pip install -U wheel "opera[openstack]<0.5" flask flask_restplus psycopg2 jinja2 docker-py
+    pip install -U wheel "opera[openstack]<0.5" flask flask_restplus psycopg2 jinja2 docker-py "Werkzeug<1"
 
-RUN pip wheel --wheel-dir=/root/wheels wheel "opera[openstack]<0.5" flask psycopg2 jinja2 docker-py
+RUN pip wheel --wheel-dir=/root/wheels wheel "opera[openstack]<0.5" flask psycopg2 jinja2 docker-py "Werkzeug<1"
 
 #####################################################
 #################   MAKE IT SMALL   #################
@@ -43,7 +43,7 @@ RUN apk update && \
 
 # Copy from big image
 COPY --from=big /root/wheels /root/wheels
-RUN pip install --find-links=/root/wheels wheel "opera[openstack]<0.5" flask flask_restplus psycopg2 jinja2 docker-py
+RUN pip install --find-links=/root/wheels wheel "opera[openstack]<0.5" flask flask_restplus psycopg2 jinja2 docker-py "Werkzeug<1"
 
 # Install required ansible libraries
 RUN ansible-galaxy install geerlingguy.docker && \

@@ -13,9 +13,7 @@ sudo cp -rf ../Builds/. /home/xopera/build/
 sudo cp -rf ../Certs/ca.crt /usr/local/share/ca-certificates/ca-xopera.crt
 sudo update-ca-certificates
 
-pip3 list
-
-export FLASK_APP="run.py"
-export FLASK_DEBUG=1
-export FLASK_ENV=development
-flask run --host=0.0.0.0
+# export FLASK_APP="run.py"
+# export FLASK_DEBUG=1
+# export FLASK_ENV=development
+# flask run --host=0.0.0.0
