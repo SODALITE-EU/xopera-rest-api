@@ -6,7 +6,7 @@ clean:
 
 system-packages:
 	sudo apt update
-	sudo apt install -y python3-venv python3-wheel python-wheel-common python3 python3-pip libpq-dev musl-dev libffi-dev libssl-dev ansible docker.io
+	sudo apt install -y python3-venv python3-wheel python-wheel-common python3-pip python3-flask libpq-dev musl-dev libffi-dev libssl-dev ansible docker.io 
 
 system-packages-docker:
 	sudo apt update
@@ -61,8 +61,10 @@ run_docker: clean_docker
 	@echo "Running on http://localhost:5000"
 	@echo "To stop xopera, execute make clean_docker"
 
-run:
-	sudo ./Implementation/run.sh
+ 
+run:	 
+	python3 Implementation/run.py
+	
 
 all: clean install build tests run
 all_docker: clean install_docker build tests run_docker

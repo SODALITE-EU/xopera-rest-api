@@ -1,4 +1,8 @@
-firstdeploy/*
+firstdeploy/
 storage/
 *openrc.sh
 .pytest_cache
+**/*__pycache__
+Builds/
+venv/
+.venv/
