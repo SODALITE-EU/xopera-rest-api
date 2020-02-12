@@ -112,7 +112,7 @@ python-keystoneclient==3.22.0
 python-novaclient==16.0.0
 python-openstackclient==4.0.0
 pytz==2019.3
-pyxdg==0.25
+pyxdg==0.26
 PyYAML==5.3
 query-string==2019.4.13
 reportlab==3.4.0
