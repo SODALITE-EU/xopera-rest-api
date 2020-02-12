@@ -4,7 +4,8 @@ Implementation of the xOpera orchestrator REST API
 ## Prerequisites
     
     - Ubuntu 18.04
-    - python 3.6 or newer
+    - Python 3.6 with pip 20.0.2 or newer
+    - Docker engine 19.03 or newer
 
 ### PostgreSQL (optional, recommended)
 Rest API is using PostgreSQL database for saving bluepints and deployment logs.
