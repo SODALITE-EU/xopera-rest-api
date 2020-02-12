@@ -14,8 +14,8 @@ system-packages-docker:
 
 python-packages:
 	pip3 install --upgrade pip
-	# pip3 install -r requirements.txt
-	pip3 install -U wheel "opera[openstack]<0.5" Flask flask_restplus psycopg2 jinja2 docker-py pytest assertpy
+	pip3 install -r requirements.txt
+	# pip3 install -U wheel "opera[openstack]<0.5" Flask flask_restplus psycopg2 jinja2 docker-py pytest assertpy
 
 ansible-packages:
 	sudo ansible-galaxy install -r Implementation/scripts/requirements.yml
