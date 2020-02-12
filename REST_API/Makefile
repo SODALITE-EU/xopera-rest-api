@@ -1,4 +1,4 @@
-.PHONY: clean system-packages python-packages ansible-packages configure-certs install clean_docker build tests run_docker run all all_docker
+.PHONY: clean system-packages python-packages ansible-packages configure-certs install clean_docker build tests run_docker run all all_docker venv venv/bin/activate
 
 clean:
 	sudo rm -rf Implementation/model_deployment_data/*
@@ -12,10 +12,10 @@ system-packages-docker:
 	sudo apt update
 	sudo apt install -y docker.io
 
-python-packages:
-	pip3 install --upgrade pip
-	pip3 install -r requirements.txt
-	# pip3 install -U wheel "opera[openstack]<0.5" Flask flask_restplus psycopg2 jinja2 docker-py pytest assertpy
+# python-packages:
+# 	pip3 install --upgrade pip
+# 	pip3 install -r requirements.txt
+# 	# pip3 install -U wheel "opera[openstack]<0.5" Flask flask_restplus psycopg2 jinja2 docker-py pytest assertpy
 
 ansible-packages:
 	sudo ansible-galaxy install -r Implementation/scripts/requirements.yml
@@ -62,15 +62,15 @@ run_docker: clean_docker
 	@echo "To stop xopera, execute make clean_docker"
 
 
-# venv: venv/bin/activate
-# venv/bin/activate: requirements.txt
-#	test -d venv || virtualenv --python=python3.6 venv
-#	venv/bin/pip install -Ur requirements.txt
-#	touch venv/bin/activate
+venv: venv/bin/activate
+venv/bin/activate: requirements.txt
+	test -d venv || virtualenv --python=python3.6 venv
+	venv/bin/pip install -Ur requirements.txt
+	touch venv/bin/activate
  
 run: venv
 	sudo Implementation/run.sh
-	sudo python3 Implementation/run.py
+	sudo venv/bin/python3 Implementation/run.py
 	
 
 all: clean install build tests run
