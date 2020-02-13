@@ -261,7 +261,7 @@ class TestDelete:
             except KeyError:
                 if time.time() - time_start > timeout:
                     break
-                time.sleep(0.1)
+                time.sleep(1)
                 pass
         return done, resp
 
@@ -353,7 +353,7 @@ class TestDelete:
         session_token = resp.json()['session_token']
 
         # check it is done
-        done, resp = TestDelete.monitor(session_token, job='deploy', url=url, timeout=10)
+        done, resp = TestDelete.monitor(session_token, job='deploy', url=url, timeout=30)
         assert_that(done).is_true()
         assert_that(resp.json()['deploy']).is_equal_to('done')
 
@@ -371,7 +371,7 @@ class TestDelete:
         session_token = resp.json()['session_token']
 
         # check it is done
-        done, resp = TestDelete.monitor(session_token, job='deploy', url=url, timeout=10)
+        done, resp = TestDelete.monitor(session_token, job='deploy', url=url, timeout=30)
         assert_that(done).is_true()
         assert_that(resp.json()['deploy']).is_equal_to('done')
 
@@ -380,7 +380,7 @@ class TestDelete:
         session_token = resp.json()['session_token']
 
         # check it is done
-        done, resp = TestDelete.monitor(session_token, job='undeploy', url=url, timeout=10)
+        done, resp = TestDelete.monitor(session_token, job='undeploy', url=url, timeout=30)
         assert_that(done).is_true()
         assert_that(resp.json()['undeploy']).is_equal_to('done')
 
@@ -398,7 +398,7 @@ class TestDelete:
         session_token = resp.json()['session_token']
 
         # check it is done
-        done, resp = TestDelete.monitor(session_token, job='deploy', url=url, timeout=10)
+        done, resp = TestDelete.monitor(session_token, job='deploy', url=url, timeout=30)
         assert_that(done).is_true()
         assert_that(resp.json()['deploy']).is_equal_to('done')
 

@@ -131,7 +131,7 @@ class TestDeploy:
             except KeyError:
                 if time.time() - time_start > timeout:
                     break
-                time.sleep(0.1)
+                time.sleep(1)
                 pass
         return done, resp
 
@@ -266,7 +266,7 @@ class TestDeploy:
 
         session_token = resp.json()['session_token']
 
-        done, resp = TestDeploy.monitor(session_token, job='deploy', url=url, timeout=10)
+        done, resp = TestDeploy.monitor(session_token, job='deploy', url=url, timeout=30)
 
         assert_that(done).is_true()
         assert_that(resp.json()['deploy']).is_equal_to('done')
@@ -309,7 +309,7 @@ class TestDeploy:
 
         session_token = resp.json()['session_token']
 
-        done, resp = TestDeploy.monitor(session_token, job='deploy', url=url, timeout=10)
+        done, resp = TestDeploy.monitor(session_token, job='deploy', url=url, timeout=30)
 
         assert_that(done).is_true()
         assert_that(resp.json()['deploy']).is_equal_to('failed')
@@ -325,7 +325,7 @@ class TestDeploy:
 
         session_token = resp.json()['session_token']
 
-        done, resp = TestDeploy.monitor(session_token, job='deploy', url=url, timeout=10)
+        done, resp = TestDeploy.monitor(session_token, job='deploy', url=url, timeout=30)
         assert_that(done).is_true()
         assert_that(resp.json()['deploy']).is_equal_to('failed')
 
@@ -342,7 +342,7 @@ class TestDeploy:
 
         session_token = resp.json()['session_token']
 
-        done, resp = TestDeploy.monitor(session_token, job='deploy', url=url, timeout=10)
+        done, resp = TestDeploy.monitor(session_token, job='deploy', url=url, timeout=30)
         assert_that(done).is_true()
         assert_that(resp.json()['deploy']).is_equal_to('done')
 
@@ -360,7 +360,7 @@ class TestDeploy:
         resp = requests.post(url=f"{url}/deploy/{blueprint_token}", files={'inputs_file': file})
         session_token = resp.json()['session_token']
 
-        done, resp = TestDeploy.monitor(session_token, job='deploy', url=url, timeout=10)
+        done, resp = TestDeploy.monitor(session_token, job='deploy', url=url, timeout=30)
         assert_that(done).is_true()
         assert_that(resp.json()['deploy']).is_equal_to('done')
 
@@ -369,7 +369,7 @@ class TestDeploy:
         session_token = resp.json()['session_token']
         assert_that(session_token).is_not_none()
 
-        done, resp = TestDeploy.monitor(session_token, job='undeploy', url=url, timeout=20)
+        done, resp = TestDeploy.monitor(session_token, job='undeploy', url=url, timeout=30)
         assert_that(done).is_true()
         assert_that(resp.json()['undeploy']).is_equal_to('failed')
 
@@ -387,7 +387,7 @@ class TestDeploy:
         resp = requests.post(url=f"{url}/deploy/{blueprint_token}", files={'inputs_file': file})
         session_token = resp.json()['session_token']
 
-        done, resp = TestDeploy.monitor(session_token, job='deploy', url=url, timeout=10)
+        done, resp = TestDeploy.monitor(session_token, job='deploy', url=url, timeout=30)
         assert_that(done).is_true()
         assert_that(resp.json()['deploy']).is_equal_to('done')
 
@@ -398,7 +398,7 @@ class TestDeploy:
         session_token = resp.json()['session_token']
         assert_that(session_token).is_not_none()
 
-        done, resp = TestDeploy.monitor(session_token, job='undeploy', url=url, timeout=20)
+        done, resp = TestDeploy.monitor(session_token, job='undeploy', url=url, timeout=30)
         assert_that(done).is_true()
         assert_that(resp.json()['undeploy']).is_equal_to('done')
 
@@ -411,7 +411,7 @@ class TestDeploy:
         resp = requests.post(url=url + "/deploy/{}".format(blueprint_token))
         session_token = resp.json()['session_token']
 
-        done, resp = TestDeploy.monitor(session_token, job='deploy', url=url, timeout=10)
+        done, resp = TestDeploy.monitor(session_token, job='deploy', url=url, timeout=30)
         assert_that(done).is_true()
         assert_that(resp.json()['deploy']).is_equal_to('done')
 
@@ -419,7 +419,7 @@ class TestDeploy:
         resp = requests.delete(url=url + "/deploy/{}".format(blueprint_token))
         session_token = resp.json()['session_token']
 
-        done, resp = TestDeploy.monitor(session_token, job='undeploy', url=url, timeout=10)
+        done, resp = TestDeploy.monitor(session_token, job='undeploy', url=url, timeout=30)
         assert_that(done).is_true()
         assert_that(resp.json()['undeploy']).is_equal_to('done')
 

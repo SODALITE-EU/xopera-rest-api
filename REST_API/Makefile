@@ -52,7 +52,7 @@ tests: build clean_docker
 
 run_docker: build clean_docker
 	@echo "starting xOpera REST API from docker..."
-	@sudo docker run -p 5000:5000 -v /root/.ssh/:/root/.ssh/ -v "$$PWD/Builds":/home/xopera/build/ -d --name xopera xopera_rest > /dev/null
+	@sudo docker run -p 5000:5000 -v /root/.ssh/:/root/.ssh/ -v "$$PWD/Builds":/home/xopera/build/ -d --name xopera xopera_rest
 	@echo "Done."
 	@echo "Running on http://localhost:5000"
 	@echo "To stop xopera, execute make clean_docker"
