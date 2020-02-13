@@ -117,10 +117,10 @@ class TestPostNew:
         except ValueError:
             fail('Incorrect timestamp format, should be "%Y-%m-%dT%H:%M:%S.%f"')
 
-    def test_invalid_blueprint_id(self, url):
-        payload = {**payload_generic, 'blueprint_id': "aaa.111"}
-        resp = requests.post(url=url + "/manage", json=payload)
-        assert_that(resp.status_code).is_equal_to(406)
+    # def test_invalid_blueprint_id(self, url):
+    #     payload = {**payload_generic, 'blueprint_id': "aaa.111"}
+    #     resp = requests.post(url=url + "/manage", json=payload)
+    #     assert_that(resp.status_code).is_equal_to(406)
 
 
 class TestPostMultipleVersions:
@@ -151,13 +151,13 @@ class TestPostMultipleVersions:
                                                              'timestamp')
         assert_that(resp.json()['version_id']).is_equal_to(2)
 
-    def test_invalid_blueprint_id(self, url):
-        resp = requests.post(url=url + "/manage", json=payload_generic)
-        token = resp.json()['blueprint_token']
+    # def test_invalid_blueprint_id(self, url):
+    #     resp = requests.post(url=url + "/manage", json=payload_generic)
+    #     token = resp.json()['blueprint_token']
 
-        payload = {**payload_generic, 'blueprint_id': "aaa.111"}
-        resp = requests.post(url=url + "/manage/{}".format(token), json=payload)
-        assert_that(resp.status_code).is_equal_to(406)
+    #     payload = {**payload_generic, 'blueprint_id': "aaa.111"}
+    #     resp = requests.post(url=url + "/manage/{}".format(token), json=payload)
+    #     assert_that(resp.status_code).is_equal_to(406)
 
 
 class TestGet:
@@ -261,7 +261,7 @@ class TestDelete:
             except KeyError:
                 if time.time() - time_start > timeout:
                     break
-                time.sleep(0.1)
+                time.sleep(1)
                 pass
         return done, resp
 
@@ -353,7 +353,7 @@ class TestDelete:
         session_token = resp.json()['session_token']
 
         # check it is done
-        done, resp = TestDelete.monitor(session_token, job='deploy', url=url, timeout=10)
+        done, resp = TestDelete.monitor(session_token, job='deploy', url=url, timeout=30)
         assert_that(done).is_true()
         assert_that(resp.json()['deploy']).is_equal_to('done')
 
@@ -371,7 +371,7 @@ class TestDelete:
         session_token = resp.json()['session_token']
 
         # check it is done
-        done, resp = TestDelete.monitor(session_token, job='deploy', url=url, timeout=10)
+        done, resp = TestDelete.monitor(session_token, job='deploy', url=url, timeout=30)
         assert_that(done).is_true()
         assert_that(resp.json()['deploy']).is_equal_to('done')
 
@@ -380,7 +380,7 @@ class TestDelete:
         session_token = resp.json()['session_token']
 
         # check it is done
-        done, resp = TestDelete.monitor(session_token, job='undeploy', url=url, timeout=10)
+        done, resp = TestDelete.monitor(session_token, job='undeploy', url=url, timeout=30)
         assert_that(done).is_true()
         assert_that(resp.json()['undeploy']).is_equal_to('done')
 
@@ -398,7 +398,7 @@ class TestDelete:
         session_token = resp.json()['session_token']
 
         # check it is done
-        done, resp = TestDelete.monitor(session_token, job='deploy', url=url, timeout=10)
+        done, resp = TestDelete.monitor(session_token, job='deploy', url=url, timeout=30)
         assert_that(done).is_true()
         assert_that(resp.json()['deploy']).is_equal_to('done')
 
@@ -408,5 +408,5 @@ class TestDelete:
 
 
 if __name__ == '__main__':
-    test = TestDelete()
-    test.test_delete_before_undeploy(url="http://localhost:5000")
+    test = TestPostNew()
+    test.test_empty(url="http://localhost:5000")

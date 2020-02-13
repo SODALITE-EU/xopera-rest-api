@@ -1,6 +1,7 @@
 import json
 import logging as log
 import uuid
+import argparse
 
 import psycopg2
 from flask import Flask, request
@@ -17,6 +18,13 @@ Settings.load_settings()
 print('RESTapi verbose: {}'.format('True' if Settings.verbose else 'False'))
 deployment_io.clean_deployment_data()
 deployment_io.configure_ssh_keys()
+
+parser = argparse.ArgumentParser(description='xOpera REST API')
+parser.add_argument('--interpreter', help="Custom path to python interpreter", type=str, default='python3')
+args = parser.parse_args()
+Settings.interpreter = args.interpreter
+print(f'Interpreter: {Settings.interpreter}')
+
 
 try:
     database = PostgreSQL(Settings.connection)
@@ -279,8 +287,9 @@ class Manage(Resource):
         try:
             blueprint_name = json_input["blueprint_id"]
             invalid_name, response = deployment_io.validate_blueprint_name(blueprint_name)
-            if invalid_name:
-                return {"message": "blueprint id {} invalid. Must comply with RFC 1123 (section 2.1) and RFC 952"}, 406
+            # if invalid_name:
+            #     return {"message": "blueprint id {} invalid. Must comply with RFC 1123 (section 2.1)"
+            #                        "and RFC 952"}, 406
         except Exception:
             pass
 
@@ -358,10 +367,9 @@ class NewBlueprint(Resource):
         try:
             blueprint_name = json_input["blueprint_id"]
             invalid_name, response = deployment_io.validate_blueprint_name(blueprint_name)
-            if invalid_name:
-                return {
-                           "message": "blueprint id {} invalid. Must comply with RFC 1123 (section 2.1) and RFC 952".format(
-                               blueprint_name)}, 406
+            # if invalid_name:
+            #     return {"message": "blueprint id {} invalid. Must comply with RFC 1123 (section 2.1)"
+            #                        "and RFC 952"}, 406
         except Exception:
             pass
 

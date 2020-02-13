@@ -7,7 +7,7 @@ blueprint_token="$4"
 session_token="$5"
 timestamp_start="$6"
 timestamp_blueprint="$7"
-inputs_file="$8"
+interpreter="$8"
 
 eval "$(ssh-agent)" >>"/dev/null"
 cd "${0%/*}/.." || exit
@@ -23,5 +23,5 @@ opera undeploy "$id"               #id
 echo "finalizing undeployment"
 # echo "$PWD"
 } &> "$logfile"
-cd "../../"
-python3 finalize_deployment.py undeploy "$path" "$id" "$logfile" "$blueprint_token" "$session_token" "$timestamp_start" "$timestamp_blueprint" "$inputs_file"
+cd "../../../"
+"$interpreter" Implementation/finalize_deployment.py undeploy "$path" "$id" "$logfile" "$blueprint_token" "$session_token" "$timestamp_start" "$timestamp_blueprint"

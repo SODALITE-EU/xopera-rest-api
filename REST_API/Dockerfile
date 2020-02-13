@@ -66,8 +66,8 @@ RUN update-ca-certificates
 # RUN ssh-keygen -t rsa -f xOpera_os.key
 
 # Install xOpera REST API
-COPY Implementation /usr/local/xopera_rest
-WORKDIR /usr/local/xopera_rest
+COPY Implementation /usr/local/xopera_rest/Implementation
+WORKDIR /usr/local/xopera_rest/Implementation
 
 # Start xOpera REST API on startup
 ENTRYPOINT ["python"]

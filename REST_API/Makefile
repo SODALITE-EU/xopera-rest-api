@@ -1,4 +1,4 @@
-.PHONY: clean system-packages python-packages ansible-packages configure-certs install clean_docker build tests run_docker run all all_docker venv venv/bin/activate
+.PHONY: clean system-packages venv venv/bin/activate ansible-packages configure-certs install build tests run all clean_docker run_docker all_docker
 
 clean:
 	sudo rm -rf Implementation/model_deployment_data/*
@@ -6,16 +6,9 @@ clean:
 
 system-packages:
 	sudo apt update
-	sudo apt install -y python3-venv virtualenv python3-wheel python-wheel-common python3-pip python3-flask libpq-dev musl-dev libffi-dev libssl-dev ansible docker.io
-
-system-packages-docker:
-	sudo apt update
-	sudo apt install -y docker.io
-
-# python-packages:
-# 	pip3 install --upgrade pip
-# 	pip3 install -r requirements.txt
-# 	# pip3 install -U wheel "opera[openstack]<0.5" Flask flask_restplus psycopg2 jinja2 docker-py pytest assertpy
+	sudo ./docker.sh
+	sudo ./system-packages.sh
+	pip3 install "opera[openstack]<0.5"
 
 ansible-packages:
 	sudo ansible-galaxy install -r Implementation/scripts/requirements.yml
@@ -29,9 +22,7 @@ configure-certs:
 	./open_stack_setup.sh $$rc_file_location $$password; \
 	sudo ./Certs/generate_os_keys.sh "$$computer_ip"
 
-install: system-packages python-packages ansible-packages configure-certs
-
-install_docker: system-packages-docker configure-certs
+install: system-packages venv ansible-packages configure-certs
 
 clean_docker:
 	@docker kill xopera  > /dev/null 2>&1 | true
@@ -43,20 +34,20 @@ build: clean
 	@mkdir -p Builds/
 	@docker save -o Builds/xopera_rest.tar xopera_rest
 
-tests: clean_docker
+tests: build clean_docker venv
 	@echo "Starting test environment..."
-	@sudo docker run -p 5000:5000 -v /root/.ssh/:/root/.ssh/ --name xopera -d xopera_rest > /dev/null 2>&1 | true
+	@sudo docker run -p 5000:5000 -v /root/.ssh/:/root/.ssh/ --name xopera -d xopera_rest
 	@sleep 3
 	@echo "Done."
 	@echo "Running tests..."
-	@pytest
+	@venv/bin/python3 -m pytest
 	@docker kill xopera > /dev/null
 	@docker rm xopera > /dev/null
 	@echo "Done."
 
-run_docker: clean_docker
+run_docker: build clean_docker
 	@echo "starting xOpera REST API from docker..."
-	@sudo docker run -p 5000:5000 -v /root/.ssh/:/root/.ssh/ -v "$$PWD/Builds":/home/xopera/build/ -d --name xopera xopera_rest > /dev/null
+	@sudo docker run -p 5000:5000 -v /root/.ssh/:/root/.ssh/ -v "$$PWD/Builds":/home/xopera/build/ -d --name xopera xopera_rest
 	@echo "Done."
 	@echo "Running on http://localhost:5000"
 	@echo "To stop xopera, execute make clean_docker"
@@ -64,16 +55,16 @@ run_docker: clean_docker
 
 venv: venv/bin/activate
 venv/bin/activate: requirements.txt
-	test -d venv || virtualenv --python=python3.6 venv
-	venv/bin/pip install -Ur requirements.txt
-	touch venv/bin/activate
+	@test -d venv || virtualenv --python=python3.6 venv
+	@venv/bin/pip install -Ur requirements.txt
+	@touch venv/bin/activate
  
 run: venv
-	sudo Implementation/run.sh
-	sudo venv/bin/python3 Implementation/run.py
+	@sudo Implementation/run.sh
+	@sudo venv/bin/python3 Implementation/run.py --interpreter "venv/bin/python3"
 	
 
 all: clean install build tests run
-all_docker: clean install_docker build tests run_docker
+all_docker: clean install build tests run_docker
 
 

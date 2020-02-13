@@ -831,7 +831,7 @@ def clean_deployment_data():
 
 
 def generic_rc_file():
-    path = "settings/openrc.sh"
+    path = f"{Settings.implementation_dir}/settings/openrc.sh"
     file = File.read(Path(path))
     return file
 
@@ -870,7 +870,11 @@ def validate_blueprint_name(name: str):
 def validate_tosca(deployment: Deployment):
     tmp_location = f"/tmp/xopera/{uuid.uuid4()}"
     Path(tmp_location).mkdir(parents=True, exist_ok=True)
-    TOSCA_path = deployment.tosca.write(tmp_location + "/")
-    print(TOSCA_path)
+    try:
+        TOSCA_path = deployment.tosca.write(tmp_location + "/")
+        # print(TOSCA_path)
+        shutil.rmtree(tmp_location, ignore_errors=True)
+    except AttributeError:
+        return True, "Tosca is empty"
     # requests.post()
     return False, "tosca_validation not implemented"
