@@ -8,7 +8,7 @@ system-packages:
 	sudo apt update
 	sudo ./docker.sh
 	sudo ./system-packages.sh
-	pip install "opera[openstack]<0.5"
+	pip3 install "opera[openstack]<0.5"
 
 ansible-packages:
 	sudo ansible-galaxy install -r Implementation/scripts/requirements.yml
@@ -55,13 +55,13 @@ run_docker: build clean_docker
 
 venv: venv/bin/activate
 venv/bin/activate: requirements.txt
-	test -d venv || virtualenv --python=python3.6 venv
-	venv/bin/pip install -Ur requirements.txt
-	touch venv/bin/activate
+	@test -d venv || virtualenv --python=python3.6 venv
+	@venv/bin/pip install -Ur requirements.txt
+	@touch venv/bin/activate
  
 run: venv
-	sudo Implementation/run.sh
-	sudo venv/bin/python3 Implementation/run.py --interpreter "venv/bin/python3"
+	@sudo Implementation/run.sh
+	@sudo venv/bin/python3 Implementation/run.py --interpreter "venv/bin/python3"
 	
 
 all: clean install build tests run
