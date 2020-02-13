@@ -1,4 +1,4 @@
-.PHONY: clean system-packages venv venv/bin/activate ansible-packages configure-certs install build tests run all clean_docker install_docker run_docker all_docker
+.PHONY: clean system-packages venv venv/bin/activate ansible-packages configure-certs install build tests run all clean_docker run_docker all_docker
 
 clean:
 	sudo rm -rf Implementation/model_deployment_data/*
@@ -8,10 +8,6 @@ system-packages:
 	sudo apt update
 	sudo ./docker.sh
 	sudo ./system-packages.sh
-
-system-packages-docker:
-	sudo apt update
-	sudo apt install -y docker.io
 
 ansible-packages:
 	sudo ansible-galaxy install -r Implementation/scripts/requirements.yml
@@ -27,8 +23,6 @@ configure-certs:
 
 install: system-packages venv ansible-packages configure-certs
 
-install_docker: system-packages-docker configure-certs
-
 clean_docker:
 	@docker kill xopera  > /dev/null 2>&1 | true
 	@docker rm xopera > /dev/null 2>&1 | true
@@ -39,7 +33,7 @@ build: clean
 	@mkdir -p Builds/
 	@docker save -o Builds/xopera_rest.tar xopera_rest
 
-tests: build clean_docker
+tests: build clean_docker venv
 	@echo "Starting test environment..."
 	@sudo docker run -p 5000:5000 -v /root/.ssh/:/root/.ssh/ --name xopera -d xopera_rest
 	@sleep 3
@@ -70,6 +64,6 @@ run: venv
 	
 
 all: clean install build tests run
-all_docker: clean install_docker build tests run_docker
+all_docker: clean install build tests run_docker
 
 
