@@ -2,11 +2,13 @@ import datetime
 import json
 import logging as log
 import os
+from pathlib import Path
 
 
 class Settings:
-    deployment_data = "model_deployment_data/"
-    offline_storage = "storage/"
+    implementation_dir = Path(__file__).absolute().parent.parent
+    deployment_data = f"{implementation_dir}/model_deployment_data/"
+    offline_storage = f"{implementation_dir}/storage/"
     offline_blueprints = "{}blueprints/".format(offline_storage)
     offline_log = "{}log/".format(offline_storage)
     ssh_keys_location = "/root/.ssh/"
@@ -44,7 +46,7 @@ class Settings:
     def load_settings():
 
         try:
-            f = open("settings/default_settings.json")
+            f = Path(Settings.implementation_dir / "settings" / "default_settings.json").open()
             settings = json.load(f)
 
             Settings.verbose = settings["run_params"]["verbose"]
