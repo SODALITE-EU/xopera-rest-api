@@ -60,7 +60,7 @@ venv/bin/activate: requirements.txt
  
 run: venv
 	sudo Implementation/run.sh
-	sudo venv/bin/python3 Implementation/run.py
+	sudo venv/bin/python3 Implementation/run.py --interpreter "venv/bin/python3"
 	
 
 all: clean install build tests run

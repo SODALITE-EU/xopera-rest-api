@@ -12,6 +12,7 @@ class Settings:
     offline_blueprints = "{}blueprints/".format(offline_storage)
     offline_log = "{}log/".format(offline_storage)
     ssh_keys_location = "/root/.ssh/"
+    interpreter = None
 
     key_pair = ""
     logfile_name = "logs.log"

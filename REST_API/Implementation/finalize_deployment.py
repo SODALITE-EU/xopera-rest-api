@@ -32,7 +32,10 @@ def main():
     session_token = sys.argv[6]
     timestamp_start = sys.argv[7]
     timestamp_blueprint = sys.argv[8]
-    inputs_file = sys.argv[9]
+    try:
+        inputs_file = sys.argv[9]
+    except IndexError:
+        inputs_file=None
     # print("finalize deployment variables: location: {} _id {} logfile_name {} blueprint_token {} session_token {} "
     # "timestamp_start {} timestamp blueprint: {}".format(location, _id, logfile_name, blueprint_token,
     # session_token, timestamp_start, timestamp_blueprint))

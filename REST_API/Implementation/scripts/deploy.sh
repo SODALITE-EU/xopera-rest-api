@@ -8,6 +8,7 @@ session_token="$5"
 timestamp_start="$6"
 timestamp_blueprint="$7"
 inputs_file="$8"
+interpreter="$9"
 
 eval "$(ssh-agent)" >>"/dev/null"
 cd "${0%/*}/.." || exit
@@ -31,6 +32,6 @@ fi
 echo "finalizing deployment"
 # echo "$PWD"
 } &> "$logfile"
-cd "../../"
+cd "../../../"
 
-python3 finalize_deployment.py deploy "$path" "$id" "$logfile" "$blueprint_token" "$session_token" "$timestamp_start" "$timestamp_blueprint" "$inputs_file"
+"$interpreter" Implementation/finalize_deployment.py deploy "$path" "$id" "$logfile" "$blueprint_token" "$session_token" "$timestamp_start" "$timestamp_blueprint" "$inputs_file"

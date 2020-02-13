@@ -55,8 +55,6 @@ def deploy_by_token(blueprint_token: str, deployment: Deployment, inputs_file: F
 
         timestamp_start = Settings.datetime_now_to_string()
 
-        _list = [f'{Settings.implementation_dir}/scripts/deploy.sh', '{}'.format(Path(location).absolute()), deployment.id, logfile_name,
-                 str(blueprint_token), str(session_token), timestamp_start, deployment.timestamp]
 
         inputs_dict = dict()
         inputs_filename = "inputs.yaml"
@@ -82,7 +80,9 @@ def deploy_by_token(blueprint_token: str, deployment: Deployment, inputs_file: F
             yaml.dump(inputs_dict, inputs_file)
             # print(json.dumps(inputs_dict))
 
-        _list.append(inputs_filename)
+        _list = [f'{Settings.implementation_dir}/scripts/deploy.sh', '{}'.format(Path(location).absolute()),
+                 deployment.id, logfile_name, str(blueprint_token), str(session_token), timestamp_start,
+                 deployment.timestamp, inputs_filename, Settings.interpreter]
 
         subprocess.Popen(_list)  # , stderr=trash, stdout=trash)
         return session_token
@@ -107,7 +107,7 @@ def undeploy_by_token(blueprint_token: str, blueprint_id: str, blueprint_timesta
         timestamp_start = Settings.datetime_now_to_string()
 
         _list = [f'{Settings.implementation_dir}/scripts/undeploy.sh', '{}'.format(Path(location).absolute()), blueprint_id, logfile_name,
-                 blueprint_token, str(session_token), timestamp_start, blueprint_timestamp]
+                 blueprint_token, str(session_token), timestamp_start, blueprint_timestamp, Settings.interpreter]
 
         deploy_dict = dict()
         deploy_dict['name'] = "service.yaml"
