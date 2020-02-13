@@ -117,10 +117,10 @@ class TestPostNew:
         except ValueError:
             fail('Incorrect timestamp format, should be "%Y-%m-%dT%H:%M:%S.%f"')
 
-    def test_invalid_blueprint_id(self, url):
-        payload = {**payload_generic, 'blueprint_id': "aaa.111"}
-        resp = requests.post(url=url + "/manage", json=payload)
-        assert_that(resp.status_code).is_equal_to(406)
+    # def test_invalid_blueprint_id(self, url):
+    #     payload = {**payload_generic, 'blueprint_id': "aaa.111"}
+    #     resp = requests.post(url=url + "/manage", json=payload)
+    #     assert_that(resp.status_code).is_equal_to(406)
 
 
 class TestPostMultipleVersions:
@@ -151,13 +151,13 @@ class TestPostMultipleVersions:
                                                              'timestamp')
         assert_that(resp.json()['version_id']).is_equal_to(2)
 
-    def test_invalid_blueprint_id(self, url):
-        resp = requests.post(url=url + "/manage", json=payload_generic)
-        token = resp.json()['blueprint_token']
+    # def test_invalid_blueprint_id(self, url):
+    #     resp = requests.post(url=url + "/manage", json=payload_generic)
+    #     token = resp.json()['blueprint_token']
 
-        payload = {**payload_generic, 'blueprint_id': "aaa.111"}
-        resp = requests.post(url=url + "/manage/{}".format(token), json=payload)
-        assert_that(resp.status_code).is_equal_to(406)
+    #     payload = {**payload_generic, 'blueprint_id': "aaa.111"}
+    #     resp = requests.post(url=url + "/manage/{}".format(token), json=payload)
+    #     assert_that(resp.status_code).is_equal_to(406)
 
 
 class TestGet:
