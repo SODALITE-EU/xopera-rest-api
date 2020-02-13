@@ -1,4 +1,4 @@
-.PHONY: clean system-packages python-packages ansible-packages configure-certs install clean_docker build tests run_docker run all all_docker venv venv/bin/activate
+.PHONY: clean system-packages venv venv/bin/activate ansible-packages configure-certs install build tests run all clean_docker install_docker run_docker all_docker
 
 clean:
 	sudo rm -rf Implementation/model_deployment_data/*
@@ -6,16 +6,12 @@ clean:
 
 system-packages:
 	sudo apt update
-	sudo apt install -y python3-venv virtualenv python3-wheel python-wheel-common python3-pip python3-flask libpq-dev musl-dev libffi-dev libssl-dev ansible docker.io
+	# sudo ./docker.sh
+	sudo ./system-packages.sh
 
 system-packages-docker:
 	sudo apt update
 	sudo apt install -y docker.io
-
-# python-packages:
-# 	pip3 install --upgrade pip
-# 	pip3 install -r requirements.txt
-# 	# pip3 install -U wheel "opera[openstack]<0.5" Flask flask_restplus psycopg2 jinja2 docker-py pytest assertpy
 
 ansible-packages:
 	sudo ansible-galaxy install -r Implementation/scripts/requirements.yml
@@ -29,7 +25,7 @@ configure-certs:
 	./open_stack_setup.sh $$rc_file_location $$password; \
 	sudo ./Certs/generate_os_keys.sh "$$computer_ip"
 
-install: system-packages python-packages ansible-packages configure-certs
+install: system-packages venv ansible-packages configure-certs
 
 install_docker: system-packages-docker configure-certs
 
@@ -45,7 +41,7 @@ build: clean
 
 tests: clean_docker
 	@echo "Starting test environment..."
-	@sudo docker run -p 5000:5000 -v /root/.ssh/:/root/.ssh/ --name xopera -d xopera_rest > /dev/null 2>&1 | true
+	@sudo docker run -p 5000:5000 -v /root/.ssh/:/root/.ssh/ --name xopera -d xopera_rest
 	@sleep 3
 	@echo "Done."
 	@echo "Running tests..."

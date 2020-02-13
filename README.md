@@ -185,7 +185,9 @@ If some non default user must be used, his credentials can be submitted wit inpu
 The following installation supports Ubuntu 18.04. 
 Move to REST_API directory and install packages (requires sudo):
     
-    sudo ./require.sh
+    sudo ./system-packages.sh
+    pip3 install -r requirements.txt
+    sudo ansible-galaxy install -r Implementation/scripts/requirements.yml
     
 #### Alpine
 
