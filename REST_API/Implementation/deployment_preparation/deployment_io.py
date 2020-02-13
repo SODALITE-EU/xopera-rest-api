@@ -870,7 +870,10 @@ def validate_blueprint_name(name: str):
 def validate_tosca(deployment: Deployment):
     tmp_location = f"/tmp/xopera/{uuid.uuid4()}"
     Path(tmp_location).mkdir(parents=True, exist_ok=True)
-    TOSCA_path = deployment.tosca.write(tmp_location + "/")
-    print(TOSCA_path)
+    try:
+        TOSCA_path = deployment.tosca.write(tmp_location + "/")
+        print(TOSCA_path)
+    except AttributeError:
+        return True, "Tosca is empty"
     # requests.post()
     return False, "tosca_validation not implemented"
