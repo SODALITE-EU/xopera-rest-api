@@ -408,5 +408,5 @@ class TestDelete:
 
 
 if __name__ == '__main__':
-    test = TestDelete()
-    test.test_delete_before_undeploy(url="http://localhost:5000")
+    test = TestPostNew()
+    test.test_empty(url="http://localhost:5000")

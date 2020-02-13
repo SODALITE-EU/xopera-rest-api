@@ -6,7 +6,7 @@ clean:
 
 system-packages:
 	sudo apt update
-	# sudo ./docker.sh
+	sudo ./docker.sh
 	sudo ./system-packages.sh
 
 system-packages-docker:
@@ -39,18 +39,18 @@ build: clean
 	@mkdir -p Builds/
 	@docker save -o Builds/xopera_rest.tar xopera_rest
 
-tests: clean_docker
+tests: build clean_docker
 	@echo "Starting test environment..."
 	@sudo docker run -p 5000:5000 -v /root/.ssh/:/root/.ssh/ --name xopera -d xopera_rest
 	@sleep 3
 	@echo "Done."
 	@echo "Running tests..."
-	@pytest
+	@venv/bin/python3 -m pytest
 	@docker kill xopera > /dev/null
 	@docker rm xopera > /dev/null
 	@echo "Done."
 
-run_docker: clean_docker
+run_docker: build clean_docker
 	@echo "starting xOpera REST API from docker..."
 	@sudo docker run -p 5000:5000 -v /root/.ssh/:/root/.ssh/ -v "$$PWD/Builds":/home/xopera/build/ -d --name xopera xopera_rest > /dev/null
 	@echo "Done."
