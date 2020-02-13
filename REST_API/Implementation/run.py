@@ -279,8 +279,9 @@ class Manage(Resource):
         try:
             blueprint_name = json_input["blueprint_id"]
             invalid_name, response = deployment_io.validate_blueprint_name(blueprint_name)
-            if invalid_name:
-                return {"message": "blueprint id {} invalid. Must comply with RFC 1123 (section 2.1) and RFC 952"}, 406
+            # if invalid_name:
+            #     return {"message": "blueprint id {} invalid. Must comply with RFC 1123 (section 2.1)"
+            #                        "and RFC 952"}, 406
         except Exception:
             pass
 
@@ -358,10 +359,9 @@ class NewBlueprint(Resource):
         try:
             blueprint_name = json_input["blueprint_id"]
             invalid_name, response = deployment_io.validate_blueprint_name(blueprint_name)
-            if invalid_name:
-                return {
-                           "message": "blueprint id {} invalid. Must comply with RFC 1123 (section 2.1) and RFC 952".format(
-                               blueprint_name)}, 406
+            # if invalid_name:
+            #     return {"message": "blueprint id {} invalid. Must comply with RFC 1123 (section 2.1)"
+            #                        "and RFC 952"}, 406
         except Exception:
             pass
 
