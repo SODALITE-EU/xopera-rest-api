@@ -8,6 +8,7 @@ system-packages:
 	sudo apt update
 	sudo ./docker.sh
 	sudo ./system-packages.sh
+	pip install "opera[openstack]<0.5"
 
 ansible-packages:
 	sudo ansible-galaxy install -r Implementation/scripts/requirements.yml
