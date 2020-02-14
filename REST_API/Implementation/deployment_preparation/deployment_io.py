@@ -814,7 +814,10 @@ def configure_ssh_keys():
     os.chown(private_key_new, uid, gid)
     os.chmod(private_key_new, 0o400)
 
-    config = "ConnectTimeout 5\n" + "IdentityFile {}\n".format(private_key_new)
+    config = "ConnectTimeout 5\n" \
+             f"IdentityFile {private_key_new}\n" \
+             "UserKnownHostsFile=/dev/null\n" \
+             "StrictHostKeyChecking=no"
     config_file = File("config", config)
     config_file.write(Settings.ssh_keys_location)
 
