@@ -1,0 +1,8 @@
+- hosts: all
+  become: yes
+  tasks:  
+
+  - name: "add docker volume"
+    docker_volume:
+      name: "{{ volume_name }}"
+   

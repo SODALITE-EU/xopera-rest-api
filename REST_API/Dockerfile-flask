@@ -1,0 +1,52 @@
+# Dockerfile-flask
+
+#####################################################
+#################     START BIG     #################
+#####################################################
+
+FROM python:3.6-alpine as big
+
+# Install prerequisites
+RUN apk add build-base musl-dev linux-headers libffi-dev libressl-dev postgresql-dev bash openssh-client
+
+# install python packages
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+RUN pip wheel --wheel-dir=/root/wheels -r requirements.txt
+
+#####################################################
+#################   MAKE IT SMALL   #################
+#####################################################
+
+FROM python:3.6-alpine as small
+
+# Install prerequisites
+RUN apk add build-base musl-dev linux-headers libffi-dev libressl-dev postgresql-dev bash openssh-client
+
+# copy python packages from big image
+COPY requirements.txt .
+COPY --from=big /root/wheels /root/wheels
+RUN pip install --find-links=/root/wheels -r requirements.txt
+
+# Install required ansible libraries
+RUN ansible-galaxy install geerlingguy.docker && \
+    ansible-galaxy install geerlingguy.pip && \
+    ansible-galaxy install geerlingguy.repo-epel
+
+# Copy required certificates and install them
+COPY Certs/ca.crt /home/xopera/certs/ca.crt
+COPY Certs/ca.key /home/xopera/certs/ca.key
+COPY Certs/firstdeploy/*.crt /home/xopera/certs/xopera.local.crt
+COPY Certs/firstdeploy/*.key /home/xopera/certs/xopera.local.key
+COPY Certs/ca.crt /usr/local/share/ca-certificates/ca.crt
+RUN update-ca-certificates
+
+# We copy codebase into the image
+COPY Implementation /usr/local/xopera_rest/Implementation
+WORKDIR /usr/local/xopera_rest/Implementation
+
+# Expose the port uWSGI will listen on
+EXPOSE 5000
+
+
+CMD [ "uwsgi", "--ini", "app.ini" ]

@@ -1,0 +1,28 @@
+# docker-compose.yml
+
+version: '3'
+services:
+
+  flask:
+    image: xopera-flask
+    build:
+      context: .
+      dockerfile: Dockerfile-flask
+    volumes:
+      - "./Implementation:/usr/local/xopera_rest/Implementation"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "/root/.ssh/:/root/.ssh/"
+      - "/home/xopera/certs:/home/xopera/certs"
+
+  nginx:
+    image: xopera-nginx
+    build:
+      context: .
+      dockerfile: Dockerfile-nginx
+    ports:
+      - 5000:80
+      - 443:443
+    depends_on:
+      - flask
+    volumes:
+      - "/etc/ssl/certs:/etc/nginx/certs"

@@ -1,0 +1,6 @@
+ssh-key-name: 154-48-185-206-xOpera
+image-name: centos7
+network-name: orchestrator-net
+security-groups: default,sodalite-remote-access,sodalite-rest
+flavor-name: m1.medium
+docker-registry-ip: 154.48.185.207

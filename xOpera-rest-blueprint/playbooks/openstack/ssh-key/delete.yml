@@ -1,0 +1,16 @@
+- hosts: all
+  become_user: root
+  become: yes
+  tasks:
+  - name: Find OpenStack keys
+
+    find:
+      paths: "/root/.ssh/"
+      patterns: "*xOpera*"
+    register: files_to_delete
+
+  - name: Delete OpenStack keys
+    file:
+      path: "{{ item.path }}"
+      state: absent
+    with_items: "{{ files_to_delete.files }}"

@@ -1,0 +1,529 @@
+tosca_definitions_version: tosca_simple_yaml_1_2
+
+
+data_types: 
+ 
+
+  sodalite.nodes.OpenStack.SecurityRule:  
+    derived_from: tosca.datatypes.Root 
+    properties:  
+      protocol:  
+        required: True 
+        type: string 
+        default: tcp 
+        constraints:  
+          valid_values: ['tcp', 'udp', 'icmp'] 
+      port_range_min:  
+        required: True 
+        type: tosca.datatypes.network.PortDef 
+      port_range_max:  
+        type: tosca.datatypes.network.PortDef 
+        required: True 
+      remote_ip_prefix:  
+        default: 0.0.0.0/0 
+        required: True 
+        type: string 
+
+
+
+node_types: 
+
+  sodalite.nodes.ConfigureKeys:
+    derived_from: tosca.nodes.SoftwareComponent
+    requirements:
+      - host:
+          capability: tosca.capabilities.Compute
+          node: sodalite.nodes.VM.OpenStack
+    interfaces:
+      Standard:
+        type: tosca.interfaces.node.lifecycle.Standard
+        create:      
+          inputs:
+            public_ipv4_address: { default: { get_attribute: [ SELF, host, public_address ] } }
+          implementation:
+            primary: playbooks/openstack/ssh-key/create.yml
+        delete: playbooks/openstack/ssh-key/delete.yml
+
+
+  sodalite.nodes.DockerVolume:
+    derived_from: tosca.nodes.SoftwareComponent
+    properties:
+      name:
+        type: string
+        description: The name of the volume
+        required: true
+    requirements:
+      - host:
+          capability: tosca.capabilities.Compute
+          node: sodalite.nodes.VM.OpenStack
+          relationship: sodalite.relationships.VmDockerHosting    
+    interfaces:
+      Standard:
+        type: tosca.interfaces.node.lifecycle.Standard
+        create:
+          inputs:
+            volume_name:    { default: { get_property: [ SELF, name ] } }
+          implementation:
+            primary: playbooks/docker/add_volume.yml 
+        delete:
+          inputs:
+            volume_name:    { default: { get_property: [ SELF, name ] } }
+          implementation:
+            primary: playbooks/docker/remove_volume.yml   
+
+  sodalite.nodes.DockerNetwork:
+    #derived_from: tosca.nodes.network.Network nework node type not supported by xopera
+    derived_from: tosca.nodes.SoftwareComponent
+    properties:
+      name:
+        type: string
+        description: The name of the network
+        required: true
+    capabilities:
+      network:
+        type: tosca.capabilities.Network
+        valid_source_types: [ sodalite.nodes.DockerizedComponent ]
+    requirements:
+      - host:
+          capability: tosca.capabilities.Compute
+          node: sodalite.nodes.VM.OpenStack
+          relationship: sodalite.relationships.VmDockerHosting    
+    interfaces:
+      Standard:
+        type: tosca.interfaces.node.lifecycle.Standard
+        create:
+          inputs:
+            docker_network_name:    { default: { get_property: [ SELF, name ] } }
+          implementation:
+            primary: playbooks/docker/add_network.yml 
+        delete:
+          inputs:
+            docker_network_name:    { default: { get_property: [ SELF, name ] } }
+          implementation:
+            primary: playbooks/docker/remove_network.yml 
+
+  sodalite.nodes.DockerizedComponent:  
+    derived_from: tosca.nodes.SoftwareComponent 
+    properties:  
+      admin_credential:  
+        description: The optional credential that can be used to authenticate to the software component. 
+        required: False 
+        type: tosca.datatypes.Credential 
+      command:  
+        description: Commands list for starting the container 
+        default:   
+        type: list 
+        required: False 
+      volumes:  
+        description: A list of mounted volumes for the docker container "host_path:container_path" like "/tmp/docker:/tmp" 
+        type: list 
+        default: [] 
+        required: False 
+      exposed_ports:  
+        description: Exposed ports of the container like "8081" 
+        type: string 
+        default: [] 
+        required: True 
+      component_version:  
+        description: Domain-specific software component version. 
+        type: version 
+        required: False 
+      restart_policy:  
+        description: Restart policy [no, on-failure, always, unless-stopped] 
+        default: False 
+        type: string 
+        required: False 
+      pull:  
+        description: If true, always pull the latest version of an image. Otherwise, will only pull an image when missing. 
+        required: False 
+        type: string 
+        default: False 
+      env:  
+        description: Map for docker enviroment variables key-value dictionary 
+        required: False 
+        type: map 
+      image_name:  
+        description: The name of the image on the host 
+        required: True 
+        type: string 
+      alias:  
+        description: Alias name for docker container 
+        type: string 
+        required: False 
+      ports:  
+        description: Port binding for the docker container "exposed:internal" like "8081:8080" 
+        type: string 
+        required: True 
+        default: [] 
+    attributes:  
+      tosca_name:  
+        description: Reflects the name of the Node Template as defined in the TOSCA service template. This name is not unique to the realized instance model of corresponding deployed application as each template in the model can result in one or more instances (e.g., scaled) when orchestrated to a provider environment. 
+        type: string 
+      tosca_id:  
+        description: A unique identifier of the realized instance of a Node Template that derives from any TOSCA normative type 
+        type: string 
+      state:  
+        description: The state of the node instance. 
+        type: string 
+    requirements:  
+      - host:  
+          capability: tosca.capabilities.Node 
+          relationship: tosca.relationships.HostedOn 
+          node: sodalite.nodes.DockerHost 
+      - network:
+          capability: tosca.capabilities.Network
+          node: sodalite.nodes.DockerNetwork    
+          occurrences:  
+            min: 0 
+            max: 1   
+      - dependency:  
+          node: tosca.nodes.Root 
+          relationship: tosca.relationships.DependsOn 
+          capability: tosca.capabilities.Node 
+          occurrences:  
+            min: 0 
+            max: UNBOUNDED 
+    capabilities:  
+      feature:  
+        type: tosca.capabilities.Node 
+    interfaces:  
+      Standard:  
+        delete:  
+          implementation:  
+            primary: playbooks/docker/dockerized_component_undeploy.yml 
+          inputs:  
+            alias: { default: { get_property: [ SELF, alias ] } } 
+        create:  
+          inputs:  
+            env: { default: { get_property: [ SELF, env ] } } 
+            ports: { default: { get_property: [ SELF, ports ] } } 
+            restart_policy: { default: { get_property: [ SELF, restart_policy ] } } 
+            image_name: { default: { get_property: [ SELF, image_name ] } } 
+            alias: { default: { get_property: [ SELF, alias ] } } 
+            exposed_ports: { default: { get_property: [ SELF, exposed_ports ] } } 
+            registry_ip: { default: { get_attribute: [ SELF, host, registry_ip ] } } 
+            ansible_ip: { default: { get_attribute: [ SELF, host, ansible_ip ] } } 
+            volumes: { default: { get_property: [ SELF, volumes ] } } 
+            command: { default: { get_property: [ SELF, command ] } } 
+            pull: { default: { get_property: [ SELF, pull ] } } 
+            docker_network_name:          { default: { get_property: [ SELF, network, name ] } }
+          implementation:  
+            primary: playbooks/docker/dockerized_component_deploy.yml 
+        type: tosca.interfaces.node.lifecycle.Standard 
+
+  sodalite.nodes.OpenStack.SecurityRules:  
+    derived_from: tosca.nodes.Root 
+    properties:  
+      group_name:  
+        description: Name of the security group in openstack. 
+        required: True 
+        type: string 
+      ports:  
+        required: False 
+        constraints:  
+          min_length: 1 
+        type: map 
+        entry_schema:  
+          type: sodalite.nodes.OpenStack.SecurityRule 
+      group_description:  
+        description: Description of the security group in openstack. 
+        required: True 
+        type: string 
+    attributes:  
+      tosca_id:  
+        description: A unique identifier of the realized instance of a Node Template that derives from any TOSCA normative type 
+        type: string 
+      tosca_name:  
+        description: Reflects the name of the Node Template as defined in the TOSCA service template. This name is not unique to the realized instance model of corresponding deployed application as each template in the model can result in one or more instances (e.g., scaled) when orchestrated to a provider environment. 
+        type: string 
+      state:  
+        description: The state of the node instance. 
+        type: string 
+    requirements:  
+      - dependency:  
+          capability: tosca.capabilities.Node 
+          node: tosca.nodes.Root 
+          relationship: tosca.relationships.DependsOn 
+          occurrences:  
+            min: 0 
+            max: UNBOUNDED 
+    capabilities:  
+      feature:  
+        type: tosca.capabilities.Node 
+    interfaces:  
+      Standard:  
+        delete:  
+          implementation: playbooks/openstack/security-rule/delete.yml 
+          inputs:  
+            group_name: { default: { get_property: [ SELF, group_name         ] } } 
+        create:  
+          implementation: playbooks/openstack/security-rule/create.yml 
+          inputs:  
+            ports: { default: { get_property: [ SELF, ports  ] } } 
+            group_name: { default: { get_property: [ SELF, group_name         ] } } 
+            group_description: { default: { get_property: [ SELF, group_description  ] } } 
+        type: tosca.interfaces.node.lifecycle.Standard 
+
+  sodalite.nodes.DockerHost:  
+    derived_from: tosca.nodes.SoftwareComponent 
+    properties:  
+      admin_credential:  
+        description: The optional credential that can be used to authenticate to the software component. 
+        type: tosca.datatypes.Credential 
+        required: False 
+      component_version:  
+        description: Domain-specific software component version. 
+        required: False 
+        type: version 
+      registry_ip:  
+        description: IP of the SODALITE docker registry 
+        default: localhost 
+        required: True 
+        type: string 
+    attributes:  
+      state:  
+        description: The state of the node instance. 
+        type: string 
+      tosca_name:  
+        description: Reflects the name of the Node Template as defined in the TOSCA service template. This name is not unique to the realized instance model of corresponding deployed application as each template in the model can result in one or more instances (e.g., scaled) when orchestrated to a provider environment. 
+        type: string 
+      tosca_id:  
+        description: A unique identifier of the realized instance of a Node Template that derives from any TOSCA normative type 
+        type: string 
+      registry_ip:  
+        description: IP of the SODALITE docker registry 
+        type: string 
+    requirements:  
+      - host:  
+          capability: tosca.capabilities.Compute 
+          relationship: tosca.relationships.HostedOn 
+          node: tosca.nodes.Compute 
+      - dependency:  
+          occurrences:  
+            max: UNBOUNDED 
+            min: 0 
+          capability: tosca.capabilities.Node 
+          node: tosca.nodes.Root 
+          relationship: tosca.relationships.DependsOn 
+    capabilities:  
+      host:  
+        type: tosca.capabilities.Node 
+        valid_source_types: ['sodalite.nodes.DockerizedComponent'] 
+      feature:  
+        type: tosca.capabilities.Node 
+    interfaces:  
+      Standard:  
+        delete:  
+          implementation:  
+            primary: playbooks/docker/destroy_docker_host.yml 
+          inputs:  
+            registry_ip: { default: { get_property: [ SELF, registry_ip ] } } 
+        create:  
+          inputs:  
+            registry_ip: { default: { get_property: [ SELF, registry_ip ] } } 
+            public_ipv4_address: { default:  { get_attribute: [ SELF, host, public_address ] } } 
+          implementation:  
+            primary: playbooks/docker/create_docker_host.yml 
+        type: tosca.interfaces.node.lifecycle.Standard 
+
+  sodalite.nodes.OpenStack.VM:  
+    derived_from: tosca.nodes.Compute 
+    properties:  
+      network:  
+        description: OpenStack network id (network names are not accepted) 
+        type: string 
+      name:  
+        description: Name that should be given to the VM in OpenStack 
+        type: string 
+      security_groups:  
+        description: OpenStack names of the security groups to which the instance should be added.Comma separated string. 
+        type: string 
+      flavor:  
+        description: OpenStack flavor id (flavor names are not accepted) 
+        type: string 
+      image:  
+        description: OpenStack image id (image names are not accepted) 
+        type: string 
+      key_name:  
+        description: OpenStack SSH key name that should be placed on the VM 
+        type: string 
+    attributes:  
+      tosca_id:  
+        description: A unique identifier of the realized instance of a Node Template that derives from any TOSCA normative type 
+        type: string 
+      networks:  
+        description: The list of logical networks assigned to the compute host instance and information about them. 
+        type: map 
+      entry_schema:  
+        type: tosca.datatypes.network.NetworkInfo
+      id:  
+        description: OpenStack id of the VM 
+        type: string
+      tosca_name:  
+        description: Reflects the name of the Node Template as defined in the TOSCA service template. This name is not unique to the realized instance model of corresponding deployed application as each template in the model can result in one or more instances (e.g., scaled) when orchestrated to a provider environment. 
+        type: string 
+      state:  
+        description: The state of the node instance. 
+        type: string 
+      ansible_ip:  
+        description: ansible ipv4 
+        type: string 
+      public_address:  
+        description: The primary public IP address assigned by the cloud provider that applications may use to access the Compute node. 
+        type: string 
+      private_address:  
+        description: The primary private IP address assigned by the cloud provider that applications may use to access the Compute node. 
+        type: string 
+      ports:  
+        description: The list of logical ports assigned to the compute host instance and information about them. 
+        type: map 
+        entry_schema:  
+          type: tosca.datatypes.network.PortInfo 
+    requirements:  
+      - protected_by:  
+          relationship: tosca.relationships.DependsOn 
+          node: sodalite.nodes.OpenStack.SecurityRules 
+          capability: tosca.capabilities.Node 
+      - dependency:  
+          capability: tosca.capabilities.Node 
+          node: tosca.nodes.Root 
+          relationship: tosca.relationships.DependsOn 
+          occurrences:  
+            max: UNBOUNDED 
+            min: 0 
+      - local_storage:  
+          capability: tosca.capabilities.Attachment 
+          relationship: tosca.relationships.AttachesTo 
+          node: tosca.nodes.Storage.BlockStorage 
+          occurrences:  
+            min: 0 
+            max: UNBOUNDED 
+    capabilities:  
+      scalable:  
+        type: tosca.capabilities.Scalable 
+      host:  
+        valid_source_types: ['tosca.nodes.SoftwareComponent'] 
+        type: tosca.capabilities.Compute 
+      feature:  
+        type: tosca.capabilities.Node 
+      binding:  
+        type: tosca.capabilities.network.Bindable 
+      os:  
+        type: tosca.capabilities.OperatingSystem 
+      endpoint:  
+        type: tosca.capabilities.Endpoint.Admin 
+    interfaces:  
+      Standard:  
+        type: tosca.interfaces.node.lifecycle.Standard 
+        create:  
+          inputs:  
+            network: { default: { get_property: [ SELF, network  ] } } 
+            flavor: { default: { get_property: [ SELF, flavor   ] } } 
+            key_name: { default: { get_property: [ SELF, key_name ] } } 
+            image: { default: { get_property: [ SELF, image    ] } } 
+            security_groups: { default: { get_property: [ SELF, security_groups  ] } } 
+            vm_name: { default: { get_property: [ SELF, name     ] } } 
+          implementation: playbooks/openstack/vm/create.yml 
+        delete:  
+          inputs:  
+            id: { default: { get_attribute: [ SELF, id ] } } 
+          implementation: playbooks/openstack/vm/delete.yml 
+
+
+topology_template:
+
+  inputs:  
+    docker-registry-ip:  
+      type: string 
+    ssh-key-name:  
+      type: string 
+    image-name:  
+      type: string 
+    network-name:  
+      type: string 
+    security-groups:  
+      type: string    
+    flavor-name:  
+      type: string
+
+
+  node_templates: 
+
+    security-rules-rest:
+      type: sodalite.nodes.OpenStack.SecurityRules 
+      properties:  
+        ports:
+          http_port:  
+            port_range_min: 5000
+            port_range_max: 5000
+            protocol: tcp 
+            remote_ip_prefix: 0.0.0.0/0
+          https_port:
+            port_range_min: 443
+            port_range_max: 443
+            protocol: tcp
+            remote_ip_prefix: 0.0.0.0/0
+        group_name:  sodalite-rest
+        group_description:  Security group for REST API
+
+    xOpera-vm:
+      type: sodalite.nodes.OpenStack.VM 
+      properties:  
+        key_name:  { get_input: ssh-key-name } 
+        image:     { get_input: image-name } 
+        name:  xOpera
+        network:   { get_input: network-name }
+        security_groups: { get_input: security-groups }
+        flavor: { get_input: flavor-name }
+      requirements:  
+       - protected_by:  security-rules-rest
+
+    xOpera-docker-host:
+      type: sodalite.nodes.DockerHost 
+      properties:  
+        registry_ip:  { get_input: docker-registry-ip } 
+      requirements:  
+        - host:  xOpera-vm
+
+    xOpera-docker-network:
+      type: sodalite.nodes.DockerNetwork
+      properties:  
+        name: xOpera
+      requirements:
+        - host: xOpera-vm
+
+    xOpera-OpenStack-keys:
+      type: sodalite.nodes.ConfigureKeys
+      requirements:
+        - host: xOpera-vm
+
+    xOpera-flask:
+      type: sodalite.nodes.DockerizedComponent
+      properties:
+        image_name:  xopera-flask:latest
+        exposed_ports:  ['5000']
+#        env:
+#           DATABASE_IP: { get_input: database_ip }
+        volumes:
+          - "/var/run/docker.sock:/var/run/docker.sock"
+          - "/root/.ssh/:/root/.ssh/"
+          - "/home/xopera/certs:/home/xopera/certs"
+        alias: flask
+      requirements:
+        - host:  xOpera-docker-host
+        - network: xOpera-docker-network
+        - dependency: xOpera-OpenStack-keys
+
+    xOpera-nginx:
+      type: sodalite.nodes.DockerizedComponent
+      properties:
+        image_name:  xopera-nginx:latest
+        ports:  ['443:443', '5000:80']
+        exposed_ports:  ['443', '5000']
+        volumes:
+          - "/home/xopera/certs:/etc/nginx/certs"
+        alias: nginx
+      requirements:
+        - host:  xOpera-docker-host
+        - dependency: xOpera-flask
+        - network: xOpera-docker-network

@@ -1,0 +1,41 @@
+- hosts: all
+  become_user: root
+  become: yes
+
+  tasks:
+    - set_fact:
+        auto_remove: "{% if  restart_policy == 'always' %} no {% else %} yes {% endif %}"      
+
+    - name: Create docker container and connect to network
+      docker_container:
+        name: "{{ alias }}"
+        image: "{{ registry_ip }}/{{ image_name }}"
+        auto_remove: no
+        command: "{{ command }}"
+        env: "{{ env }}"
+        restart_policy: "{{ restart_policy }}"
+        pull: yes
+        ports: "{{ ports }}"
+        exposed_ports: "{{ exposed_ports }}"
+        volumes: "{{ volumes }}"        
+        networks: 
+          - name: "{{ docker_network_name }}"        
+            aliases:
+              - "{{ alias }}"
+      when: docker_network_name != None            
+    
+    - name: Create docker container
+      docker_container:
+        name: "{{ alias }}"
+        image: "{{ registry_ip }}/{{ image_name }}"
+        auto_remove: no
+        command: "{{ command }}"
+        env: "{{ env }}"
+        restart_policy: "{{ restart_policy }}"
+        pull: yes
+        ports: "{{ ports }}"
+        exposed_ports: "{{ exposed_ports }}"
+        volumes: "{{ volumes }}"        
+      when: docker_network_name == None      
+
+
