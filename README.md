@@ -63,6 +63,10 @@ or run stages separately:
     make tests
     make run_docker
 
+## Production stack
+
+To deploy xOpera REST API in production stack (FLASK + uWSGI + NGINX), use [docker compose](REST_API/docker-compose.yml) or [TOSCA template](xOpera-rest-blueprint).
+
 ## Manual installation
 See [manual installation](#Instructions-for-manual-installation-and-run).
 

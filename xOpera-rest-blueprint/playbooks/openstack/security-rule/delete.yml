@@ -1,0 +1,10 @@
+---
+- hosts: all
+  gather_facts: no
+
+  tasks:
+    - name: Delete security group
+      os_security_group:  
+        name: "{{ group_name }}"
+        state: absent
+
