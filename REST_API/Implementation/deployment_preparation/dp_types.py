@@ -5,6 +5,11 @@ import uuid
 from pathlib import Path
 
 from deployment_preparation.settings import Settings
+from werkzeug.datastructures import FileStorage
+import shutil
+import yaml
+import json
+import glob
 
 
 class Node:
@@ -167,7 +172,7 @@ class Deployment:
         if rc_file is None:
             try:
                 self.rc_file = File.read(Path(self.template + "openrc.sh"))
-            except FileNotFoundError:
+            except (FileNotFoundError, AttributeError):
                 self.rc_file = Dummy()
         else:
             self.rc_file = rc_file
@@ -221,3 +226,39 @@ class Deployment:
                               blueprint_token=blueprint_token)
         except (KeyError, TypeError, FileNotFoundError):
             return None
+
+    @staticmethod
+    def from_csar(blueprint_token: uuid, CSAR: FileStorage):
+
+        tmp_dir = Path(f'/tmp/xopera/{str(blueprint_token)}')
+        CSAR_path = tmp_dir / Path(CSAR.filename)
+        blueprint_path = tmp_dir / Path('blueprint')
+        os.makedirs(tmp_dir)
+        CSAR.save(CSAR_path.open('wb'))
+        shutil.unpack_archive(str(CSAR_path), extract_dir=str(blueprint_path))
+        tosca_meta_path = Path(blueprint_path / 'TOSCA.meta')
+        if tosca_meta_path.exists():
+            meta = yaml.safe_load(tosca_meta_path.open('r'))
+            # author = meta['Created-By']
+            entry_definitions = blueprint_path / Path(meta['Entry-Definitions'])
+            name = meta['CSAR-name']
+            # timestamp = meta['CSAR-timestamp']
+        else:
+            yaml_files = glob.glob(str(blueprint_path) + "/*.yaml") + glob.glob(str(blueprint_path) + "/*.yml")
+            if len(yaml_files) != 1:
+                return None
+
+            entry_definitions = Path(yaml_files[0])
+            entry_definitions_json = yaml.safe_load(entry_definitions.open('r'))
+            meta = entry_definitions_json['metadata']
+            # author = meta['template_author']
+            name = meta['template_name']
+            # timestamp = datetime.datetime.now().timestamp()
+
+        deployment = Deployment(id=name,
+                                tosca=File.read(entry_definitions),
+                                ansible_tree=Directory.read(blueprint_path / Path("playbooks")),
+                                blueprint_token=blueprint_token)
+        deployment.tosca.name = 'service.yaml'
+        shutil.rmtree(tmp_dir)
+        return deployment
