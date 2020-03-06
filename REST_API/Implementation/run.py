@@ -25,7 +25,6 @@ args = parser.parse_args()
 Settings.interpreter = args.interpreter
 print(f'Interpreter: {Settings.interpreter}')
 
-
 try:
     database = PostgreSQL(Settings.connection)
     log.info('Database: PostgreSQL')
@@ -52,7 +51,7 @@ api = Api(app=flask_app, version='beta', title="xOpera REST api",
                       "4) After completion, check logs with GET to /info/log\n\n"
                       "UNDEPLOY\n"
                       "1) undeploy blueprint with DELETE to /deploy/{blueprint_token}\n"
-                      "- optionally, inputs file to be used with template must also be uploaded within same API call\n" 
+                      "- optionally, inputs file to be used with template must also be uploaded within same API call\n"
                       " - optionally also in combination with version_id or timestamp\n - save session_token\n "
                       "2) using status_token with GET to /info/status check status of your job\n"
                       "3) After completion, check logs with GET to /info/log\n"
@@ -65,6 +64,7 @@ api = Api(app=flask_app, version='beta', title="xOpera REST api",
 # namespaces
 ssh = api.namespace('ssh', description='SSH key management')
 manage = api.namespace('manage', description='save or view blueprint')
+manage_csar = api.namespace('manage_csar', description='save or view blueprint in csar format')
 deploy = api.namespace('deploy', description='deploy or undeploy blueprint')
 info = api.namespace('info', description='information about deployment')
 
@@ -121,6 +121,11 @@ parser = reqparse.RequestParser()
 parser.add_argument('timestamp', type=inputs.datetime_from_iso8601, help='timestamp of blueprint version')
 parser.add_argument('version_id', type=int, help='id of blueprint version')
 parser.add_argument('force', type=inputs.boolean, help='force delete blueprint')
+
+# CSAR parser
+csar_parser = api.parser()
+csar_parser.add_argument('CSAR', location='files', type=FileStorage, required=True,
+                         help='TOSCA Cloud Service Archive')
 
 
 @ssh.route('/keys/public')
@@ -183,7 +188,8 @@ class Status(Resource):
 @deploy.param('blueprint_token', 'token of blueprint')
 class Deploy(Resource):
     upload_parser = api.parser()
-    upload_parser.add_argument('inputs_file', location='files', type=FileStorage, required=False, help='File with inputs for TOSCA template')
+    upload_parser.add_argument('inputs_file', location='files', type=FileStorage, required=False,
+                               help='File with inputs for TOSCA template')
     upload_parser.add_argument('timestamp', type=inputs.datetime_from_iso8601, help='timestamp of blueprint version')
     upload_parser.add_argument('version_id', type=int, help='id of blueprint version')
 
@@ -204,7 +210,8 @@ class Deploy(Resource):
             return {"message": 'Did not find blueprint with token: {}, timestamp: {} and version_id: {} '.format(
                 blueprint_token, timestamp or 'any', version_id or 'any')}, 404
 
-        session_token = xopera_link.deploy_by_token(blueprint_token=blueprint_token, deployment=deployment, inputs_file=file)
+        session_token = xopera_link.deploy_by_token(blueprint_token=blueprint_token, deployment=deployment,
+                                                    inputs_file=file)
 
         message = "Deploying '{}', session_token: {}".format(blueprint_token, session_token)
         log.info(message)
@@ -234,8 +241,9 @@ class Deploy(Resource):
                 blueprint_token, timestamp or 'any', version_id or 'any')}, 404
 
         if not last_deployment_data:
-            return {"message": 'Blueprint with token: {}, timestamp: {} and version_id: {} has not been deployed yet '.format(
-                blueprint_token, timestamp or 'any', version_id or 'any')}, 404
+            return {
+                       "message": 'Blueprint with token: {}, timestamp: {} and version_id: {} has not been deployed yet '.format(
+                           blueprint_token, timestamp or 'any', version_id or 'any')}, 404
 
         session_token = xopera_link.undeploy_by_token(blueprint_token=blueprint_token, blueprint_id=deployment.id,
                                                       blueprint_timestamp=deployment.timestamp,
@@ -380,6 +388,77 @@ class NewBlueprint(Resource):
                        "message": f"Invalid TOSCA: {response}"}, 406
 
         if deployment is not None:
+            database.add_revision(deploy=deployment, version_id=version_id)
+            timestamp = database.get_timestamp(blueprint_token=str(blueprint_token), version_id=version_id)
+            return {
+                       'message': "Saved blueprint to database",
+                       "id": deployment.id,
+                       "blueprint_token": str(blueprint_token),
+                       "version_id": version_id,
+                       "timestamp": Settings.datetime_to_str(timestamp)
+                   }, 200
+        else:
+            return {
+                       "message": "Format not acceptable!"
+                   }, 406
+
+
+@manage_csar.param('blueprint_token', 'token of blueprint')
+@manage_csar.route('/<string:blueprint_token>')
+class ManageCsar(Resource):
+
+    @manage_csar.expect(csar_parser)
+    @manage_csar.response(200, 'Successfully saved blueprint to database', blueprint_metadata_model)
+    @manage_csar.response(404, 'Blueprint token not found', just_message_model)
+    @manage_csar.response(406, 'Format not acceptable', just_message_model)
+    def post(self, blueprint_token):
+        args = csar_parser.parse_args()
+        file = args.get('CSAR')
+
+        if not database.check_token_exists(blueprint_token):
+            return {"message": "Blueprint token does not exist, 'manage' route instead"}, 404
+
+        # deployment = Deployment.from_dict(blueprint_token=blueprint_token, dictionary=json_input)
+        deployment = Deployment.from_csar(blueprint_token=blueprint_token, CSAR=file)
+
+        invalid_tosca, response = deployment_io.validate_tosca(deployment)
+        if invalid_tosca:
+            return {
+                       "message": f"Invalid TOSCA: {response}"}, 406
+
+        if deployment is not None:
+            version_id = database.get_max_version_id(blueprint_token) + 1
+            database.add_revision(deploy=deployment, version_id=version_id)
+            timestamp = database.get_timestamp(blueprint_token=blueprint_token, version_id=version_id)
+            return {
+                       'message': "Saved blueprint to database",
+                       "id": deployment.id,
+                       "blueprint_token": str(blueprint_token),
+                       "version_id": version_id,
+                       "timestamp": Settings.datetime_to_str(timestamp)
+                   }, 200
+        else:
+            return {"message": "Format not acceptable!"}, 406
+
+
+@manage_csar.route("")
+class NewBlueprintCsar(Resource):
+    @manage_csar.response(200, 'Successfully saved blueprint to database', blueprint_metadata_model)
+    @manage_csar.response(406, 'Format not acceptable', just_message_model)
+    @manage_csar.expect(csar_parser)
+    def post(self):
+        args = csar_parser.parse_args()
+        file = args.get('CSAR')
+        blueprint_token = uuid.uuid4()
+        version_id = database.get_max_version_id(str(blueprint_token)) + 1
+
+        deployment = Deployment.from_csar(blueprint_token=blueprint_token, CSAR=file)
+        invalid_tosca, response = deployment_io.validate_tosca(deployment)
+        if invalid_tosca:
+            return {
+                       "message": f"Invalid TOSCA: {response}"}, 406
+
+        if deployment:
             database.add_revision(deploy=deployment, version_id=version_id)
             timestamp = database.get_timestamp(blueprint_token=str(blueprint_token), version_id=version_id)
             return {
