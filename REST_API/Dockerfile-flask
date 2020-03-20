@@ -7,7 +7,7 @@
 FROM python:3.6-alpine as big
 
 # Install prerequisites
-RUN apk add build-base musl-dev linux-headers libffi-dev libressl-dev postgresql-dev bash openssh-client
+RUN apk add build-base musl-dev linux-headers libffi-dev libressl-dev postgresql-dev bash openssh-client git
 
 # install python packages
 COPY requirements.txt .
@@ -21,7 +21,7 @@ RUN pip wheel --wheel-dir=/root/wheels -r requirements.txt
 FROM python:3.6-alpine as small
 
 # Install prerequisites
-RUN apk add build-base musl-dev linux-headers libffi-dev libressl-dev postgresql-dev bash openssh-client
+RUN apk add build-base musl-dev linux-headers libffi-dev libressl-dev postgresql-dev bash openssh-client git
 
 # copy python packages from big image
 COPY requirements.txt .

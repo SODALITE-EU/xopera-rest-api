@@ -7,13 +7,39 @@ Implementation of the xOpera orchestrator REST API
     - Python 3.6 with pip 20.0.2 or newer
     - Docker engine 19.03 or newer
 
+### GIT backend server (optional, recommended)
+xOpera REST API uses git to store blueprints. It supports github.com and gitlab (both gitlab.com and private gitlab based servers).
+If GIT server is not set it uses computer's filesystem to store git repos.
+
+To connect REST API to github.com:
+ - obtain [github access token](https://github.com/settings/tokens) with repo end delete_repo permissions
+ - export following environmental variables:
+    - XOPERA_GIT_TYPE=github
+    - XOPERA_GIT_AUTH_TOKEN=[your_github_access_token]
+    
+To connect REST API to gitlab server:
+ - obtain [Gitlab's Personal Access Token](https://xxx.xx/profile/personal_access_tokens) with api scope
+ - export following environmental variables:
+    - XOPERA_GIT_TYPE=gitlab
+    - XOPERA_GIT_URL=[url_to_your_gitlab_server]
+    - XOPERA_GIT_AUTH_TOKEN=[your_personal_access_token]
+
+
+See [example config](REST_API/Implementation/settings/example_settings.sh).
 ### PostgreSQL (optional, recommended)
 Rest API is using PostgreSQL database for saving bluepints and deployment logs.
 If PostgreSQL database is not available, it uses computer's filesystem.
 
-To connect REST API to PostgreSQL database, export DATABASE_IP:
-    
-    export DATABASE_IP=[you_database_ip]
+To connect REST API, config must be exported as series of environmental variables:
+- XOPERA_DATABASE_IP=[database_ip]
+- XOPERA_DATABASE_PORT=[database_port]
+- XOPERA_DATABASE_NAME=[database_name]
+- XOPERA_DATABASE_USER=[database_username]
+- XOPERA_DATABASE_PASSWORD=[database_password]
+- XOPERA_DATABASE_TIMEOUT=[database_timeout], optional
+- XOPERA_DATABASE_LOG_TABLE=[table_name_for_logs], optional
+
+See [example config](REST_API/Implementation/settings/example_settings.sh).
 
 PostgreSQL can be also run as [docker container](#PostgreSQL-docker)
 
@@ -22,7 +48,7 @@ In most applications, REST API needs docker registry to store docker images.
 It can be run [locally](#Local-docker-registry) or [remotely](#Connect-to-remote-registry).
 See [docker docs](https://docs.docker.com/engine/security/certificates/) for more details.
 If installing with `make`, certificates for remote registry are going to be configured automatically.
-    
+
 ## Quick start
 
 ### Local run
@@ -87,7 +113,7 @@ Standard scenarios of using REST api:
     - save blueprint_metadata, returned by API call -> it is the only way of accessing your blueprint afterwards
 - deploy last version of blueprint with POST to /deploy/{blueprint_token}
     - optionally, inputs file to be used with template must also be uploaded within same API call
-    - another version can be specified by version_id or timestamp
+    - another version can be specified by version_tag
     - save session_token
 
 - using status_token from with GET to /info/status check status of your job
@@ -96,56 +122,35 @@ Standard scenarios of using REST api:
 ### UNDEPLOY
 - undeploy blueprint with DELETE to /deploy/{blueprint_token}
     - optionally, inputs file to be used with template must also be uploaded within same API call
-    - optionally also in combination with version_id or timestamp
+    - optionally also in combination with version_tag
     - save session_token
 - using status_token with GET to /info/status check status of your job
 - After completion, check logs with GET to /info/log
 - Delete all versions of blueprint from database with DELETE to /manage/{blueprint_token}
-    - to delete just specific version, use version_id or timestamp
+    - to delete just specific version, use version_tag
     - if deployment from template has not been undeployed yet, blueprint cannot be deleted-> use ‘force’ to override
-    
-Check [HTTP requests](REST_API/Documentation/requests.http) for exact API calls.
 
+### ACCESS TO REPOSITORY WITH BLUEPRINTS
+- xOpera REST API uses git backend for storing blueprints
+- to obtain access, POST to /manage/<blueprint_token>/user endpoint username
+    - invitation for user with username will be sent to its email address
+- with GET to /manage/<blueprint_token>/user user_list can be obtained
 
+## TOSCA 1.3 Cloud Service Archive (CSAR) format
 
+xOpera REST API uses CSAR format as input format for uploading blueprints to REST API server.
 
-## JSON deployment format
+### Converting blueprint to CSAR
 
-### Converting deployment to JSON
-
-Blueprint can be transformed to JSON format with [blueprint2json script](REST_API/Implementation/scripts/blueprint2json.py).
+Blueprint can be transformed to CSAR format with [blueprint2CSAR script](REST_API/Implementation/blueprint_converters/blueprint2CSAR.py).
 Check help:
-    `python3 scripts/blueprint2json.py --help`
 
-### Structure of JSON deployment format  
-    
-The general format is structured like shown below:
+    python3 scripts/blueprint2CSAR.py --help
 
-    {
-        "blueprint_id": "ID"
-        "tosca_definition": FILE,
-        "ansible_definition": DIRECTORY,
-        "config_script": FILE,
-        "timestamp": "YYYY-MM-DD hh:mm:ss.ssssss"
-    }
+[blueprint2CSAR](REST_API/Implementation/blueprint_converters/blueprint2CSAR.py) can also be used as python library to be included to your python application.
 
-DIRECTORY is structured like this (NAME is name string):
-
-    {
-        "name": "NAME",
-        "type": "dir",
-        "content": [LIST FILES IN THIS ARRAY]
-    }
-
-FILE is structured like this (NAME is name string, CONTENT is URL formatted string):
-
-    {
-        "name": "NAME",
-        "type": "file",
-        "content": "CONTENT"
-    }
-
-Check [sample blueprint](REST_API/Documentation/blueprint.json).
+### Structure of CSAR format  
+For details about CSAR format structure, visit [TOSCA Simple Profile in YAML Version 1.3](https://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.3/os/TOSCA-Simple-Profile-YAML-v1.3-os.html#_Toc26969474)
 
 ### Using xopera-key-name in templates
 
@@ -167,8 +172,6 @@ If get_input field name is set to `xopera-key-name`, rest api will automatically
 It can also be configured to custom get_input field name, but in this case, user must provide his own file with inputs.
 
     curl -X "POST" -F "inputs_file=@path/to/file.yaml" localhost:5000/deploy/567858fc-a1e8-43b4-91f5-cb04ec8be90b
-    
-See [api calls](REST_API/Documentation/requests.http) for more help.
 
 ### Using non default user
 xOpera by default uses administrator's credentials (provided during configuration of REST API) to login to Openstack.
@@ -191,7 +194,7 @@ Move to REST_API directory and install packages (requires sudo):
     
     sudo ./system-packages.sh
     pip3 install -r requirements.txt
-    sudo ansible-galaxy install -r Implementation/scripts/requirements.yml
+    sudo ansible-galaxy install -r requirements.yml
     
 #### Alpine
 
@@ -199,7 +202,7 @@ For alpine, run following commands:
 
     apk add gcc bash openssh-client python3-dev py-virtualenv linux-headers musl-dev libffi-dev libressl-dev postgresql-dev python3 pip3 ansible
     pip3 install -U wheel "opera[openstack]<0.5" Flask flask_restplus psycopg2 jinja2 docker-py
-    ansible-galaxy install -r Implementation/scripts/requirements.yml
+    ansible-galaxy install -r requirements.yml
     
 ##### Certificates
 Docker needs certificates to run properly. Run the command and provide details, when prompted.

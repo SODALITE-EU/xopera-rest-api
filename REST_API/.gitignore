@@ -6,3 +6,4 @@ storage/
 Builds/
 venv/
 .venv/
+tmp/

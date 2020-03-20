@@ -11,7 +11,7 @@ system-packages:
 	pip3 install "opera[openstack]<0.5"
 
 ansible-packages:
-	sudo ansible-galaxy install -r Implementation/scripts/requirements.yml
+	sudo ansible-galaxy install -r requirements.yml
 
 configure-certs: SHELL :=/bin/bash
 configure-certs:

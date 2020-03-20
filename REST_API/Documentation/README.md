@@ -1,10 +1,8 @@
 # Content of Documentation/ dir
-## [blueprint.json](blueprint.json)
-File [blueprint.json](blueprint.json) is an example of blueprint in json deployment format.
-More info about converting to JSON deployment format can be found in [main documentation](../../README.md)
+## [CSAR-local_blueprint.zip](CSAR-local_blueprint.zip)
+File [CSAR-local_blueprint.zip](CSAR-local_blueprint.zip) is an example of blueprint in CSAR format.
+More info about CSAR format can be found on [TOSCA Simple Profile in YAML Version 1.3](https://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.3/os/TOSCA-Simple-Profile-YAML-v1.3-os.html#_Toc26969474).
 
-## [requests.http](requests.http)
-File [requests.http](requests.http) contains sample request for xOpera REST API.
 
 
 ## [swagger.json](swagger.json)
