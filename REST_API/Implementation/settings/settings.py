@@ -1,3 +1,4 @@
+import copy
 import json
 import logging as log
 import os
@@ -36,8 +37,13 @@ class Settings:
             'type': os.getenv('XOPERA_GIT_TYPE', 'mock'),
             'url': os.getenv("XOPERA_GIT_URL", ""),
             'auth_token': os.getenv("XOPERA_GIT_AUTH_TOKEN", ""),
-            'workdir': Settings.workdir
+            'mock_workdir': Settings.workdir,
 
+            # optional params
+            'workdir': os.getenv("XOPERA_GIT_WORKDIR", "/tmp/git_db"),
+            'repo_prefix': os.getenv("XOPERA_GIT_REPO_PREFIX", "gitDB_"),
+            'commit_name': os.getenv("XOPERA_GIT_COMMIT_NAME", "SODALITE-xOpera-REST-API"),
+            'commit_mail': os.getenv("XOPERA_GIT_COMMIT_MAIL", "no-email@domain.com")
         }
 
         Settings.sql_config = {
@@ -65,9 +71,15 @@ class Settings:
 
         log.basicConfig(format="%(levelname)s: %(message)s", level=_nameToLevel.get(Settings.verbose, log.WARNING))
 
+        # prepare git_config for printing
+        __debug_git_config = copy.deepcopy(Settings.git_config)
+        __debug_git_config['auth_token'] = '****' if __debug_git_config['auth_token'] != "" else None
+        __debug_git_config['url'] = None if __debug_git_config['url'] is "" else __debug_git_config['url']
+        __debug_git_config['mock_workdir'] = str(__debug_git_config['mock_workdir'])
+
         log.debug(json.dumps({
             "sql_config": Settings.sql_config,
             "log_table": Settings.log_table,
-            "git_config": {key: (str(value) if isinstance(value, Path) else value) for key, value in Settings.git_config.items()},
+            "git_config": __debug_git_config,
             "verbose": Settings.verbose
         }, indent=2))
