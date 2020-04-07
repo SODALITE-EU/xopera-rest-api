@@ -43,7 +43,8 @@ class Settings:
             'workdir': os.getenv("XOPERA_GIT_WORKDIR", "/tmp/git_db"),
             'repo_prefix': os.getenv("XOPERA_GIT_REPO_PREFIX", "gitDB_"),
             'commit_name': os.getenv("XOPERA_GIT_COMMIT_NAME", "SODALITE-xOpera-REST-API"),
-            'commit_mail': os.getenv("XOPERA_GIT_COMMIT_MAIL", "no-email@domain.com")
+            'commit_mail': os.getenv("XOPERA_GIT_COMMIT_MAIL", "no-email@domain.com"),
+            'guest_permissions': os.getenv("XOPERA_GIT_GUEST_PERMISSIONS", "reporter")
         }
 
         Settings.sql_config = {

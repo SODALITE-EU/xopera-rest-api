@@ -16,11 +16,13 @@ class GitCsarDB:
         pass
 
     def __init__(self, connector: Connector, workdir="/tmp/git_db", repo_prefix='gitDB_',
-                 commit_name="SODALITE-xOpera-REST-API", commit_mail="some-email@xlab.si"):
+                 commit_name="SODALITE-xOpera-REST-API", commit_mail="some-email@xlab.si",
+                 guest_permissions="reporter"):
         self.git_connector = connector
         self.workdir = Path(workdir)
         self.workdir.mkdir(exist_ok=True)
         self.repo_prefix = repo_prefix
+        self.guest_permissions = guest_permissions
         self.commit_name = commit_name
         self.commit_mail = commit_mail
 
@@ -96,7 +98,7 @@ class GitCsarDB:
 
     def add_user(self, csar_token: uuid, username: str):
         repo_name = self.repo_name(csar_token)
-        return self.git_connector.add_collaborator(repo_name, username)
+        return self.git_connector.add_collaborator(repo_name, username, permissions=self.guest_permissions)
 
     def get_user_list(self, csar_token: uuid):
         repo_name = self.repo_name(csar_token)

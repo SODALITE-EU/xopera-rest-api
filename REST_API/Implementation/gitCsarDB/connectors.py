@@ -51,10 +51,11 @@ class Connector:
         """
         pass
 
-    def add_collaborator(self, repo_name: str, username: str):
+    def add_collaborator(self, repo_name: str, username: str, permissions: str = 'developer'):
         """
         Adds user as collaborator to repository.
         Args:
+            permissions: either developer or reporter. Addapted after gitlab permissions
             repo_name: name of repository
             username: username of user to be added to repo
 
@@ -150,8 +151,7 @@ class MockConnector(Connector):
         repo_path = self.workdir / Path(repo_name)
         return repo_path.exists()
 
-    def add_collaborator(self, repo_name: str, username: str):
-
+    def add_collaborator(self, repo_name: str, username: str, permissions='developer'):
         if repo_name not in self.collaborators:
             return False
         if username in self.collaborators[repo_name]:
@@ -367,9 +367,10 @@ class GithubConnector(Connector):
             return False
         return True
 
-    def add_collaborator(self, repo_name: str, username: str):
+    def add_collaborator(self, repo_name: str, username: str, permissions='developer'):
         repo = self.__get_repo(repo_name)
-        repo.add_to_collaborators(collaborator=username, permission='pull')
+        github_permissions = "push" if permissions == 'developer' else "pull"
+        repo.add_to_collaborators(collaborator=username, permission=github_permissions)
         return True
 
     def get_collaborators(self, repo_name):

@@ -280,7 +280,7 @@ class GitUserManage(Resource):
 
         success, error_msg = CSAR_db.add_member_to_blueprint(blueprint_token=blueprint_token, username=username)
         if success:
-            return "invite sent", 201
+            return f"invite for user {username} sent" if Settings.git_config['type'] == 'github' else f"user {username} added", 201
         response = {
             'description': f"Could not add user {username} to repository with blueprint_id '{blueprint_token}'",
             'stacktrace': error_msg

@@ -12,7 +12,8 @@ export XOPERA_GIT_AUTH_TOKEN=authtoken
 export XOPERA_GIT_WORKDIR=/tmp/git_db
 export XOPERA_GIT_REPO_PREFIX=gitDB_
 export XOPERA_GIT_COMMIT_NAME=SODALITE-xOpera-REST-API
-export XOPERA_GIT_COMMIT_MAIL=some-email@domain.com
+export XOPERA_GIT_COMMIT_MAIL=no-email@domain.com
+export XOPERA_GIT_GUEST_PERMISSIONS=reporter
 
 # SQL_database
 export XOPERA_DATABASE_IP=172.17.0.3
