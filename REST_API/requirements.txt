@@ -14,6 +14,8 @@ docker-pycreds==0.4.0
 dogpile.cache==0.9.0
 Flask==1.1.1
 flask-restplus==0.13.0
+gitdb==4.0.2
+GitPython==3.1.0
 idna==2.8
 importlib-metadata==1.5.0
 iso8601==0.1.12
@@ -37,9 +39,11 @@ pluggy==0.13.1
 psycopg2==2.8.4
 py==1.8.1
 pycparser==2.19
+PyGithub==1.47
 pyparsing==2.4.6
 pyrsistent==0.15.7
 pytest==5.3.5
+python-gitlab==2.1.2
 pytz==2019.3
 PyYAML==5.3
 requests==2.22.0

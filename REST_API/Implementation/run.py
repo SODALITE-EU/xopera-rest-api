@@ -1,36 +1,38 @@
+import argparse
 import json
 import logging as log
 import uuid
-import argparse
+from pathlib import Path
 
 import psycopg2
 from flask import Flask, request
-from flask_restplus import Api, Resource, fields, reqparse, inputs
+from flask_restplus import Api, Resource, fields, inputs
 from werkzeug.datastructures import FileStorage
 
-from deployment_preparation import deployment_io
-from deployment_preparation import xopera_link
-from deployment_preparation.deployment_io import PostgreSQL, OfflineStorage
-from deployment_preparation.dp_types import Deployment
-from deployment_preparation.settings import Settings
+from service import xopera_service, info_service, csardb_service, sqldb_service
+from settings import Settings
+from util import xopera_util, timestamp_util, git_util
 
 Settings.load_settings()
-print('RESTapi verbose: {}'.format('True' if Settings.verbose else 'False'))
-deployment_io.clean_deployment_data()
-deployment_io.configure_ssh_keys()
+log.info('RESTapi verbose: {}'.format('True' if Settings.verbose else 'False'))
+xopera_util.clean_deployment_data()
+xopera_util.configure_ssh_keys()
 
-parser = argparse.ArgumentParser(description='xOpera REST API')
-parser.add_argument('--interpreter', help="Custom path to python interpreter", type=str, default='python3')
-args = parser.parse_args()
+app_parser = argparse.ArgumentParser(description='xOpera REST API')
+app_parser.add_argument('--interpreter', help="Custom path to python interpreter", type=str, default='python3')
+args = app_parser.parse_args()
 Settings.interpreter = args.interpreter
-print(f'Interpreter: {Settings.interpreter}')
+log.info(f'Interpreter: {Settings.interpreter}')
 
 try:
-    database = PostgreSQL(Settings.connection)
-    log.info('Database: PostgreSQL')
+    SQL_database = sqldb_service.PostgreSQL(Settings.sql_config)
+    log.info('SQL_database: PostgreSQL')
 except psycopg2.Error:
-    database = OfflineStorage()
-    log.info("Database: OfflineStorage")
+    SQL_database = sqldb_service.OfflineStorage()
+    log.info("SQL_database: OfflineStorage")
+
+CSAR_db = csardb_service.GitDB(**Settings.git_config)
+log.info(f"GitCsarDB with {str(CSAR_db.connection.git_connector)}")
 
 flask_app = Flask(__name__)
 api = Api(app=flask_app, version='beta', title="xOpera REST api",
@@ -41,54 +43,38 @@ api = Api(app=flask_app, version='beta', title="xOpera REST api",
                       "DEPLOY\n"
                       "1) upload blueprint with POST to /manage\n - new version of existing one must be POSTed to "
                       "/manage/{blueprint_token}\n - save blueprint_metadata, returned by API call -> it is the only "
-                      "way of "
-                      "accessing your blueprint afterwards\n "
+                      "way of accessing your blueprint afterwards\n "
                       "2) deploy last version of blueprint with POST to /deploy/{blueprint_token}\n"
                       "- optionally, inputs file to be used with template must also be uploaded within same API call\n"
-                      "- another version can be specified by version_id or timestamp\n"
+                      "- another version can be specified by version_tag\n"
                       "- save session_token\n"
                       "3) using status_token from with GET to /info/status check status of your job\n"
                       "4) After completion, check logs with GET to /info/log\n\n"
                       "UNDEPLOY\n"
                       "1) undeploy blueprint with DELETE to /deploy/{blueprint_token}\n"
                       "- optionally, inputs file to be used with template must also be uploaded within same API call\n"
-                      " - optionally also in combination with version_id or timestamp\n - save session_token\n "
+                      " - optionally also in combination with version_tag\n - save session_token\n "
                       "2) using status_token with GET to /info/status check status of your job\n"
                       "3) After completion, check logs with GET to /info/log\n"
                       "4) Delete all versions of blueprint from database with DELETE to /manage/{blueprint_token}\n"
                       "- to delete just specific version, use version_id or timestamp\n"
                       "- if deployment from template has not been undeployed yet, blueprint cannot be deleted"
-                      "-> use 'force' to override\n"
+                      "-> use 'force' to override\n\n"
+                      "ACCESS TO REPOSITORY WITH BLUEPRINTS\n"
+                      "- xOpera REST API uses git backend for storing blueprints\n"
+                      "- to obtain access, POST to /manage/<blueprint_token>/user endpoint username and invitation "
+                      "will be sent\n"
+                      "- with GET to /manage/<blueprint_token>/user user can obtain "
+                      "list of collaborators and repo url\n"
           )
 
 # namespaces
 ssh = api.namespace('ssh', description='SSH key management')
-manage = api.namespace('manage', description='save or view blueprint')
-manage_csar = api.namespace('manage_csar', description='save or view blueprint in csar format')
+manage = api.namespace('manage', description='save or delete blueprint')
 deploy = api.namespace('deploy', description='deploy or undeploy blueprint')
 info = api.namespace('info', description='information about deployment')
 
 # models
-tosca_model = api.model('tosca_definition', {
-    'name': fields.String(required=True, description='Name of file with TOSCA definition'),
-    'type': fields.String(required=True, description='must be set to "file" '),
-    'content': fields.String(required=True, description='Content of file with TOSCA definition')
-})
-
-ansible_model = api.model('ansible_definition', {
-    'name': fields.String(required=True, description='Name of folder or file with ansible playbooks'),
-    'type': fields.String(required=True, description='must be set to "dir" or "file"'),
-    'content': fields.Raw(required=True, description='Content of file / dir')
-})
-
-blueprint_model = api.model('blueprint', {
-    'blueprint_id': fields.String(required=True, description='name of blueprint'),
-    'tosca_definition': fields.Nested(tosca_model, required=True, description="TOSCA file"),
-    'ansible_definition': fields.Nested(ansible_model, required=True, description="Ansible file or folder"),
-    'config_script': fields.String(required=False, description="Vendor configuration script (openrc.sh)"),
-    'timestamp': fields.DateTime(required=True, description="timestamp of blueprint")
-})
-
 key_model = api.model('openstack key pair', {
     'key_pair_name': fields.String(required=True, description="Name of xOpera REST API's  private/public key pair"),
     'public_key': fields.String(required=True, description="Rest api's public key")
@@ -96,17 +82,16 @@ key_model = api.model('openstack key pair', {
 
 blueprint_metadata_model = api.model('blueprint_metadata', {
     'message': fields.String(required=True, description="return message"),
-    "id": fields.String(required=True, description="id of blueprint"),
     "blueprint_token": fields.String(required=True, description="token of blueprint"),
     "session_token": fields.String(required=False, description="token of deploying session"),
-    "version_id": fields.Integer(required=True, description="id of current version of blueprint"),
+    "version_tag": fields.Integer(required=True, description="version_tag blueprint"),
     "timestamp": fields.DateTime(required=True, description="timestamp of database entry")
 })
 
 delete_metadata_model = api.model('delete_metadata', {
     'message': fields.String(required=True, description="return message"),
     "blueprint_token": fields.String(required=True, description="token of blueprint"),
-    "version_id": fields.Integer(required=True, description="id of current version of blueprint"),
+    "version_tag": fields.Integer(required=True, description="id of current version of blueprint"),
     "timestamp": fields.DateTime(required=True, description="timestamp of database entry"),
     "deleted_database_entries": fields.Integer(required=True, description="Number of deleted entries"),
     "force": fields.Boolean(required=True, description="did we do it with force or not")
@@ -116,16 +101,31 @@ just_message_model = api.model('just_message', {
     "message": fields.String(required=True, description="return message")
 })
 
-# args parser
-parser = reqparse.RequestParser()
-parser.add_argument('timestamp', type=inputs.datetime_from_iso8601, help='timestamp of blueprint version')
-parser.add_argument('version_id', type=int, help='id of blueprint version')
-parser.add_argument('force', type=inputs.boolean, help='force delete blueprint')
+collaborators_list_model = api.model('collaborators_list', {
+    'message': fields.String(required=True, description="return message"),
+    'blueprint_token': fields.String(required=True, description="token of blueprint"),
+    'repo_url': fields.String(required=True, description="Url to repository"),
+    'collaborators': fields.List(fields.String(required=True, description="Collaborator"),
+                                 required=True, description='List of collaborators')
+
+})
+
+error_msg_model = api.model('error_msg', {
+    'description': fields.String(required=True, description="Error description"),
+    'stacktrace': fields.String(required=True, description="Exception stacktrace")
+})
 
 # CSAR parser
 csar_parser = api.parser()
 csar_parser.add_argument('CSAR', location='files', type=FileStorage, required=True,
                          help='TOSCA Cloud Service Archive')
+csar_parser.add_argument('revision_msg', type=str, help='Optional comment on submission', required=False)
+# csar_parser.add_argument('username', type=str, help='username to assign top repo', required=False)
+
+# CSAR delete parser
+csar_delete_parser = api.parser()
+csar_delete_parser.add_argument('version_tag', type=str, help='version_tag to delete', required=False)
+csar_delete_parser.add_argument('force', type=inputs.boolean, help='force delete blueprint', required=False)
 
 
 @ssh.route('/keys/public')
@@ -136,7 +136,7 @@ class PublicKey(Resource):
     def get(self):
         key_name = Settings.key_pair
         try:
-            with open("{}{}.pubk".format(Settings.ssh_keys_location, key_name), 'r') as file:
+            with (Settings.ssh_keys_location / Path(f"{key_name}.pubk")).open('r') as file:
                 file_string = "".join(file.readlines())
 
                 return {"key_pair_name": key_name, "public_key": file_string}, 200
@@ -157,8 +157,8 @@ class Log(Resource):
         session_token = request.args.get('session_token')
         blueprint_token = request.args.get('blueprint_token')
 
-        data = database.get_deployment_log(blueprint_token=blueprint_token, session_token=session_token)
-        return_data = [{Settings.datetime_to_str(_data[0]): json.loads(_data[1])} for _data in data]
+        data = SQL_database.get_deployment_log(blueprint_token=blueprint_token, session_token=session_token)
+        return_data = [{timestamp_util.datetime_to_str(_data[0]): json.loads(_data[1])} for _data in data]
         return_data.sort(key=lambda x: list(x.keys())[0], reverse=True)
         if not return_data:
             return {"message": "Log file not found"}, 400
@@ -177,10 +177,10 @@ class Status(Resource):
         session_token = request.args.get('token')
         return_format = request.args.get('format')
 
-        log.info("session_token: '{}'".format(session_token))
+        log.debug("session_token: '{}'".format(session_token))
 
-        json_output, status_code = xopera_link.check_status(token=session_token, format=return_format)
-        log.info(json.dumps(json_output, indent=2, sort_keys=True))
+        json_output, status_code = info_service.check_status(session_token=session_token, format=return_format)
+        log.debug(json.dumps(json_output, indent=2, sort_keys=True))
         return json_output, status_code
 
 
@@ -190,288 +190,232 @@ class Deploy(Resource):
     upload_parser = api.parser()
     upload_parser.add_argument('inputs_file', location='files', type=FileStorage, required=False,
                                help='File with inputs for TOSCA template')
-    upload_parser.add_argument('timestamp', type=inputs.datetime_from_iso8601, help='timestamp of blueprint version')
-    upload_parser.add_argument('version_id', type=int, help='id of blueprint version')
+    upload_parser.add_argument('version_tag', type=str, help='version_tag to deploy')
 
     @deploy.expect(upload_parser)
-    # @deploy.param('timestamp', 'timestamp of blueprint')
-    # @deploy.param('version_id', 'version_id of blueprint')
     @deploy.response(202, 'Deploy job accepted', blueprint_metadata_model)
     @deploy.response(404, 'Did not find blueprint', just_message_model)
     def post(self, blueprint_token):
 
         args = Deploy.upload_parser.parse_args()
-        timestamp = args.get('timestamp')
-        version_id = args.get('version_id')
+        version_tag = args.get('version_tag')
         file = args.get('inputs_file')
 
-        deployment = database.get_revision(blueprint_token, timestamp, version_id)
-        if deployment is None:
-            return {"message": 'Did not find blueprint with token: {}, timestamp: {} and version_id: {} '.format(
-                blueprint_token, timestamp or 'any', version_id or 'any')}, 404
+        session_token = uuid.uuid4()
+        location = xopera_util.deployment_location(session_token=session_token, blueprint_token=blueprint_token)
+        log.debug(f"Deploy_location: {location}")
 
-        session_token = xopera_link.deploy_by_token(blueprint_token=blueprint_token, deployment=deployment,
-                                                    inputs_file=file)
+        if CSAR_db.get_revision(blueprint_token=blueprint_token, dst=location, version_tag=version_tag) is None:
+            return {"message": 'Did not find blueprint with token: {} and version_id: {} '.format(
+                blueprint_token, version_tag or 'any')}, 404
 
-        message = "Deploying '{}', session_token: {}".format(blueprint_token, session_token)
-        log.info(message)
+        xopera_service.deploy(deployment_location=location, inputs_file=file)
 
-        deploy_meta = dict()
-        deploy_meta["message"] = "Deploy job started, check status via /info/status endpoint"
-        deploy_meta["session_token"] = str(session_token)
-        blueprint_meta = deployment.metadata()
+        log.info("Deploying '{}', session_token: {}".format(blueprint_token, session_token))
 
-        return {**deploy_meta, **blueprint_meta}, 202
+        response = {
+            "message": "Deploy job started, check status via /info/status endpoint",
+            "session_token": str(session_token),
+            "blueprint_token": str(blueprint_token),
+            "version_tag": version_tag or "last",
+            "timestamp": timestamp_util.datetime_now_to_string()
+        }
+        return response, 202
 
     @deploy.expect(upload_parser)
-    # @deploy.param('timestamp', 'timestamp of blueprint')
-    # @deploy.param('version_id', 'version_id of blueprint')
-    @deploy.response(202, 'Undeploy job accepted', blueprint_metadata_model)  # , log_model)
+    @deploy.response(202, 'Undeploy job accepted', blueprint_metadata_model)
     @deploy.response(404, 'Did not find blueprint', just_message_model)
+    @deploy.response(403, 'Undeploy not allowed', just_message_model)
     def delete(self, blueprint_token):
 
         args = Deploy.upload_parser.parse_args()
-        timestamp = args.get('timestamp')
-        version_id = args.get('version_id')
+        version_tag = args.get('version_tag')
         file = args.get('inputs_file')
 
-        deployment, last_deployment_data = database.get_last_deployment_data(blueprint_token, timestamp, version_id)
-        if not deployment:
-            return {"message": 'Did not find blueprint with token: {}, timestamp: {} and version_id: {} '.format(
-                blueprint_token, timestamp or 'any', version_id or 'any')}, 404
+        session_token = uuid.uuid4()
+        location = xopera_util.deployment_location(session_token=session_token, blueprint_token=blueprint_token)
+        log.debug(f"Undeploy_location: {location}")
 
-        if not last_deployment_data:
-            return {
-                       "message": 'Blueprint with token: {}, timestamp: {} and version_id: {} has not been deployed yet '.format(
-                           blueprint_token, timestamp or 'any', version_id or 'any')}, 404
+        if CSAR_db.get_revision(blueprint_token=blueprint_token, dst=location, version_tag=version_tag) is None:
+            return {"message": 'Did not find blueprint with token: {} and version_id: {} '.format(
+                blueprint_token, version_tag or 'any')}, 404
 
-        session_token = xopera_link.undeploy_by_token(blueprint_token=blueprint_token, blueprint_id=deployment.id,
-                                                      blueprint_timestamp=deployment.timestamp,
-                                                      directory=last_deployment_data, inputs_file=file)
+        last_message, error = CSAR_db.get_last_commit_msg(blueprint_token)
+        if last_message is not None:
+            if git_util.after_job_commit_msg(token=blueprint_token, mode='deploy') not in last_message:
+                return {"message": f"Blueprint with token: {blueprint_token}, and version_tag: {version_tag or 'any'} "
+                                   f"has not been deployed yet, cannot undeploy"}, 403
 
-        message = "Undeploying '{}', session_token: {}".format(blueprint_token, session_token)
-        log.info(message)
+        xopera_service.undeploy(deployment_location=location, inputs_file=file)
 
-        deploy_meta = dict()
-        deploy_meta["message"] = "Undeploy job started, check status via /info/status endpoint"
-        deploy_meta["session_token"] = str(session_token)
-        blueprint_meta = deployment.metadata()
+        log.info("Undeploying '{}', session_token: {}".format(blueprint_token, session_token))
 
-        return {**deploy_meta, **blueprint_meta}, 202
+        response = {
+            "message": "Undeploy job started, check status via /info/status endpoint",
+            "session_token": str(session_token),
+            "blueprint_token": str(blueprint_token),
+            "version_tag": version_tag or "last",
+            "timestamp": timestamp_util.datetime_now_to_string()
+        }
+        return response, 202
+
+
+@manage.route('/<string:blueprint_token>/user')
+@manage.param('blueprint_token', 'token of blueprint')
+class GitUserManage(Resource):
+    user_parser = api.parser()
+    user_parser.add_argument('username', type=str, required=True,
+                             help='username of user to be added to repository with blueprint')
+
+    @manage.expect(user_parser)
+    @manage.response(201, 'invite sent', just_message_model)
+    @manage.response(404, 'blueprint not found', just_message_model)
+    @manage.response(500, 'DB error when adding user', error_msg_model)
+    def post(self, blueprint_token):
+
+        args = GitUserManage.user_parser.parse_args()
+        username = args.get('username')
+        if not CSAR_db.check_token_exists(blueprint_token=blueprint_token):
+            return f"Blueprint with token {blueprint_token} does not exist", 404
+
+        success, error_msg = CSAR_db.add_member_to_blueprint(blueprint_token=blueprint_token, username=username)
+        if success:
+            return "invite sent", 201
+        response = {
+            'description': f"Could not add user {username} to repository with blueprint_id '{blueprint_token}'",
+            'stacktrace': error_msg
+        }
+        return response, 500
+
+    @manage.response(200, 'user list returned', just_message_model)
+    @manage.response(404, 'blueprint not found', collaborators_list_model)
+    @manage.response(500, 'DB error when getting user list', error_msg_model)
+    def get(self, blueprint_token):
+        if not CSAR_db.check_token_exists(blueprint_token=blueprint_token):
+            return f"Blueprint with token {blueprint_token} does not exist", 404
+
+        user_list, error_msg = CSAR_db.get_blueprint_user_list(blueprint_token=blueprint_token)
+
+        repo_url, repo_error_msg = CSAR_db.get_repo_url(blueprint_token=blueprint_token)
+
+        if user_list is not None and repo_url is not None:
+            response = {
+                'message': f'Found {len(user_list)} collaborators for repo with blueprint_token {blueprint_token}',
+                'blueprint_token': str(blueprint_token),
+                'repo_url': repo_url,
+                'collaborators': user_list
+            }
+            return response, 200
+        response = {
+            'description': f"Could not retrieve list of users for repository with blueprint_id '{blueprint_token}'",
+            'stacktrace': error_msg or repo_error_msg
+        }
+        return response, 500
 
 
 @manage.param('blueprint_token', 'token of blueprint')
 @manage.route('/<string:blueprint_token>')
-class Manage(Resource):
-
-    @manage.param('timestamp', 'timestamp of blueprint')
-    @manage.param('version_id', 'version_id of blueprint')
-    @manage.response(200, 'Blueprint found, returned', blueprint_model)
-    @manage.response(404, 'Blueprint not found', just_message_model)
+class ManageCsar(Resource):
+    """
+    @manage.param('version_tag', 'version_tag of blueprint')
+    # @manage.response(200, 'Blueprint found, returned', blueprint_model)
+    # @manage.response(404, 'Blueprint not found', just_message_model)
+    # @manage.representation('application/zip')
+    @manage.produces(['application/zip'])
     def get(self, blueprint_token):
 
         args = parser.parse_args()
 
-        timestamp = args.get('timestamp')
-        version_id = args.get('version_id')
+        version_tag = args.get('version_id')
 
-        deployment = database.get_revision(blueprint_token, timestamp, version_id)
-        if deployment is not None:
-            deployment.print_metadata()
-            return deployment.to_dict(), 200
+        path = CSAR_db.get_revision_as_CSAR(blueprint_token=blueprint_token, dst=Path(f'/tmp/{uuid.uuid4()}'),
+                                            version_tag=version_tag)
+        if path is not None:
+            # deployment.print_metadata()
+            return send_file(path, as_attachment=True, attachment_filename=f'{blueprint_token}-CSAR.zip', mimetype='application/zip'), 200
         else:
-            return {"message": 'Did not find blueprint with token: {}, timestamp: {} and version_id: {} '.format(
-                blueprint_token, timestamp or 'any', version_id or 'any')}, 404
+            return {"message": 'Did not find blueprint with token: {} and version_id: {} '.format(
+                blueprint_token, version_tag or 'any')}, 404
 
-    @manage.expect(blueprint_model, validate=False)
-    @manage.response(200, 'Successfully saved blueprint to database', blueprint_metadata_model)
-    @manage.response(404, 'Blueprint token not found', just_message_model)
-    @manage.response(406, 'Format not acceptable', just_message_model)
-    def post(self, blueprint_token):
-        json_input = request.get_json()
+    """
 
-        if not database.check_token_exists(blueprint_token):
-            return {"message": "Blueprint token does not exist, 'manage' route instead"}, 404
-        try:
-            blueprint_name = json_input["blueprint_id"]
-            invalid_name, response = deployment_io.validate_blueprint_name(blueprint_name)
-            # if invalid_name:
-            #     return {"message": "blueprint id {} invalid. Must comply with RFC 1123 (section 2.1)"
-            #                        "and RFC 952"}, 406
-        except Exception:
-            pass
-
-        deployment = Deployment.from_dict(blueprint_token=blueprint_token, dictionary=json_input)
-
-        invalid_tosca, response = deployment_io.validate_tosca(deployment)
-        if invalid_tosca:
-            return {
-                       "message": f"Invalid TOSCA: {response}"}, 406
-
-        if deployment is not None:
-            version_id = database.get_max_version_id(blueprint_token) + 1
-            database.add_revision(deploy=deployment, version_id=version_id)
-            timestamp = database.get_timestamp(blueprint_token=blueprint_token, version_id=version_id)
-            return {
-                       'message': "Saved blueprint to database",
-                       "id": deployment.id,
-                       "blueprint_token": str(blueprint_token),
-                       "version_id": version_id,
-                       "timestamp": Settings.datetime_to_str(timestamp)
-                   }, 200
-        else:
-            return {"message": "Format not acceptable!"}, 406
-
-    @manage.param('timestamp', 'timestamp of blueprint')
-    @manage.param('version_id', 'version_id of blueprint')
-    @manage.param('force', 'force delete (bool)')
+    @manage.expect(csar_delete_parser)
     @manage.response(200, 'Successfully removed', delete_metadata_model)
     @manage.response(404, 'Blueprint not found', delete_metadata_model)
     @manage.response(403, 'Did not undeploy yet, not allowed', just_message_model)
     def delete(self, blueprint_token):
-        args = parser.parse_args()
+        args = csar_delete_parser.parse_args()
 
-        timestamp = args.get('timestamp')
-        version_id = args.get('version_id')
+        version_tag = args.get('version_tag')
         force = args.get('force')
 
         if not force:
-            last_job = database.last_job(blueprint_token=blueprint_token, timestamp=timestamp, version_id=version_id)
+            last_message, _ = CSAR_db.get_last_commit_msg(blueprint_token)
+            if last_message is not None:
+                if git_util.after_job_commit_msg(token=blueprint_token, mode='deploy') in last_message:
+                    log.info('Cannot delete, undeploy not done yet')
+                    return {"message": "Cannot delete, deployment has not been undeployed yet"}, 403
 
-            if last_job == 'deploy':
-                log.info('Cannot delete, undeploy not done yet')
-                return {"message": "Cannot delete, deployment has not been undeployed yet"}, 403
-
-        rows_affected = database.delete_blueprint(blueprint_token, timestamp, version_id)
+        rows_affected, status_code = CSAR_db.delete_blueprint(blueprint_token, version_tag)
+        log.debug(f"Rows affected, status_code: {rows_affected} {status_code}")
 
         delete_metadata = dict()
 
-        if rows_affected != 0:
-            status_code = 200
+        if status_code == 200:
             delete_metadata["message"] = 'Successfully removed'
-        else:
-            status_code = 404
-            delete_metadata["message"] = 'Blueprint(s) not found'
+            if not version_tag:
+                rows_affected = 'all'
+        elif status_code == 404:
+            if rows_affected == 0:
+                delete_metadata["message"] = 'Tag not found'
+            else:
+                delete_metadata["message"] = 'Blueprint not found'
+        else:  # status code 500
+            delete_metadata["message"] = 'Server error'
 
         delete_metadata["blueprint_token"] = blueprint_token
-        delete_metadata["version_id"] = version_id or 'any'
-        delete_metadata["timestamp"] = 'any' if timestamp is None else Settings.datetime_to_str(timestamp)
+        delete_metadata["version_id"] = version_tag or 'all'
         delete_metadata["deleted_database_entries"] = rows_affected
         delete_metadata["force"] = force or False
 
         return delete_metadata, status_code
 
-
-@manage.route("")
-class NewBlueprint(Resource):
+    @manage.expect(csar_parser)
     @manage.response(200, 'Successfully saved blueprint to database', blueprint_metadata_model)
+    @manage.response(404, 'Blueprint token not found', just_message_model)
     @manage.response(406, 'Format not acceptable', just_message_model)
-    @manage.expect(blueprint_model, validate=False)
-    def post(self):
-        json_input = request.get_json()
-        blueprint_token = uuid.uuid4()
-        version_id = database.get_max_version_id(str(blueprint_token)) + 1
-
-        try:
-            blueprint_name = json_input["blueprint_id"]
-            invalid_name, response = deployment_io.validate_blueprint_name(blueprint_name)
-            # if invalid_name:
-            #     return {"message": "blueprint id {} invalid. Must comply with RFC 1123 (section 2.1)"
-            #                        "and RFC 952"}, 406
-        except Exception:
-            pass
-
-        deployment = Deployment.from_dict(blueprint_token=blueprint_token, dictionary=json_input)
-        invalid_tosca, response = deployment_io.validate_tosca(deployment)
-        if invalid_tosca:
-            return {
-                       "message": f"Invalid TOSCA: {response}"}, 406
-
-        if deployment is not None:
-            database.add_revision(deploy=deployment, version_id=version_id)
-            timestamp = database.get_timestamp(blueprint_token=str(blueprint_token), version_id=version_id)
-            return {
-                       'message': "Saved blueprint to database",
-                       "id": deployment.id,
-                       "blueprint_token": str(blueprint_token),
-                       "version_id": version_id,
-                       "timestamp": Settings.datetime_to_str(timestamp)
-                   }, 200
-        else:
-            return {
-                       "message": "Format not acceptable!"
-                   }, 406
-
-
-@manage_csar.param('blueprint_token', 'token of blueprint')
-@manage_csar.route('/<string:blueprint_token>')
-class ManageCsar(Resource):
-
-    @manage_csar.expect(csar_parser)
-    @manage_csar.response(200, 'Successfully saved blueprint to database', blueprint_metadata_model)
-    @manage_csar.response(404, 'Blueprint token not found', just_message_model)
-    @manage_csar.response(406, 'Format not acceptable', just_message_model)
     def post(self, blueprint_token):
         args = csar_parser.parse_args()
         file = args.get('CSAR')
+        message = args.get('revision_msg')
 
-        if not database.check_token_exists(blueprint_token):
+        if not CSAR_db.check_token_exists(blueprint_token):
             return {"message": "Blueprint token does not exist, 'manage' route instead"}, 404
 
-        # deployment = Deployment.from_dict(blueprint_token=blueprint_token, dictionary=json_input)
-        deployment = Deployment.from_csar(blueprint_token=blueprint_token, CSAR=file)
+        result, response = CSAR_db.add_revision(CSAR=file, revision_msg=message, blueprint_token=blueprint_token)
 
-        invalid_tosca, response = deployment_io.validate_tosca(deployment)
-        if invalid_tosca:
-            return {
-                       "message": f"Invalid TOSCA: {response}"}, 406
+        if result is None:
+            return {"message": f"Invalid CSAR: {response}"}, 406
 
-        if deployment is not None:
-            version_id = database.get_max_version_id(blueprint_token) + 1
-            database.add_revision(deploy=deployment, version_id=version_id)
-            timestamp = database.get_timestamp(blueprint_token=blueprint_token, version_id=version_id)
-            return {
-                       'message': "Saved blueprint to database",
-                       "id": deployment.id,
-                       "blueprint_token": str(blueprint_token),
-                       "version_id": version_id,
-                       "timestamp": Settings.datetime_to_str(timestamp)
-                   }, 200
-        else:
-            return {"message": "Format not acceptable!"}, 406
+        return result, 200
 
 
-@manage_csar.route("")
+@manage.route("")
 class NewBlueprintCsar(Resource):
-    @manage_csar.response(200, 'Successfully saved blueprint to database', blueprint_metadata_model)
-    @manage_csar.response(406, 'Format not acceptable', just_message_model)
-    @manage_csar.expect(csar_parser)
+    @manage.response(200, 'Successfully saved blueprint to database', blueprint_metadata_model)
+    @manage.response(406, 'Format not acceptable', just_message_model)
+    @manage.expect(csar_parser)
     def post(self):
         args = csar_parser.parse_args()
         file = args.get('CSAR')
-        blueprint_token = uuid.uuid4()
-        version_id = database.get_max_version_id(str(blueprint_token)) + 1
+        message = args.get('revision_msg')
 
-        deployment = Deployment.from_csar(blueprint_token=blueprint_token, CSAR=file)
-        invalid_tosca, response = deployment_io.validate_tosca(deployment)
-        if invalid_tosca:
-            return {
-                       "message": f"Invalid TOSCA: {response}"}, 406
+        result, response = CSAR_db.add_revision(CSAR=file, revision_msg=message)
 
-        if deployment:
-            database.add_revision(deploy=deployment, version_id=version_id)
-            timestamp = database.get_timestamp(blueprint_token=str(blueprint_token), version_id=version_id)
-            return {
-                       'message': "Saved blueprint to database",
-                       "id": deployment.id,
-                       "blueprint_token": str(blueprint_token),
-                       "version_id": version_id,
-                       "timestamp": Settings.datetime_to_str(timestamp)
-                   }, 200
-        else:
-            return {
-                       "message": "Format not acceptable!"
-                   }, 406
+        if result is None:
+            return {"message": f"Invalid CSAR: {response}"}, 406
+
+        return result, 200
 
 
 if __name__ == '__main__':
