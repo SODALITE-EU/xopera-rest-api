@@ -15,11 +15,14 @@ class GitCsarDB:
     class UnsupportedConnectorType(GitCsarDBError):
         pass
 
-    def __init__(self, connector: Connector, workdir="/tmp/git_db", repo_prefix='gitDB_'):
+    def __init__(self, connector: Connector, workdir="/tmp/git_db", repo_prefix='gitDB_',
+                 commit_name="SODALITE-xOpera-REST-API", commit_mail="some-email@xlab.si"):
         self.git_connector = connector
         self.workdir = Path(workdir)
         self.workdir.mkdir(exist_ok=True)
         self.repo_prefix = repo_prefix
+        self.commit_name = commit_name
+        self.commit_mail = commit_mail
 
     def save_CSAR(self, csar_path: Path, csar_token: uuid, message: str = None):
         if not self.CSAR_exists(csar_token):
@@ -28,8 +31,8 @@ class GitCsarDB:
         shutil.rmtree(path=repo_path, ignore_errors=True)
         repo = self.git_connector.clone(repo_name=self.repo_name(csar_token), workdir=self.workdir)
 
-        repo.config_writer().set_value("user", "name", "SODALITE-xOpera-REST-API").release()
-        repo.config_writer().set_value("user", "email", "some-email@xlab.si").release()
+        repo.config_writer().set_value("user", "name", self.commit_name).release()
+        repo.config_writer().set_value("user", "email", self.commit_mail).release()
 
         try:
             repo.git.rm('*')
