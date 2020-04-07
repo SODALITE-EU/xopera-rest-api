@@ -16,7 +16,7 @@ class Settings:
     interpreter = None
     logfile_name = "logs.log"
 
-    verbose = None
+    verbose = ""
 
     # sql_database config
     sql_config = None
@@ -50,7 +50,7 @@ class Settings:
         }
         Settings.log_table = os.getenv("XOPERA_DATABASE_LOG_TABLE", 'log')
 
-        Settings.verbose = str(os.getenv('XOPERA_VERBOSE_MODE', 'warning')).casefold(),
+        Settings.verbose = os.getenv('XOPERA_VERBOSE_MODE', 'warning').casefold()
 
         _nameToLevel = {
             'critical': log.CRITICAL,
@@ -63,4 +63,11 @@ class Settings:
             'notset': log.NOTSET,
         }
 
-        log.basicConfig(format="%(levelname)s: %(message)s", level=_nameToLevel.get(str(Settings.verbose), log.WARNING))
+        log.basicConfig(format="%(levelname)s: %(message)s", level=_nameToLevel.get(Settings.verbose, log.WARNING))
+
+        log.debug(json.dumps({
+            "sql_config": Settings.sql_config,
+            "log_table": Settings.log_table,
+            "git_config": {key: (str(value) if isinstance(value, Path) else value) for key, value in Settings.git_config.items()},
+            "verbose": Settings.verbose
+        }, indent=2))
