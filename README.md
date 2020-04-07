@@ -8,14 +8,17 @@ Implementation of the xOpera orchestrator REST API
     - Docker engine 19.03 or newer
 
 ### GIT backend server (optional, recommended)
-xOpera REST API uses git to store blueprints. It supports github.com and gitlab (both gitlab.com and private gitlab based servers).
+xOpera REST API uses git backend to store blueprints. It supports github.com and gitlab (both gitlab.com and private gitlab based servers).
 If GIT server is not set it uses computer's filesystem to store git repos.
 
 To connect REST API to github.com:
+ - github.com user with enough private repository is needed. Every blueprint will be saved to its own repository,
+  so unlimited account with private repositories is recommended.
  - obtain [github access token](https://github.com/settings/tokens) with repo end delete_repo permissions
  - export following environmental variables:
     - XOPERA_GIT_TYPE=github
     - XOPERA_GIT_AUTH_TOKEN=[your_github_access_token]
+ - optionally set some of [optional git config settings](#Optional-git-configuration-settings)
     
 To connect REST API to gitlab server:
  - obtain [Gitlab's Personal Access Token](https://xxx.xx/profile/personal_access_tokens) with api scope
@@ -23,9 +26,18 @@ To connect REST API to gitlab server:
     - XOPERA_GIT_TYPE=gitlab
     - XOPERA_GIT_URL=[url_to_your_gitlab_server]
     - XOPERA_GIT_AUTH_TOKEN=[your_personal_access_token]
+ - optionally set some of [optional git config settings](#Optional-git-configuration-settings)
 
 
-See [example config](REST_API/Implementation/settings/example_settings.sh).
+#### Optional git configuration settings
+Beside obligatory settings following settings can be configured:
+ - XOPERA_GIT_WORKDIR (default: `/tmp/git_db`) - workdir for git on REST API server
+ - XOPERA_GIT_REPO_PREFIX (default: `gitDB_`) - repo prefix. Blueprint with token `963d7c94-34f9-498d-b122-472dbd9a8681` would be saved to repository `gitDB_963d7c94-34f9-498d-b122-472dbd9a8681`
+ - XOPERA_GIT_COMMIT_NAME (default: `SODALITE-xOpera-REST-API`) - user.name to author git commit
+ - XOPERA_GIT_COMMIT_MAIL (default: `no-email@domain.com`) - user.mail to author git commit
+ - XOPERA_GIT_GUEST_PERMISSIONS (default: `reporter`) - role, assigned to user, added to repository. See [access to blueprints](#ACCESS-TO-REPOSITORY-WITH-BLUEPRINTS).
+
+See [example config](REST_API/Implementation/settings/example_settings.sh) for example on how to export variables.
 ### PostgreSQL (optional, recommended)
 Rest API is using PostgreSQL database for saving bluepints and deployment logs.
 If PostgreSQL database is not available, it uses computer's filesystem.
@@ -133,7 +145,8 @@ Standard scenarios of using REST api:
 ### ACCESS TO REPOSITORY WITH BLUEPRINTS
 - xOpera REST API uses git backend for storing blueprints
 - to obtain access, POST to /manage/<blueprint_token>/user endpoint username
-    - invitation for user with username will be sent to its email address
+    - invitation for user with username will be sent to its email address (github.com)
+    - user will be added to repository (gitlab)
 - with GET to /manage/<blueprint_token>/user user_list can be obtained
 
 ## TOSCA 1.3 Cloud Service Archive (CSAR) format

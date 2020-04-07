@@ -16,6 +16,7 @@ def connect(**kwargs):
             f'Unsupported gitCsarDB type, supported: "gitlab", "github", "mock", requested: {kwargs["type"]}')
     try:
         return GitCsarDB(connector=connector, workdir=kwargs['workdir'], repo_prefix=kwargs['repo_prefix'],
-                         commit_name=kwargs['commit_name'], commit_mail=kwargs['commit_mail'])
+                         commit_name=kwargs['commit_name'], commit_mail=kwargs['commit_mail'],
+                         guest_permissions=kwargs['guest_permissions'])
     except KeyError:
         return GitCsarDB(connector=connector)
