@@ -1,26 +1,23 @@
-import glob
 import json
-import os
 
 from settings import Settings
 
 
 def check_status(session_token: str, format: str = 'short'):
-    json_dict = {}
-    for file_path in glob.glob("{}/*/{}/*.data".format(Settings.deployment_data, session_token)):
-        file = open(file_path, 'r')
-        parsed = json.load(file)
-        component_name = os.path.splitext(file_path)[0].split('/')[-1]
-        if format == 'long':
-            json_dict[component_name] = parsed
+    json_dict = {'state': "running", 'nodes': {}}
+    deploy_dir = next(Settings.deployment_data.glob(f'*/{session_token}'), None)
+    if deploy_dir is None:
+        return {'message': f'Could not find session with session_token {session_token}'}, 404
+    for file_path in (deploy_dir / ".opera" / "instances").glob("*"):
+        parsed = json.load(open(file_path, 'r'))
+        component_name = parsed['tosca_name']['data']
+        json_dict['nodes'][component_name] = parsed if format == 'long' else parsed['state']['data']
 
-        else:
-            json_short = parsed['state']
-            json_dict[component_name] = json_short
-    if "deploy" in json_dict or "undeploy" in json_dict:
-        mode = "deploy" if "deploy" in json_dict else "undeploy"
-        state = json_dict[mode]['state'] if format == 'long' else json_dict[mode]
-        status_code = 201 if state == "done" else 500
+    log_json_path = next(deploy_dir.glob("*.json"), None)
+    if log_json_path:
+        log_json = json.load(log_json_path.open('r'))
+        status_code = 201 if log_json['state'] == "done" else 500
+        json_dict = log_json if format == 'long' else {'state': log_json['state']}
     else:
         status_code = 202
     return json_dict, status_code

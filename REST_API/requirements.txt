@@ -31,7 +31,7 @@ more-itertools==8.2.0
 munch==2.5.0
 netifaces==0.10.9
 openstacksdk==0.41.0
-opera==0.1.7
+opera==0.5.5
 os-service-types==1.7.0
 packaging==20.1
 pbr==5.4.4
