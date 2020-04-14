@@ -1,6 +1,7 @@
 import argparse
 import json
 import logging as log
+import time
 import uuid
 from pathlib import Path
 
@@ -23,6 +24,15 @@ app_parser.add_argument('--interpreter', help="Custom path to python interpreter
 args = app_parser.parse_args()
 Settings.interpreter = args.interpreter
 log.info(f'Interpreter: {Settings.interpreter}')
+
+for i in range(10):
+    try:
+        SQL_database = sqldb_service.PostgreSQL(Settings.sql_config)
+        log.info('SQL_database: PostgreSQL')
+        break
+    except psycopg2.Error as e:
+        log.error(f"Error while connecting to PostgreSQL for {i+1} time: {str(e)}")
+        time.sleep(1)
 
 try:
     SQL_database = sqldb_service.PostgreSQL(Settings.sql_config)

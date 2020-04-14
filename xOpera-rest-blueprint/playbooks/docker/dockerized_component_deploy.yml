@@ -13,6 +13,7 @@
         auto_remove: no
         command: "{{ command }}"
         env: "{{ env }}"
+        env_file: "{{ env_file }}"
         restart_policy: "{{ restart_policy }}"
         pull: yes
         ports: "{{ ports }}"
@@ -37,5 +38,14 @@
         exposed_ports: "{{ exposed_ports }}"
         volumes: "{{ volumes }}"        
       when: docker_network_name == None      
+
+    - shell: "docker inspect --format '{''{ .NetworkSettings.IPAddress }''}' {{ alias }}"
+      register: result
+
+    - name: Extract ip address
+      set_stats:
+        data:
+          ip_address: "{{ result.stdout }}"
+
 
 

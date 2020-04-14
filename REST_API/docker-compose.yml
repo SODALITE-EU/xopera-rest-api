@@ -8,11 +8,23 @@ services:
     build:
       context: .
       dockerfile: Dockerfile-flask
+    depends_on:
+      - postgres
     volumes:
       - "./Implementation:/usr/local/xopera_rest/Implementation"
       - "/var/run/docker.sock:/var/run/docker.sock"
       - "/root/.ssh/:/root/.ssh/"
       - "/home/xopera/certs:/home/xopera/certs"
+    environment:
+      - XOPERA_GIT_TYPE=gitlab
+      - XOPERA_GIT_URL=https://gitlab.com
+      - XOPERA_GIT_AUTH_TOKEN=[yourtoken]
+      - XOPERA_VERBOSE_MODE=debug
+      - XOPERA_DATABASE_IP=postgres
+      - XOPERA_DATABASE_NAME=postgres
+      - XOPERA_DATABASE_USER=postgres
+      - XOPERA_DATABASE_PASSWORD=password
+
 
   nginx:
     image: xopera-nginx
@@ -24,5 +36,19 @@ services:
       - 443:443
     depends_on:
       - flask
+      - postgres
     volumes:
       - "/etc/ssl/certs:/etc/nginx/certs"
+
+  postgres:
+    image: postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=postgres
+      - POSTGRES_PORT=5432
+    volumes:
+    - $HOME/docker/volumes/postgres:/var/lib/postgresql/data
+    ports:
+    - 5432:5432
+    restart: unless-stopped
