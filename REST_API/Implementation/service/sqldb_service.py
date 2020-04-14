@@ -71,7 +71,7 @@ class OfflineStorage(Database):
         """
         updates deployment log with blueprint_token, timestamp, session_token, _log
         """
-        location = "{}{}".format(Settings.offline_log, session_token)
+        location = "{}/{}".format(Settings.offline_log, session_token)
         if os.path.exists(location):
             shutil.rmtree(location)
         os.makedirs(location)
@@ -87,7 +87,7 @@ class OfflineStorage(Database):
         In case of no results returns [0, "not enough parameters"]
         """
         if blueprint_token is not None and session_token is not None:
-            path = "{}{}".format(Settings.offline_log, session_token)
+            path = "{}/{}".format(Settings.offline_log, session_token)
             try:
                 if not self.file_read(path, 'blueprint_token') == str(blueprint_token):
                     # combination of blueprint_token and session_token does not exist
@@ -98,7 +98,7 @@ class OfflineStorage(Database):
             return [[timestamp_util.str_to_datetime(self.file_read(path, "timestamp")), self.file_read(path, "_log")]]
 
         elif blueprint_token is not None:
-            pattern = "{}*/blueprint_token".format(Settings.offline_log)
+            pattern = "{}/*/blueprint_token".format(Settings.offline_log)
             token_file_paths = ["/".join(path.split('/')[:-1]) for path in glob.glob(pattern) if
                                 self.file_read(path) == str(blueprint_token)]
             return [[timestamp_util.str_to_datetime(self.file_read(path, "timestamp")), self.file_read(path, "_log")]
@@ -106,7 +106,7 @@ class OfflineStorage(Database):
                     in token_file_paths]
 
         elif session_token is not None:
-            path = "{}{}".format(Settings.offline_log, session_token)
+            path = "{}/{}".format(Settings.offline_log, session_token)
             try:
                 return [
                     [timestamp_util.str_to_datetime(self.file_read(path, "timestamp")), self.file_read(path, "_log")]]

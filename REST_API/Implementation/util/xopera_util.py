@@ -28,13 +28,10 @@ def parse_path(path: Path):
         uuid.UUID(session_token)
         uuid.UUID(blueprint_token)
     except ValueError:
-        return None
+        return None, None
     if not path.parent.parent == Path(Settings.deployment_data):
-        return None
-    return {
-        'blueprint_token': blueprint_token,
-        'session_token': session_token
-        }
+        return None, None
+    return blueprint_token, session_token
 
 
 def replace_username_and_password(rc_file_path: str, username, password):
@@ -115,3 +112,12 @@ def clean_deployment_data():
         shutil.rmtree(Settings.deployment_data)
     os.mkdir(Settings.deployment_data)
     Path(Path(Settings.deployment_data) / Path(".gitignore")).write_text("*")
+
+
+def parse_log(deploy_location: Path):
+    with (deploy_location / Settings.logfile_name).open('r') as file:
+        logfile = file.readlines()
+        log_str = "".join(logfile).casefold()
+    failed_keywords = ["fail", "traceback", "error"]
+    state = "failed" if len([i for i in failed_keywords if i in log_str]) != 0 else "done"
+    return state, log_str
