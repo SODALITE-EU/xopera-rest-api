@@ -27,7 +27,8 @@ log.info(f'Interpreter: {Settings.interpreter}')
 try:
     SQL_database = sqldb_service.PostgreSQL(Settings.sql_config)
     log.info('SQL_database: PostgreSQL')
-except psycopg2.Error:
+except psycopg2.Error as e:
+    log.error(f"Error while connecting to PostgreSQL: {str(e)}")
     SQL_database = sqldb_service.OfflineStorage()
     log.info("SQL_database: OfflineStorage")
 
@@ -49,13 +50,13 @@ api = Api(app=flask_app, version='beta', title="xOpera REST api",
                       "- another version can be specified by version_tag\n"
                       "- save session_token\n"
                       "3) using status_token from with GET to /info/status check status of your job\n"
-                      "4) After completion, check logs with GET to /info/log\n\n"
+                      "4) After completion, check logs with GET to /info/log/deployment\n\n"
                       "UNDEPLOY\n"
                       "1) undeploy blueprint with DELETE to /deploy/{blueprint_token}\n"
                       "- optionally, inputs file to be used with template must also be uploaded within same API call\n"
                       " - optionally also in combination with version_tag\n - save session_token\n "
                       "2) using status_token with GET to /info/status check status of your job\n"
-                      "3) After completion, check logs with GET to /info/log\n"
+                      "3) After completion, check logs with GET to /info/log/deployment\n"
                       "4) Delete all versions of blueprint from database with DELETE to /manage/{blueprint_token}\n"
                       "- to delete just specific version, use version_id or timestamp\n"
                       "- if deployment from template has not been undeployed yet, blueprint cannot be deleted"
@@ -65,7 +66,13 @@ api = Api(app=flask_app, version='beta', title="xOpera REST api",
                       "- to obtain access, POST to /manage/<blueprint_token>/user endpoint username and invitation "
                       "will be sent\n"
                       "- with GET to /manage/<blueprint_token>/user user can obtain "
-                      "list of collaborators and repo url\n"
+                      "list of collaborators and repo url\n\n"
+                      "GIT LOGS\n"
+                      "- Last transaction details for gitCsarDB can be inspected using "
+                      "/info/log/git/{blueprint_token} endpoint.\n"
+                      "- optionally, logs inspection can be further specified with version_tag\n"
+                      "- if all=True, all logs that satisfy blueprint_token and version_tag conditions will be "
+                      "returned\n\n"
           )
 
 # namespaces
@@ -146,8 +153,8 @@ class PublicKey(Resource):
             return {"message": "Public key {} not found".format(key_name)}, 404
 
 
-@info.route('/log')
-class Log(Resource):
+@info.route('/log/deployment')
+class DeployLog(Resource):
 
     @info.param('session_token', 'token of session')
     @info.param('blueprint_token', 'token of blueprint')
@@ -163,6 +170,27 @@ class Log(Resource):
         if not return_data:
             return {"message": "Log file not found"}, 400
         return return_data, 200
+
+
+@info.route('/log/git/<string:blueprint_token>')
+class GitLog(Resource):
+    git_log_parser = api.parser()
+    git_log_parser.add_argument('version_tag', type=str, help='version_tag of blueprint', required=False)
+    git_log_parser.add_argument('all', type=inputs.boolean, help='show all database entries, not just last one', required=False)
+
+    @info.expect(git_log_parser)
+    @info.response(400, "Log file not found", just_message_model)
+    @info.response(200, 'OK')  # , log_model)
+    def get(self, blueprint_token):
+
+        args = GitLog.git_log_parser.parse_args()
+        version_tag = args.get('version_tag')
+        all = args.get('all')
+
+        data = SQL_database.get_git_transaction_data(blueprint_token=blueprint_token, version_tag=version_tag, all=all)
+        if not data:
+            return {"message": "Log file not found"}, 400
+        return data, 200
 
 
 @info.route('/status')
@@ -280,7 +308,8 @@ class GitUserManage(Resource):
 
         success, error_msg = CSAR_db.add_member_to_blueprint(blueprint_token=blueprint_token, username=username)
         if success:
-            return f"invite for user {username} sent" if Settings.git_config['type'] == 'github' else f"user {username} added", 201
+            return f"invite for user {username} sent" if Settings.git_config[
+                                                             'type'] == 'github' else f"user {username} added", 201
         response = {
             'description': f"Could not add user {username} to repository with blueprint_id '{blueprint_token}'",
             'stacktrace': error_msg
@@ -356,8 +385,21 @@ class ManageCsar(Resource):
                     log.info('Cannot delete, undeploy not done yet')
                     return {"message": "Cannot delete, deployment has not been undeployed yet"}, 403
 
+        repo_url, _ = CSAR_db.get_repo_url(blueprint_token)
+
         rows_affected, status_code = CSAR_db.delete_blueprint(blueprint_token, version_tag)
         log.debug(f"Rows affected, status_code: {rows_affected} {status_code}")
+
+        if status_code == 200:
+            version_tags = [version_tag] if version_tag else SQL_database.get_version_tags(blueprint_token)
+            for tag in version_tags:
+
+                SQL_database.save_git_transaction_data(blueprint_token=blueprint_token,
+                                                       version_tag=tag,
+                                                       revision_msg=f"Deleted {'one version of ' if version_tag else ''}blueprint",
+                                                       job='delete',
+                                                       git_backend=str(CSAR_db.connection.git_connector),
+                                                       repo_url=repo_url)
 
         delete_metadata = dict()
 
@@ -397,6 +439,13 @@ class ManageCsar(Resource):
         if result is None:
             return {"message": f"Invalid CSAR: {response}"}, 406
 
+        SQL_database.save_git_transaction_data(blueprint_token=result['blueprint_token'],
+                                               version_tag=result['version_tag'],
+                                               revision_msg=f"Updated blueprint: {message}",
+                                               job='update',
+                                               git_backend=str(CSAR_db.connection.git_connector),
+                                               repo_url=result['url'])
+
         return result, 200
 
 
@@ -414,6 +463,13 @@ class NewBlueprintCsar(Resource):
 
         if result is None:
             return {"message": f"Invalid CSAR: {response}"}, 406
+
+        SQL_database.save_git_transaction_data(blueprint_token=result['blueprint_token'],
+                                               version_tag=result['version_tag'],
+                                               revision_msg=f"Saved new blueprint: {message}",
+                                               job='update',
+                                               git_backend=str(CSAR_db.connection.git_connector),
+                                               repo_url=result['url'])
 
         return result, 200
 

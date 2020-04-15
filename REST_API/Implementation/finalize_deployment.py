@@ -74,8 +74,17 @@ def main():
         openrc_path.unlink()
 
     # save deployment data to database
-    CSAR_db.add_revision(blueprint_token=blueprint_token, blueprint_path=deploy_location,
-                         revision_msg=git_util.after_job_commit_msg(token=blueprint_token, mode=mode))
+    revision_msg = git_util.after_job_commit_msg(token=blueprint_token, mode=mode)
+    result, _ = CSAR_db.add_revision(blueprint_token=blueprint_token, blueprint_path=deploy_location,
+                                     revision_msg=revision_msg)
+
+    # register adding revision
+    SQL_database.save_git_transaction_data(blueprint_token=result['blueprint_token'],
+                                           version_tag=result['version_tag'],
+                                           revision_msg=revision_msg,
+                                           job='update',
+                                           git_backend=str(CSAR_db.connection.git_connector),
+                                           repo_url=result['url'])
 
     shutil.rmtree(deploy_location)
     os.mkdir(deploy_location)

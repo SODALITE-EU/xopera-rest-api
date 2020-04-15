@@ -134,9 +134,9 @@ class GitDB:
         if version_tag is not None:
             try:
                 if self.connection.delete_tag(csar_token=blueprint_token, version_tag=version_tag):
-                    log.debug('deleted tag', version_tag)
+                    log.debug(f'deleted tag {version_tag}')
                     return 1, 200
-                log.debug('tag', version_tag, 'does not exist')
+                log.debug(f'tag {version_tag} does not exist')
                 return 0, 404  # tag does not exist
             except FileNotFoundError as e:
                 log.debug(str(e))

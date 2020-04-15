@@ -21,11 +21,13 @@ class Settings:
 
     # sql_database config
     sql_config = None
-    log_table = None
+    deployment_log_table = None
+    git_log_table = None
 
     # OfflineStorage database (alternative to sql_database) config
     offline_storage = implementation_dir / Path('storage')
-    offline_log = offline_storage / Path('log')
+    offline_deployment_log = offline_storage / Path('deployment_log')
+    offline_git_log = offline_storage / Path('git_log')
 
     # gitCsarDB config
     git_config = None
@@ -55,7 +57,8 @@ class Settings:
             'password': os.getenv("XOPERA_DATABASE_PASSWORD", 'password'),
             'connect_timeout': int(os.getenv("XOPERA_DATABASE_TIMEOUT", '3'))
         }
-        Settings.log_table = os.getenv("XOPERA_DATABASE_LOG_TABLE", 'log')
+        Settings.deployment_log_table = os.getenv("XOPERA_DATABASE_DEPLOYMENT_LOG_TABLE", 'deployment_log')
+        Settings.git_log_table = os.getenv("XOPERA_DATABASE_GIR_LOG_TABLE", 'git_log')
 
         Settings.verbose = os.getenv('XOPERA_VERBOSE_MODE', 'warning').casefold()
 
@@ -80,7 +83,8 @@ class Settings:
 
         log.debug(json.dumps({
             "sql_config": Settings.sql_config,
-            "log_table": Settings.log_table,
+            "deployment_log_table": Settings.deployment_log_table,
+            "git_log_table": Settings.git_log_table,
             "git_config": __debug_git_config,
             "verbose": Settings.verbose
         }, indent=2))
