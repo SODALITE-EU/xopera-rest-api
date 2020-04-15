@@ -4,3 +4,10 @@ network-name: orchestrator-net
 security-groups: default,sodalite-remote-access,sodalite-rest
 flavor-name: m1.medium
 docker-registry-ip: 154.48.185.207
+postgres_user: username
+postgres_password: password
+postgres_db: postgres
+git_type: gitlab
+git_url: https://gitlab.com
+git_auth_token: auth_token
+verbose_mode: debug

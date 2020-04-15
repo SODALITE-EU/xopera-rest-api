@@ -1,0 +1,23 @@
+- hosts: all
+  become_user: root
+  become: yes
+
+  tasks:
+    - set_fact:
+        env_dest: "{{ dir }}/{{ file_name }}"
+    - name: Make dir if it does not exist
+      file:
+        path: "{{ dir }}"
+        state: directory
+
+    - name: Copy env_file
+      copy:
+        content: "POSTGRES_USER={{ postgres_user }}
+                \nPOSTGRES_PASSWORD={{ postgres_password }}
+                \nPOSTGRES_DB={{ postgres_db }}\n"
+        dest: "{{ env_dest }}"
+
+    - name: Set attributes
+      set_stats:
+        data:
+          env_file:  "{{ env_dest }}"
