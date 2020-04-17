@@ -25,7 +25,7 @@ else
     opera deploy -i "$inputs_file" service.yaml
 fi
 
-echo "finalizing deployment"
+echo $?
 
 } &> "$logfile"
 cd "../../../../"

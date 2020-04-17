@@ -11,8 +11,9 @@ from settings import Settings
 
 
 def generic_rc_file(path: Path):
-    rc_file_path = f"{Settings.implementation_dir}/settings/openrc.sh"
-    shutil.copy(str(rc_file_path), str(path / Path('openrc.sh')))
+    if not Settings.testing:
+        rc_file_path = f"{Settings.implementation_dir}/settings/openrc.sh"
+        shutil.copy(str(rc_file_path), str(path / Path('openrc.sh')))
 
 
 def deployment_location(session_token: uuid, blueprint_token: uuid):
@@ -117,7 +118,13 @@ def clean_deployment_data():
 def parse_log(deploy_location: Path):
     with (deploy_location / Settings.logfile_name).open('r') as file:
         logfile = file.readlines()
-        log_str = "".join(logfile).casefold()
-    failed_keywords = ["fail", "traceback", "error"]
-    state = "failed" if len([i for i in failed_keywords if i in log_str]) != 0 else "done"
+        log_str = "".join(logfile[:-1]).casefold()
+    try:
+        status_code = int(logfile[-1])
+        state = "done" if status_code == 0 else "failed"
+    except ValueError:
+        log.warning('Could not read xopera exit code, obtaining status from stacktrace...')
+        failed_keywords = ["fail", "traceback", "error"]
+        state = "failed" if len([i for i in failed_keywords if i in log_str]) != 0 else "done"
+
     return state, log_str

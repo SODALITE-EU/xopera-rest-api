@@ -1,5 +1,6 @@
 import shutil
 from pathlib import Path
+import json
 
 import git
 import gitlab
@@ -132,7 +133,10 @@ class MockConnector(Connector):
         self.workdir = workdir
         if not self.workdir.exists():
             self.workdir.mkdir(parents=True)
-        self.collaborators = dict()
+        self.collab_file = self.workdir / 'colaborators.json'
+        if not self.collab_file.exists():
+            with self.collab_file.open('w') as file:
+                json.dump({}, file)
 
     def __str__(self):
         return f"MockConnector, workdir: {self.workdir}"
@@ -143,7 +147,9 @@ class MockConnector(Connector):
         if repo_path.exists():
             return False  # repo already exist, could not initialize
         git.Repo.init(repo_path, bare=True)
-        self.collaborators[repo_name] = []
+        collaborators = json.load(self.collab_file.open('r'))
+        collaborators[repo_name] = []
+        json.dump(collaborators, self.collab_file.open('w'))
         return True
 
     def repo_exist(self, repo_name: str):
@@ -152,18 +158,20 @@ class MockConnector(Connector):
         return repo_path.exists()
 
     def add_collaborator(self, repo_name: str, username: str, permissions='developer'):
-        if repo_name not in self.collaborators:
+        collaborators = json.load(self.collab_file.open('r'))
+        if repo_name not in collaborators:
             return False
-        if username in self.collaborators[repo_name]:
+        if username in collaborators[repo_name]:
             return True
-        self.collaborators[repo_name].append(username)
+        collaborators[repo_name].append(username)
+        json.dump(collaborators, self.collab_file.open('w'))
         return True
 
     def get_collaborators(self, repo_name):
 
         if not self.repo_exist(repo_name):
             return []
-        return self.collaborators[repo_name]
+        return json.load(self.collab_file.open('r'))[repo_name]
 
     def get_repo_url(self, repo_name: str):
         repo_path = Path(f"{str(self.workdir)}/{repo_name}")

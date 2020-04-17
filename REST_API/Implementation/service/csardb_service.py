@@ -46,6 +46,7 @@ class GitDB:
                 validate_csar(path, raise_exceptions=True)
             except Exception as e:
                 log.error(str(e))
+                shutil.rmtree(str(path))
                 return None, str(e)
 
         elif blueprint_path is None:
@@ -59,8 +60,7 @@ class GitDB:
             shutil.rmtree(str(path))
 
         return {
-            # 'success': result['success'],
-            'msg': "Revision saved to GitDB",
+            'message': "Revision saved to GitDB",
             'blueprint_token': result['token'],
             'url': https_url,
             'version_tag': result['version_tag'],
