@@ -1,4 +1,6 @@
 # xopera-rest-api
+![Build](https://github.com/SODALITE-EU/xopera-rest-api/workflows/Build/badge.svg?branch=master)
+
 Implementation of the xOpera orchestrator REST API
 
 ## Prerequisites
