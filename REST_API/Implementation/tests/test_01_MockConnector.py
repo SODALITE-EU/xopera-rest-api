@@ -1,8 +1,9 @@
 from pathlib import Path
+import json
 
 import git
 
-from Implementation.gitCsarDB.connectors import MockConnector
+from gitCsarDB.connectors import MockConnector
 
 
 def test_init_new(mock: MockConnector):
@@ -35,14 +36,17 @@ def test_add_collaborator(mock: MockConnector):
     repo_name = 'test_repo'
     username = 'random_user'
     assert mock.init_repo(repo_name), "Could not create repo, test useless"
-    assert repo_name in mock.collaborators, "No 'repo_name' key in collaborators dict"
-    assert not 'random_name' in mock.collaborators, "Non existing repo key exist in collaborators"
-    assert not mock.collaborators[repo_name], "List with collaborators not empty"
+    collaborators = json.load(mock.collab_file.open('r'))
+    assert repo_name in collaborators, "No 'repo_name' key in collaborators dict"
+    assert 'random_name' not in collaborators, "Non existing repo key exist in collaborators"
+    assert not collaborators[repo_name], "List with collaborators not empty"
     assert mock.add_collaborator(repo_name, username), "Did not return True on success"
-    assert len(mock.collaborators[repo_name]) == 1, "List with collaborators should contain just one element"
-    assert mock.collaborators[repo_name][0] == username, 'Username was not saved properly'
+    collaborators = json.load(mock.collab_file.open('r'))
+    assert len(collaborators[repo_name]) == 1, "List with collaborators should contain just one element"
+    assert collaborators[repo_name][0] == username, 'Username was not saved properly'
     assert mock.add_collaborator(repo_name, username), "Did not ignore adding existing user"
-    assert len(mock.collaborators[repo_name]) == 1, "repo should have just one collaborator"
+    collaborators = json.load(mock.collab_file.open('r'))
+    assert len(collaborators[repo_name]) == 1, "repo should have just one collaborator"
 
 
 def test_get_collaborators(mock: MockConnector):

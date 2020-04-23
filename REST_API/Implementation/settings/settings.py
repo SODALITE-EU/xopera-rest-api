@@ -18,6 +18,7 @@ class Settings:
     logfile_name = "logs.log"
 
     verbose = ""
+    testing = False
 
     # sql_database config
     sql_config = None
@@ -35,6 +36,7 @@ class Settings:
 
     @staticmethod
     def load_settings():
+        Settings.testing = os.getenv('XOPERA_TESTING', False)
         Settings.git_config = {
             'type': os.getenv('XOPERA_GIT_TYPE', 'mock'),
             'url': os.getenv("XOPERA_GIT_URL", ""),

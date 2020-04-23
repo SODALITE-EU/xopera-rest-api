@@ -1,12 +1,12 @@
 import uuid
 from pathlib import Path
 
-import Implementation.gitCsarDB as gitCsarDB
-from Implementation.gitCsarDB import GitCsarDB
+import gitCsarDB as gitCsarDB
+from gitCsarDB import GitCsarDB
 
 
 def test_connect_function():
-    db_mock = gitCsarDB.connect(type='mock', workdir='/tmp/blah')
+    db_mock = gitCsarDB.connect(type='mock', mock_workdir='/tmp/blah')
     assert isinstance(db_mock, GitCsarDB)
     assert isinstance(db_mock.git_connector, gitCsarDB.MockConnector)
 

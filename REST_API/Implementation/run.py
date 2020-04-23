@@ -1,4 +1,3 @@
-import argparse
 import json
 import logging as log
 import time
@@ -17,22 +16,25 @@ from util import xopera_util, timestamp_util, git_util
 Settings.load_settings()
 log.info('RESTapi verbose: {}'.format('True' if Settings.verbose else 'False'))
 xopera_util.clean_deployment_data()
-xopera_util.configure_ssh_keys()
+if not Settings.testing:
+    xopera_util.configure_ssh_keys()
 
-app_parser = argparse.ArgumentParser(description='xOpera REST API')
-app_parser.add_argument('--interpreter', help="Custom path to python interpreter", type=str, default='python3')
-args = app_parser.parse_args()
-Settings.interpreter = args.interpreter
+# app_parser = argparse.ArgumentParser(description='xOpera REST API')
+# app_parser.add_argument('--interpreter', help="Custom path to python interpreter", type=str, default='python3')
+# args = app_parser.parse_args()
+# Settings.interpreter = args.interpreter
+Settings.interpreter = 'python3'
 log.info(f'Interpreter: {Settings.interpreter}')
 
-for i in range(10):
-    try:
-        SQL_database = sqldb_service.PostgreSQL(Settings.sql_config)
-        log.info('SQL_database: PostgreSQL')
-        break
-    except psycopg2.Error as e:
-        log.error(f"Error while connecting to PostgreSQL for {i+1} time: {str(e)}")
-        time.sleep(1)
+if not Settings.testing:
+    for i in range(10):
+        try:
+            SQL_database = sqldb_service.PostgreSQL(Settings.sql_config)
+            log.info('SQL_database: PostgreSQL')
+            break
+        except psycopg2.Error as e:
+            log.error(f"Error while connecting to PostgreSQL for {i+1} time: {str(e)}")
+            time.sleep(1)
 
 try:
     SQL_database = sqldb_service.PostgreSQL(Settings.sql_config)
@@ -46,10 +48,10 @@ CSAR_db = csardb_service.GitDB(**Settings.git_config)
 log.info(f"GitCsarDB with {str(CSAR_db.connection.git_connector)}")
 
 flask_app = Flask(__name__)
-api = Api(app=flask_app, version='beta', title="xOpera REST api",
-          description="Standard scenarios of using REST api:\n\n"
+api = Api(app=flask_app, version='0.2.0', title="xOpera REST API",
+          description="xOpera REST API with xOpera==0.5.5\n\n"
+                      "Standard scenarios of using REST api:\n\n"
                       "FIRST RUN\n"
-
                       "- GET key pair via ssh/keys/public download and register it on your openstack\n\n"
                       "DEPLOY\n"
                       "1) upload blueprint with POST to /manage\n - new version of existing one must be POSTed to "
@@ -109,7 +111,7 @@ delete_metadata_model = api.model('delete_metadata', {
     'message': fields.String(required=True, description="return message"),
     "blueprint_token": fields.String(required=True, description="token of blueprint"),
     "version_tag": fields.Integer(required=True, description="id of current version of blueprint"),
-    "timestamp": fields.DateTime(required=True, description="timestamp of database entry"),
+    # "timestamp": fields.DateTime(required=True, description="timestamp of database entry"),
     "deleted_database_entries": fields.Integer(required=True, description="Number of deleted entries"),
     "force": fields.Boolean(required=True, description="did we do it with force or not")
 })
@@ -426,7 +428,7 @@ class ManageCsar(Resource):
             delete_metadata["message"] = 'Server error'
 
         delete_metadata["blueprint_token"] = blueprint_token
-        delete_metadata["version_id"] = version_tag or 'all'
+        delete_metadata["version_tag"] = version_tag or 'all'
         delete_metadata["deleted_database_entries"] = rows_affected
         delete_metadata["force"] = force or False
 

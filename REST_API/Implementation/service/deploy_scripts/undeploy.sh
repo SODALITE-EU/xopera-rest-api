@@ -16,8 +16,8 @@ echo "Adding openrc key"
 echo "Entered"
 echo "Launching xOpera"
 opera undeploy
-echo "finalizing undeployment"
 
+echo $?
 } &> "$logfile"
 cd "../../../../"
 "$interpreter" Implementation/finalize_deployment.py undeploy "$path" "$timestamp_start"
