@@ -228,6 +228,31 @@ def validate_csar(csar: Path, raise_exceptions=False):
     return True
 
 
+def entry_definitions(csar: Path):
+    """
+    returns path: str to entry definitions, relative to csar path
+
+    """
+
+    tosca_meta_path = Path(csar / 'TOSCA-Metadata' / 'TOSCA.meta')
+
+    if not tosca_meta_path.exists():
+        yaml_files = glob.glob(str(csar) + "/*.yaml") + glob.glob(str(csar) + "/*.yml")
+
+        if len(yaml_files) != 1:
+            return None
+
+        return Path(yaml_files[0]).name
+
+    else:
+        metadata_yaml = yaml.safe_load(open(tosca_meta_path, 'r').read())
+
+        if 'Entry-Definitions' not in metadata_yaml:
+            return None
+
+        return metadata_yaml['Entry-Definitions']
+
+
 def main(args):
     to_CSAR(blueprint_name=args.name, blueprint_dir=args.blueprint_dir, no_meta=args.no_meta,
             entry_definitions=args.entry_definitions, other_definitions=args.other_definitions,
