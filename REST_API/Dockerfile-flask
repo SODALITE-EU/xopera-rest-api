@@ -34,12 +34,12 @@ RUN ansible-galaxy install geerlingguy.docker && \
     ansible-galaxy install geerlingguy.repo-epel
 
 # Copy required certificates and install them
-COPY Certs/ca.crt /home/xopera/certs/ca.crt
-COPY Certs/ca.key /home/xopera/certs/ca.key
-COPY Certs/firstdeploy/*.crt /home/xopera/certs/xopera.local.crt
-COPY Certs/firstdeploy/*.key /home/xopera/certs/xopera.local.key
-COPY Certs/ca.crt /usr/local/share/ca-certificates/ca.crt
-RUN update-ca-certificates
+# COPY Certs/ca.crt /home/xopera/certs/ca.crt
+# COPY Certs/ca.key /home/xopera/certs/ca.key
+# COPY Certs/firstdeploy/*.crt /home/xopera/certs/xopera.local.crt
+# COPY Certs/firstdeploy/*.key /home/xopera/certs/xopera.local.key
+# COPY Certs/ca.crt /usr/local/share/ca-certificates/ca.crt
+# RUN update-ca-certificates
 
 # We copy codebase into the image
 COPY Implementation /usr/local/xopera_rest/Implementation

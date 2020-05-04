@@ -1,6 +1,7 @@
 #!/bin/bash
 
-IP="$1"
+CN="$1"
+# CN: common name of xOpera host. Usually IP, but can be arbitrary.
 
 echo "Installing xOpera SSH key pair..."
 
@@ -34,7 +35,7 @@ fi
 echo "Generating rsa key pair for xOpera..."
 cd /root/.ssh/ || exit
 rm -f ./*xOpera*
-ssh-keygen -t rsa -f "${IP}-xOpera" -q -N ""
-mv "${IP}-xOpera" "${IP}-xOpera.pk"
-mv "${IP}-xOpera.pub" "${IP}-xOpera.pubk"
+ssh-keygen -t rsa -f "${CN}-xOpera" -q -N ""
+mv "${CN}-xOpera" "${CN}-xOpera.pk"
+mv "${CN}-xOpera.pub" "${CN}-xOpera.pubk"
 echo "Done."
