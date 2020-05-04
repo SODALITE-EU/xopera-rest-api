@@ -75,8 +75,11 @@ def main():
 
     # save deployment data to database
     revision_msg = git_util.after_job_commit_msg(token=blueprint_token, mode=mode)
+    version_tag = xopera_util.read_version_tag(deploy_location=deploy_location)
+    if version_tag == 'None':
+        version_tag = CSAR_db.get_tags(blueprint_token=blueprint_token)[-1]
     result, _ = CSAR_db.add_revision(blueprint_token=blueprint_token, blueprint_path=deploy_location,
-                                     revision_msg=revision_msg)
+                                     revision_msg=revision_msg, minor_to_increment=version_tag)
 
     # register adding revision
     SQL_database.save_git_transaction_data(blueprint_token=result['blueprint_token'],
@@ -84,7 +87,8 @@ def main():
                                            revision_msg=revision_msg,
                                            job='update',
                                            git_backend=str(CSAR_db.connection.git_connector),
-                                           repo_url=result['url'])
+                                           repo_url=result['url'],
+                                           commit_sha=result['commit_sha'])
 
     shutil.rmtree(deploy_location)
     os.mkdir(deploy_location)

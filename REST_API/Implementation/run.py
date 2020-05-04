@@ -249,6 +249,8 @@ class Deploy(Resource):
             return {"message": 'Did not find blueprint with token: {} and version_id: {} '.format(
                 blueprint_token, version_tag or 'any')}, 404
 
+        xopera_util.save_version_tag(deploy_location=location, version_tag=version_tag)
+
         xopera_service.deploy(deployment_location=location, inputs_file=file)
 
         log.info("Deploying '{}', session_token: {}".format(blueprint_token, session_token))
@@ -285,6 +287,8 @@ class Deploy(Resource):
             if git_util.after_job_commit_msg(token=blueprint_token, mode='deploy') not in last_message:
                 return {"message": f"Blueprint with token: {blueprint_token}, and version_tag: {version_tag or 'any'} "
                                    f"has not been deployed yet, cannot undeploy"}, 403
+
+        xopera_util.save_version_tag(deploy_location=location, version_tag=version_tag)
 
         xopera_service.undeploy(deployment_location=location, inputs_file=file)
 
@@ -456,7 +460,8 @@ class ManageCsar(Resource):
                                                revision_msg=f"Updated blueprint: {message}",
                                                job='update',
                                                git_backend=str(CSAR_db.connection.git_connector),
-                                               repo_url=result['url'])
+                                               repo_url=result['url'],
+                                               commit_sha=result['commit_sha'])
 
         return result, 200
 
@@ -481,7 +486,8 @@ class NewBlueprintCsar(Resource):
                                                revision_msg=f"Saved new blueprint: {message}",
                                                job='update',
                                                git_backend=str(CSAR_db.connection.git_connector),
-                                               repo_url=result['url'])
+                                               repo_url=result['url'],
+                                               commit_sha=result['commit_sha'])
 
         return result, 200
 

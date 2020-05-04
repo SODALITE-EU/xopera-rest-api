@@ -25,13 +25,13 @@ class TestPostNew:
         resp = client.post("/manage", data=csar_1)
         assert_that(resp.status_code).is_equal_to(200)
         assert_that(resp.json).is_not_none().contains_only("message", 'blueprint_token', 'url',
-                                                           'version_tag', 'users')
+                                                           'version_tag', 'users', 'commit_sha')
         try:
             uuid.UUID(resp.get_json()['blueprint_token'])
         except ValueError:
             fail('"blueprint_token" from response is not uuid')
 
-        assert_that(resp.get_json()['version_tag']).is_equal_to('v1')
+        assert_that(resp.get_json()['version_tag']).is_equal_to('v1.0')
 
         try:
             validators.url(resp.get_json()['url'])
@@ -65,8 +65,8 @@ class TestPostMultipleVersions:
         resp2 = client.post(f"/manage/{token}", data=csar_2)
         assert_that(resp2.status_code).is_equal_to(200)
         assert_that(resp2.json).is_not_none().contains_only("message", 'blueprint_token', 'url',
-                                                            'version_tag', 'users')
-        assert_that(resp2.json['version_tag']).is_equal_to('v2')
+                                                            'version_tag', 'users', 'commit_sha')
+        assert_that(resp2.json['version_tag']).is_equal_to('v2.0')
 
 
 class TestDelete:

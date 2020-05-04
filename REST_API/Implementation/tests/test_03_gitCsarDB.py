@@ -68,7 +68,7 @@ def test_save_update_CSAR(db: GitCsarDB, generic_dir: Path):
     assert db.CSAR_exists(csar_token), "Did not correctly saved repo, test useless"
     db.save_CSAR(csar_path=generic_dir, csar_token=csar_token)
 
-    repo_path = db.get_CSAR(csar_token=csar_token, version_tag='v2')
+    repo_path = db.get_CSAR(csar_token=csar_token, version_tag='v2.0')
     assert len([file for file in repo_path.glob("[!.git]*")]) > 0, "Repo empty"
 
 
