@@ -6,6 +6,7 @@ from pathlib import Path
 import yaml
 from werkzeug.datastructures import FileStorage
 
+from blueprint_converters import blueprint2CSAR
 from settings import Settings
 from util import xopera_util, timestamp_util
 
@@ -18,6 +19,7 @@ def deploy(deployment_location: Path, inputs_file: FileStorage = None):
     log.info("Orchestrating with xOpera...")
 
     timestamp_start = timestamp_util.datetime_now_to_string()
+    entry_definitions = blueprint2CSAR.entry_definitions(csar=deployment_location)
 
     inputs_dict = dict()
     inputs_filename = "inputs.yaml"
@@ -40,7 +42,7 @@ def deploy(deployment_location: Path, inputs_file: FileStorage = None):
         yaml.dump(inputs_dict, inputs_file)
 
     _list = [f'{Settings.implementation_dir}/service/deploy_scripts/deploy.sh', '{}'.format(str(deployment_location)),
-             Settings.logfile_name, timestamp_start, inputs_filename, Settings.interpreter]
+             Settings.logfile_name, timestamp_start, inputs_filename, Settings.interpreter, entry_definitions]
 
     subprocess.Popen(_list)
 
