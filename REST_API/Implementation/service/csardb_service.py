@@ -26,11 +26,19 @@ class GitDB:
         """
         self.connection.add_tag(csar_token=blueprint_token, commit_sha=commit_sha, tag=tag, tag_msg=tag_msg)
 
+    def get_tags(self, blueprint_token: uuid):
+        """
+        returns list of all tags
+        """
+        return self.connection.get_tags_list(csar_token=blueprint_token)
+
     def add_revision(self, blueprint_token: uuid = None, CSAR: FileStorage = None,
-                     blueprint_path: Path = None, revision_msg: str = None):
+                     blueprint_path: Path = None, revision_msg: str = None, minor_to_increment: str = None):
         """
         saves blueprint into database. One of (CSAR, blueprint_path) must not be None. If blueprint_token is None,
         it is generated and returned together with version_id
+
+        if minor_to_increment not None, minor version of tag will be incremented, else, major version (of all tags) will be incremented
         """
         token = uuid.uuid4() if not blueprint_token else blueprint_token
         path = Path(f'/tmp/{uuid.uuid4()}') if not blueprint_path else blueprint_path
@@ -52,8 +60,8 @@ class GitDB:
         elif blueprint_path is None:
             # both params cannot be None
             raise AttributeError('Both CSAR and blueprint path cannot be None')
-
-        result = self.connection.save_CSAR(csar_path=path, csar_token=token, message=revision_msg)
+        result = self.connection.save_CSAR(csar_path=path, csar_token=token,
+                                           message=revision_msg, minor_to_increment=minor_to_increment)
         https_url = self.connection.get_repo_url(csar_token=token)
         users = self.connection.get_user_list(csar_token=token)
         if CSAR is not None:
@@ -63,6 +71,7 @@ class GitDB:
             'message': "Revision saved to GitDB",
             'blueprint_token': result['token'],
             'url': https_url,
+            'commit_sha': result['commit_sha'],
             'version_tag': result['version_tag'],
             'users': users
         }, None

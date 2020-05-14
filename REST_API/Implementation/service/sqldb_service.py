@@ -38,7 +38,7 @@ class Database:
         pass
 
     def save_git_transaction_data(self, blueprint_token: uuid, version_tag: str, revision_msg: str, job: str,
-                                  git_backend: str, repo_url: str):
+                                  git_backend: str, repo_url: str, commit_sha: str = None):
         """
         Saves transaction data to database
         """
@@ -141,7 +141,7 @@ class OfflineStorage(Database):
             return []
 
     def save_git_transaction_data(self, blueprint_token: uuid, version_tag: str,
-                                  revision_msg: str, job: str, git_backend: str, repo_url: str):
+                                  revision_msg: str, job: str, git_backend: str, repo_url: str, commit_sha: str = None):
         """
         Saves transaction data to database
         """
@@ -158,6 +158,7 @@ class OfflineStorage(Database):
                 'job': job,
                 'git_backend': git_backend,
                 'repo_url': repo_url,
+                'commit_sha': commit_sha,
                 'timestamp': timestamp
             }
             (location / str(timestamp)).write_text(json.dumps(git_transaction_data, indent=2))
@@ -217,6 +218,7 @@ class PostgreSQL(Database):
                         job varchar(36), 
                         git_backend text,
                         repo_url text,
+                        commit_sha text,
                         primary key (timestamp)
                         );""".format(Settings.git_log_table))
 
@@ -282,14 +284,14 @@ class PostgreSQL(Database):
         return lines
 
     def save_git_transaction_data(self, blueprint_token: uuid, version_tag: str, revision_msg: str, job: str,
-                                  git_backend: str, repo_url: str):
+                                  git_backend: str, repo_url: str, commit_sha: str = None):
         """
         Saves transaction data to database
         """
         response = self.execute(
-            """insert into {} (blueprint_token, version_tag, revision_msg, job, git_backend, repo_url) values 
-            (%s, %s, %s, %s, %s, %s)""".format(Settings.git_log_table),
-            (str(blueprint_token), version_tag, revision_msg, job, git_backend, repo_url))
+            """insert into {} (blueprint_token, version_tag, revision_msg, job, git_backend, repo_url, commit_sha) 
+            values (%s, %s, %s, %s, %s, %s, %s)""".format(Settings.git_log_table),
+            (str(blueprint_token), version_tag, revision_msg, job, git_backend, repo_url, commit_sha))
         if response:
             log.info('Updated git log in PostgreSQL database')
         else:
@@ -302,7 +304,7 @@ class PostgreSQL(Database):
         """
         inputs = tuple(xi for xi in (str(blueprint_token), version_tag) if xi is not None)
         dbcur = self.connection.cursor()
-        query = """select blueprint_token, version_tag, revision_msg, job, git_backend, repo_url, timestamp
+        query = """select blueprint_token, version_tag, revision_msg, job, git_backend, repo_url, commit_sha, timestamp
          from {} where blueprint_token = %s {} order by timestamp desc {};""".format(
             Settings.git_log_table, "and version_tag = %s" if version_tag else "", "limit 1" if not all else "")
 
@@ -316,7 +318,8 @@ class PostgreSQL(Database):
                 'job': line[3],
                 'git_backend': line[4],
                 'repo_url': line[5],
-                'timestamp': timestamp_util.datetime_to_str(line[6])
+                'commit_sha': line[6],
+                'timestamp': timestamp_util.datetime_to_str(line[7])
             } for line in lines
         ]
         dbcur.close()

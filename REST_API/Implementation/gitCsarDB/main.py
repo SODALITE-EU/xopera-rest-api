@@ -4,6 +4,7 @@ from pathlib import Path
 
 import git
 
+from . import tag_util
 from .connectors import Connector
 
 
@@ -26,7 +27,7 @@ class GitCsarDB:
         self.commit_name = commit_name
         self.commit_mail = commit_mail
 
-    def save_CSAR(self, csar_path: Path, csar_token: uuid, message: str = None):
+    def save_CSAR(self, csar_path: Path, csar_token: uuid, message: str = None, minor_to_increment: str = None):
         if not self.CSAR_exists(csar_token):
             self.git_connector.init_repo(self.repo_name(csar_token))
         repo_path = self.workdir / Path(self.repo_name(csar_token))
@@ -42,9 +43,12 @@ class GitCsarDB:
             pass
         self.copy_content(csar_path, repo_path)
         repo.git.add('--all')
-        n = len(repo.tags) + 1
-        tag_name = f'v{n}'
+        if minor_to_increment:
+            tag_name = tag_util.next_minor(repo.tags, minor_to_increment)
+        else:
+            tag_name = tag_util.next_major(repo.tags)
         commit_obj = repo.index.commit(message=f'gitCsarDB: {message or tag_name}')
+        commit_sha = str(commit_obj)
         tag = repo.create_tag(path=tag_name, message=message, ref=commit_obj)
         repo.remotes.origin.push()
         repo.remotes.origin.push(tag.name)
@@ -52,7 +56,8 @@ class GitCsarDB:
         return {
             'success': True,
             'token': str(csar_token),
-            'version_tag': tag_name
+            'version_tag': tag_name,
+            'commit_sha': commit_sha
         }
 
     def add_tag(self, csar_token: uuid, commit_sha: str, tag: str, tag_msg: str = None):
@@ -113,6 +118,15 @@ class GitCsarDB:
     def get_commits_list(self, csar_token):
         repo_name = self.repo_name(csar_token)
         return self.git_connector.get_commits_list(repo_name)
+
+    def get_tags_list(self, csar_token):
+
+        repo_path = self.workdir / Path(self.repo_name(csar_token))
+        shutil.rmtree(path=repo_path, ignore_errors=True)
+        repo = self.git_connector.clone(repo_name=self.repo_name(csar_token), workdir=self.workdir)
+        tags = [str(tag) for tag in repo.tags]
+        shutil.rmtree(path=repo_path)
+        return tags
 
     @staticmethod
     def copy_content(src: Path, dst: Path):

@@ -128,3 +128,14 @@ def parse_log(deploy_location: Path):
         state = "failed" if len([i for i in failed_keywords if i in log_str]) != 0 else "done"
 
     return state, log_str
+
+
+def save_version_tag(deploy_location: Path, version_tag: str):
+    with (deploy_location / "version_tag").open('w') as file:
+        file.write(str(version_tag))
+
+
+def read_version_tag(deploy_location: Path):
+    version_tag = (deploy_location / "version_tag").open('r').read()
+    (deploy_location / "version_tag").unlink()
+    return version_tag
