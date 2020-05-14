@@ -18,7 +18,7 @@ services:
     environment:
       - XOPERA_GIT_TYPE=gitlab
       - XOPERA_GIT_URL=https://gitlab.com
-      - XOPERA_GIT_AUTH_TOKEN=[yourtoken]
+      - XOPERA_GIT_AUTH_TOKEN=[your access token here]
       - XOPERA_VERBOSE_MODE=debug
       - XOPERA_DATABASE_IP=postgres
       - XOPERA_DATABASE_NAME=postgres
@@ -38,7 +38,7 @@ services:
       - flask
       - postgres
     volumes:
-      - "/etc/ssl/certs:/etc/nginx/certs"
+      - "/home/xopera/certs:/etc/nginx/certs"
 
   postgres:
     image: postgres

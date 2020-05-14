@@ -3,10 +3,6 @@
 cd "${0%/*}" || exit
 
 rc_file_location="$1"
-os_password="$2"
-computer_ip="$3"
-
-
 
 if [ -z "$rc_file_location" ]; then
   file=openrc.sh || exit
@@ -23,10 +19,7 @@ echo "done"
 cd Implementation || exit
 rm -rf settings/vault.yml || true
 
-if [[ -z "$os_password" ]];
-then
-   read -s -r -p "Enter OpenStack RC password:" os_password
-fi
+read -s -r -p "Enter OpenStack RC password:" os_password
 
 echo "$os_password" >settings/vault.yml
 
@@ -35,13 +28,3 @@ echo "Creting ansible vault and saving openstack pasword..."
 ansible-vault encrypt --vault-id prod@settings/sec.yml settings/vault.yml
 
 echo "Vault created"
-
-if [ -z "$computer_ip" ]
-then
-      exit
-fi
-
-echo "Creating OpenStack key pair..."
-cd ../Certs || exit
-./generate_os_keys.sh "$computer_ip"
-echo "done"

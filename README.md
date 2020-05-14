@@ -61,54 +61,41 @@ PostgreSQL can be also run as [docker container](#PostgreSQL-docker)
 In most applications, REST API needs docker registry to store docker images.
 It can be run [locally](#Local-docker-registry) or [remotely](#Connect-to-remote-registry).
 See [docker docs](https://docs.docker.com/engine/security/certificates/) for more details.
-If installing with `make`, certificates for remote registry are going to be configured automatically.
+Certificates 
+
+## Installation
+
+## System packages
+System packages can be installed using:
+    
+    sudo ./system-packages.sh
+
+### xOpera certs
+xOpera REST API needs root CA pair and client key cert pair. Required certs and keys can be installed with:
+
+    sudo ./Installation/xopera-certs.sh
+
+### Openstack setup
+This step if required only if working with openstack. Run:
+
+    ./Installation/openstack_setup.sh [openstack.rc location]
+
+On prompt, openstack password must be entered.
+    
+### SSH keys
+xOpera needs SSH key pair with `xOpera` substring in name in `/root/.ssh` dir. It can be generated using
+
+    sudo ./Installation/ssh_keys.sh [common name]
+
+where common name is desired name for SSH key (usually computer's IP).
 
 ## Quick start
 
 ### Local run
+To run locally, use [docker compose](REST_API/docker-compose.yml)
 
-#### Run in venv (optional, recommended)
-- Installing: `python3 -m pip install --user virtualenv`
-- Creating: `python3 -m venv [venv_name]`
-- Activating: `source [venv_name]/bin/activate`
-
-
-Your python venv must be activated before installation and also before every run.
-
-#### Installation and run
-
-To install, test and run in computer's environment (or venv), simply run:
-
-    make all
-    
-or run stages separately:
-
-    make clean
-    make install
-    make build
-    make tests
-    make run
-    
-### Run in docker
-To install, test and run in docker container, simply run:
-    
-    make all_docker
-
-or run stages separately:
-    
-    make clean
-    make clean_docker
-    make install_docker
-    make build
-    make tests
-    make run_docker
-
-## Production stack
-
-To deploy xOpera REST API in production stack (FLASK + uWSGI + NGINX + Postgres), use [docker compose](REST_API/docker-compose.yml) or [TOSCA template](xOpera-rest-blueprint).
-
-## Manual installation
-See [manual installation](#Instructions-for-manual-installation-and-run).
+### Remote deploy
+REST API can be deployed remotely using [TOSCA template](xOpera-rest-blueprint) with compliant orchestrator, for instance [xOpera](https://github.com/xlab-si/xopera-opera).
 
 ## API
 Check [swagger docs](REST_API/Documentation/swagger.json).
@@ -150,6 +137,11 @@ Standard scenarios of using REST api:
     - invitation for user with username will be sent to its email address (github.com)
     - user will be added to repository (gitlab)
 - with GET to /manage/<blueprint_token>/user user_list can be obtained
+                      
+### GIT LOGS
+- Last transaction details for gitCsarDB can be inspected using /info/log/git/{blueprint_token} endpoint.
+    - optionally, logs inspection can be further specified with version_tag
+    - if all=True, all logs that satisfy blueprint_token and version_tag conditions will be returned
 
 ## TOSCA 1.3 Cloud Service Archive (CSAR) format
 
@@ -166,6 +158,8 @@ Check help:
 
 ### Structure of CSAR format  
 For details about CSAR format structure, visit [TOSCA Simple Profile in YAML Version 1.3](https://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.3/os/TOSCA-Simple-Profile-YAML-v1.3-os.html#_Toc26969474)
+
+## xOpera caveats
 
 ### Using xopera-key-name in templates
 
@@ -196,95 +190,31 @@ If some non default user must be used, his credentials can be submitted wit inpu
     OS_USERNAME: [username]
     OS_PASSWORD: [password]
     ...
-    
-    
-## Instructions for manual installation and run
 
-### Installation
-
-#### Ubuntu
-
-The following installation supports Ubuntu 18.04. 
-Move to REST_API directory and install packages (requires sudo):
-    
-    sudo ./system-packages.sh
-    pip3 install -r requirements.txt
-    sudo ansible-galaxy install -r requirements.yml
-    
-#### Alpine
-
-For alpine, run following commands:
-
-    apk add gcc bash openssh-client python3-dev py-virtualenv linux-headers musl-dev libffi-dev libressl-dev postgresql-dev python3 pip3 ansible
-    pip3 install -U wheel "opera[openstack]<0.5" Flask flask_restplus psycopg2 jinja2 docker-py
-    ansible-galaxy install -r requirements.yml
-    
-##### Certificates
-Docker needs certificates to run properly. Run the command and provide details, when prompted.
-    
-    sudo ./certs.sh [COMPUTER_IP] [DOCKER_CONTAINER_IP]
-
-Docker container IPs [DOCKER_CONTAINER_IP] start with 172.17.0.2 (172.17.0.1 is the local computer), so this is probably the one.
-
-##### OpenStack credentials
-Go to OpenStack dashboard and navigate to the `Access & Security` -> `API Access` and download RC file (RC FILE v3).
-[RC_FILE_PATH] is path to RC file, if file with filename `openrc.sh` is located in same directory as script (`REST_API`), it can be left empty.
-When prompted, make sure you provide the following script with correct OpenStack password.
-    
-    sudo ./open_stack_setup.sh [RC_FILE_PATH] [COMPUTER_IP]
-
-##### Default settings
-Default settings are stored in [default_settings.json](REST_API/Implementation/settings/default_settings.json).
-### Run
-#### Docker run REST API
-To run docker with REST_API, simply run:
-
-    sudo ./build_and_run.sh
-
-REST_API by default runs on port 5000. If it is already taken, docker launch will fail, so docker's parameter `-p` in `Impementation/build_and_run.sh` must be changed to `-p 5000:[IP_OF_CHOICE]`
-
-#### Local run REST API
-To run REST_API app locally, simply run:
-
-    sudo ./Implementation/run.sh
-
-#### PostgreSQL docker
-REST API can run with or without database.
-To run PostgreSQL inside docker container, run:
-    
-    docker run --rm --name postgres-docker -e POSTGRES_PASSWORD=password -d -v $HOME/docker/volumes/postgres:/var/lib/postgresql/data postgres
-    
-Database's IP can be obtained using following command:
-
-    docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' postgres-docker
-
-#### Local docker registry
+## Docker registry connection
+### Local docker registry
 To run docker image registry locally, run the following command:
 
     docker run -d --restart=always --name registry -v /mnt/registry:/var/lib/registry registry:2
 
-#### Connect to remote registry
+### Connect to remote registry
 
-This is done after you already set the docker registry up using either `docker-registry` or `xopera-full` template and would like to connect to registry from another local machine.
-
-##### Installation with script (Ubuntu only)   
+#### Installation with script (Ubuntu only)   
 If you are using ubuntu, just run the following script:
 
-    sudo ./local_certs.sh [computer_IP] [registry_IP]
+    sudo ./docker_certs.sh [computer_IP] [registry_IP] [path_to_CA_dir]
    
-##### Manual installation (Ubuntu or CentOS) 
+#### Manual installation (Ubuntu or CentOS) 
 If you choose to preform steps manually, follow the steps below:
 * Ubuntu: add root certificate `ca.crt` to `/usr/share/ca-certificates/` folder, add the filename `ca.crt` to `/etc/ca-certificates.conf` and run `sudo update-ca-certificates` to update certificates.
 * CentOS: add root certificate `ca.crt` to `/etc/pki/ca-trust/source/anchors/` folder and run `sudo update-ca-trust` to update certificates.
  
-Now we want to generate client certificate, signed with root CA to use for your local machine. You can do this by running the following command and replacing the [COMPUTER_IP] with the respective value:
-
-    sudo ./Certs/generate_noprompt.sh [COMPUTER_IP] IP:[COMPUTER_IP] local
+Generate client cert and key, get it signed using docker registry's root CA certificate.
 
 Now create a new directory in the docker certificate folder (`/etc/docker/certs.d/`) that has the same name as the IP/domain of your docker registry.
-Afterwards, copy the `ca.crt` from `Certs` folder inside the newly created folder. You also need to copy the certificate and private key you generated from the `Certs/local` folder into this folder and change the certificate's extension from `.crt` to `.cert`. This way Docker recognizes which certificates are root CAs and which are client certificates. You can leave the .key file as-is.
+Afterwards, copy the docker registry's `ca.crt` to newly created folder. You also need to copy client certificate and private key you generated and got signed.
 
-The file structure should now look similar to this:
+The file structure should be as follows:
 
     /etc/docker/certs.d/
     └── my_registry_ip
@@ -293,20 +223,3 @@ The file structure should now look similar to this:
        └── ca.crt
 
 See [docker docs](https://docs.docker.com/engine/security/certificates/) for more details.
-
-### Building Docker Images
-
-#### Build
-
-Some deployments need docker images to deploy services properly(for instance full_test example, that deploys REST API container)
-
-To build the REST API image, run the following command from the `REST_API/` folder:
-
-    sudo ./build_xopera_rest.sh
-
-Command will make `xopera_rest.tar` image in `Builds` dir. The content of this dir will be copied to `home/xopera/build` as part of `run.sh` script so make sure to build images before running REST API, or you can just copy images by yourself. 
-
-To test and start your newly built docker container locally (optionally, not necessary), run the following command:
-
-    docker run -it xopera_rest
-
