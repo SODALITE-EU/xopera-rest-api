@@ -29,11 +29,11 @@
         groups: vms
         ansible_host: "{{ server_info.server.public_v4 }}"
         ansible_user: centos
-        ansible_ssh_common_args: >
-          -o IdentitiesOnly=yes
+        ansible_ssh_common_args: "
+          -o IdentityFile={{ identity_file }}
           -o BatchMode=yes
           -o UserKnownHostsFile=/dev/null
-          -o StrictHostKeyChecking=no
+          -o StrictHostKeyChecking=no"
 
 - hosts: vms
   gather_facts: no

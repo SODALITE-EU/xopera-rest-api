@@ -19,10 +19,6 @@ xopera_util.clean_deployment_data()
 if not Settings.testing:
     xopera_util.configure_ssh_keys()
 
-# app_parser = argparse.ArgumentParser(description='xOpera REST API')
-# app_parser.add_argument('--interpreter', help="Custom path to python interpreter", type=str, default='python3')
-# args = app_parser.parse_args()
-# Settings.interpreter = args.interpreter
 Settings.interpreter = 'python3'
 log.info(f'Interpreter: {Settings.interpreter}')
 
@@ -49,7 +45,7 @@ log.info(f"GitCsarDB with {str(CSAR_db.connection.git_connector)}")
 
 flask_app = Flask(__name__)
 api = Api(app=flask_app, version='0.2.0', title="xOpera REST API",
-          description="xOpera REST API with xOpera==0.5.5\n\n"
+          description="xOpera REST API with xOpera==0.5.7\n\n"
                       "Standard scenarios of using REST api:\n\n"
                       "FIRST RUN\n"
                       "- GET key pair via ssh/keys/public download and register it on your openstack\n\n"
