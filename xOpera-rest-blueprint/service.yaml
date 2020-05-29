@@ -418,7 +418,15 @@ node_types:
         description: IP of the SODALITE docker registry 
         default: localhost 
         required: True 
-        type: string 
+        type: string
+      ca_crt_location:
+        description: location of ca.crt file
+        required: True
+        type: string
+      ca_key_location:
+        description: location of ca.key file
+        required: True
+        type: string
     attributes:  
       state:  
         description: The state of the node instance. 
@@ -460,7 +468,9 @@ node_types:
         create:  
           inputs:  
             registry_ip: { default: { get_property: [ SELF, registry_ip ] } } 
-            public_ipv4_address: { default:  { get_attribute: [ SELF, host, public_address ] } } 
+            ca_crt_location: { default: { get_property: [ SELF, ca_crt_location ] } }
+            ca_key_location: { default: { get_property: [ SELF, ca_key_location ] } }
+            public_ipv4_address: { default:  { get_attribute: [ SELF, host, public_address ] } }
           implementation:  
             primary: playbooks/docker/create_docker_host.yml 
         type: tosca.interfaces.node.lifecycle.Standard 
@@ -485,7 +495,10 @@ node_types:
         type: string 
       key_name:  
         description: OpenStack SSH key name that should be placed on the VM 
-        type: string 
+        type: string
+      identity_file:
+        description: path to ssh key on orchestrator
+        type: string
     attributes:  
       tosca_id:  
         description: A unique identifier of the realized instance of a Node Template that derives from any TOSCA normative type 
@@ -562,7 +575,8 @@ node_types:
             image: { default: { get_property: [ SELF, image    ] } } 
             security_groups: { default: { get_property: [ SELF, security_groups  ] } } 
             vm_name: { default: { get_property: [ SELF, name     ] } } 
-          implementation: playbooks/openstack/vm/create.yml 
+            identity_file: { default: { get_property: [ SELF, identity_file     ] } }
+          implementation: playbooks/openstack/vm/create.yml
         delete:  
           inputs:  
             id: { default: { get_attribute: [ SELF, id ] } } 
@@ -598,6 +612,12 @@ topology_template:
       type: string
     verbose_mode:
       type: string
+    identity_file:
+      type: string
+    ca_crt_location:
+      type: string
+    ca_key_location:
+      type: string
 
 
   node_templates: 
@@ -628,14 +648,17 @@ topology_template:
         network:   { get_input: network-name }
         security_groups: { get_input: security-groups }
         flavor: { get_input: flavor-name }
-      requirements:  
+        identity_file: { get_input: identity_file }
+      requirements:
        - protected_by:  security-rules-rest
 
     xOpera-docker-host:
       type: sodalite.nodes.DockerHost 
       properties:  
         registry_ip:  { get_input: docker-registry-ip } 
-      requirements:  
+        ca_crt_location:  { get_input: ca_crt_location }
+        ca_key_location:  { get_input: ca_key_location }
+      requirements:
         - host:  xOpera-vm
 
     xOpera-docker-network:

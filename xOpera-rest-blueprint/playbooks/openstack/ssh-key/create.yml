@@ -17,12 +17,12 @@
             path: "{{ ssh_path }}"
             state: directory
         - openssl_privatekey:
-            path: "{{ ssh_path }}{{ key_name }}.pk"
+            path: "{{ ssh_path }}{{ key_name }}"
             size: 4096
         - openssl_publickey:
             path: "{{ ssh_path }}{{ key_name }}.pubk"
             format: OpenSSH
-            privatekey_path: "{{ ssh_path }}{{ key_name }}.pk"
+            privatekey_path: "{{ ssh_path }}{{ key_name }}"
 
 
 

@@ -31,7 +31,7 @@ more-itertools==8.2.0
 munch==2.5.0
 netifaces==0.10.9
 openstacksdk==0.41.0
-opera==0.5.6
+opera==0.5.7
 os-service-types==1.7.0
 packaging==20.1
 pbr==5.4.4
@@ -43,7 +43,7 @@ PyGithub==1.47
 pyparsing==2.4.6
 pyrsistent==0.15.7
 pytest==5.3.5
-python-gitlab==2.1.2
+python-gitlab==2.2.0
 pytz==2019.3
 PyYAML==5.3
 requests==2.22.0
