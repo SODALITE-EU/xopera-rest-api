@@ -37,6 +37,7 @@ pipeline {
             }
         }
         stage('Build and push xopera-flask') {
+            when { tag "*" }
             steps {
                 sh "cp -f $openrc_file REST_API/Implementation/settings/openrc.sh"
                 sh "cp -f $ansible_vault_file REST_API/Implementation/settings/vault.yml"
@@ -46,13 +47,39 @@ pipeline {
             }
         }
         stage('Build and push xopera-nginx') {
+            when { tag "*" }
             steps {
                 sh "cd REST_API; docker build -t xopera-nginx -f Dockerfile-nginx ."
                 sh "docker tag xopera-nginx $docker_registry_ip/xopera-nginx"
                 sh "docker push $docker_registry_ip/xopera-nginx"
             }
         }
+        stage('Push xopera-flask to DockerHub') {
+            when { tag "*" }
+            steps {
+                withDockerRegistry(credentialsId: 'jenkins-sodalite.docker_token', url: '') {
+                    sh  """#!/bin/bash
+                            docker tag xopera-flask sodaliteh2020/xopera-flask
+                            git fetch --tags
+                            ./make_docker.sh push sodaliteh2020/xopera-flask
+                        """
+                }
+            }
+        }
+        stage('Push xopera-nginx to DockerHub') {
+            when { tag "*" }
+            steps {
+                withDockerRegistry(credentialsId: 'jenkins-sodalite.docker_token', url: '') {
+                    sh  """#!/bin/bash
+                            docker tag xopera-nginx sodaliteh2020/xopera-nginx
+                            git fetch --tags
+                            ./make_docker.sh push sodaliteh2020/xopera-nginx
+                        """
+                }
+            }
+        }
         stage('Install dependencies') {
+            when { tag "*" }
             steps {
                 sh "virtualenv venv"
                 sh ". venv/bin/activate; python -m pip install -U 'opera[openstack]<0.5'"
@@ -61,6 +88,7 @@ pipeline {
             }
         }
         stage('Deploy to openstack') {
+            when { tag "*" }
             steps {
                 withCredentials([sshUserPrivateKey(credentialsId: 'xOpera_ssh_key', keyFileVariable: 'xOpera_ssh_key_file', usernameVariable: 'xOpera_ssh_username')]) {
                     sh 'truncate -s 0 xOpera-rest-blueprint/input.yaml'
