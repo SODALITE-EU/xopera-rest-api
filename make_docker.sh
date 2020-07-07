@@ -17,12 +17,13 @@ push() {
     set -x
     docker tag ${IMAGE}:latest ${IMAGE}:${VERSION}
     docker push ${IMAGE}:${VERSION}
+    docker push ${IMAGE}:latest
     set +x
-    if [ "$BRANCH" = "master" ]; then
-        set -x
-        docker push ${IMAGE}:latest
-        set +x
-    fi
+    # if [ "$BRANCH" = "master" ]; then
+    #     set -x
+    #     docker push ${IMAGE}:latest
+    #     set +x
+    # fi
 }
 
 
