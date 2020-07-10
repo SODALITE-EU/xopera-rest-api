@@ -692,7 +692,7 @@ topology_template:
         volumes:
           - "/home/postgres:/var/lib/postgresql/data"
         ports: ['5432:5432']
-        alias: postgres
+        alias: xopera-postgres
         env_file: /tmp/postgres/postgres.env
       requirements:
         - host:  xOpera-docker-host
@@ -725,7 +725,7 @@ topology_template:
           - "/var/run/docker.sock:/var/run/docker.sock"
           - "/root/.ssh/:/root/.ssh/"
           - "/home/xopera/certs:/home/xopera/certs"
-        alias: flask
+        alias: xopera-flask
       requirements:
         - host:  xOpera-docker-host
         - network: xOpera-docker-network
@@ -740,7 +740,7 @@ topology_template:
         exposed_ports:  ['443', '5000']
         volumes:
           - "/home/xopera/certs:/etc/nginx/certs"
-        alias: nginx
+        alias: xopera-nginx
       requirements:
         - host:  xOpera-docker-host
         - dependency: xOpera-flask
