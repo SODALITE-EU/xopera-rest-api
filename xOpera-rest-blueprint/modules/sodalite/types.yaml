@@ -22,33 +22,6 @@ node_types:
         description: Path to conf file on target VM
         type: string
 
-  sodalite.nodes.Configuration.IACBlueprintBuilder:
-    derived_from: sodalite.nodes.Configuration
-    properties:
-      template_name:
-        description: Filename of configuration template
-        required: True
-        type: string   
-        default: "iac_blueprint_builder.json.tmpl"
-      xopera_endpoint:
-        description: URL xOpera REST API
-        required: False
-        type: string
-    interfaces:
-      Standard:
-        type: tosca.interfaces.node.lifecycle.Standard
-        operations:
-          create:
-            inputs:
-              dir: { default: { get_property: [ SELF, dir ] } }
-              filename: { default: { get_property: [ SELF, filename ] } }
-              template_name: { default: { get_property: [ SELF, template_name ] } }
-              xopera_endpoint: { default: { get_property: [ SELF, xopera_endpoint ] } }
-            implementation:
-              primary: playbooks/config/create_conf.yml
-              dependencies: 
-                - artifacts/iac_blueprint_builder.json.tmpl                
-
   sodalite.nodes.ConfigureKeys:
     derived_from: tosca.nodes.SoftwareComponent
     interfaces:
