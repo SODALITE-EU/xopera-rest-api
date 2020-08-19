@@ -17,4 +17,3 @@
         port_range_max: "{{ item.value.port_range_max }}"
         remote_ip_prefix: "{{ item.value.remote_ip_prefix }}"
       loop: "{{ ports | dict2items }}"
-

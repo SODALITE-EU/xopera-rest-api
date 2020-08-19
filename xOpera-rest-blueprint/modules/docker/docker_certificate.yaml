@@ -1,0 +1,46 @@
+tosca_definitions_version: tosca_simple_yaml_1_3
+
+node_types:
+
+  sodalite.nodes.RegistryCertificate:
+    derived_from: tosca.nodes.SoftwareComponent
+    properties:
+      registry_ip:
+        type: string
+        description: IP of the SODALITE docker registry
+        required: true
+        default: localhost
+      country_name:
+        type: string
+        description: Country name field of the certificate signing request subject.
+        required: true
+      organization_name:
+        type: string
+        description: The organizationName field of the certificate signing request subject.
+        required: true
+      email_address:
+        type: string
+        description: The emailAddress field of the certificate signing request subject.
+        required: true
+
+    interfaces:
+      Standard:
+        type: tosca.interfaces.node.lifecycle.Standard
+        operations:
+          create:
+            inputs:
+              registry_ip:              { default: { get_property: [ SELF, registry_ip ] } }
+              country_name:             { default: { get_property: [ SELF, country_name ] } }
+              organization_name:        { default: { get_property: [ SELF, organization_name ] } }
+              email_address:            { default: { get_property: [ SELF, email_address ] } } 
+              public_ipv4_address:      { default: { get_attribute: [ SELF, host, public_address ] } }                                                
+            implementation:
+              primary: playbooks/add_cert.yml 
+              dependencies: 
+                - artifacts/ca.crt
+                - artifacts/ca.key               
+          delete:
+            inputs:
+              registry_ip:              { default: { get_property: [ SELF, registry_ip ] } }
+            implementation:
+              primary: playbooks/remove_cert.yml 

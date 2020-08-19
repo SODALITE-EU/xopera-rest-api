@@ -1,0 +1,10 @@
+---
+- hosts: all
+  become_user: root
+  become: yes
+
+  tasks:
+  - name: logging into Docker Hub
+    docker_login:
+      registry: "{{ docker_registry_url }}"
+      state: "absent"

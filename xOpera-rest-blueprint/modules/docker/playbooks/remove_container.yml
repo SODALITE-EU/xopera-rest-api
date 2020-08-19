@@ -1,13 +1,11 @@
----
 - hosts: all
   become_user: root
   become: yes
-
   tasks:
-    - name: Delete docker containers
+
+    - name: delete {{ alias }} container
       docker_container:
         name: "{{ alias }}"
         force_kill: true
         keep_volumes: false
         state: absent
-

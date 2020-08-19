@@ -1,0 +1,65 @@
+tosca_definitions_version: tosca_simple_yaml_1_3
+
+node_types:
+
+  sodalite.nodes.Configuration:
+    derived_from: tosca.nodes.SoftwareComponent
+    properties:
+      dir:
+        description: Dir with config file
+        type: string
+        required: True
+      filename:
+        description: Filename of target configuration 
+        required: True
+        type: string
+      template_name:
+        description: Filename of configuration template
+        required: True
+        type: string        
+    attributes:
+      config_file_path:
+        description: Path to conf file on target VM
+        type: string
+
+  sodalite.nodes.Configuration.IACBlueprintBuilder:
+    derived_from: sodalite.nodes.Configuration
+    properties:
+      template_name:
+        description: Filename of configuration template
+        required: True
+        type: string   
+        default: "iac_blueprint_builder.json.tmpl"
+      xopera_endpoint:
+        description: URL xOpera REST API
+        required: False
+        type: string
+    interfaces:
+      Standard:
+        type: tosca.interfaces.node.lifecycle.Standard
+        operations:
+          create:
+            inputs:
+              dir: { default: { get_property: [ SELF, dir ] } }
+              filename: { default: { get_property: [ SELF, filename ] } }
+              template_name: { default: { get_property: [ SELF, template_name ] } }
+              xopera_endpoint: { default: { get_property: [ SELF, xopera_endpoint ] } }
+            implementation:
+              primary: playbooks/config/create_conf.yml
+              dependencies: 
+                - artifacts/iac_blueprint_builder.json.tmpl                
+
+  sodalite.nodes.ConfigureKeys:
+    derived_from: tosca.nodes.SoftwareComponent
+    interfaces:
+      Standard:
+        type: tosca.interfaces.node.lifecycle.Standard
+        operations:
+          create:      
+            inputs:
+              public_ipv4_address: { default: { get_attribute: [ SELF, host, public_address ] } }
+            implementation:
+              primary: playbooks/ssh-key/create.yml
+          delete: 
+            implementation:
+              primary: playbooks/ssh-key/delete.yml

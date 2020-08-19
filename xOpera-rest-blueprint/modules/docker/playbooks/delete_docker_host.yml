@@ -1,0 +1,15 @@
+---
+- hosts: all
+  become_user: root
+  become: yes
+  
+  vars:
+    docker_package_state: absent
+    pip_install_packages:
+      - name: docker
+        state: absent
+
+  roles:
+    - geerlingguy.pip
+    #error in role tries to restart absent docker geerlingguy.docker : restart docker
+    - { role: geerlingguy.docker, ignore_errors: yes }

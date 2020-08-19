@@ -1,0 +1,26 @@
+ssh-key-name: test_mp
+image-name: "centos-7 x86_64"
+openstack-network-name: xlab
+security-groups: default,remote_access,sodalite-uc
+flavor-name: m1.medium
+docker-network: sodalite
+dockerhub-user: 
+dockerhub-pass: 
+docker-public-registry-url: registry.hub.docker.com
+docker-private-registry-url: 10.10.43.54
+docker-registry-cert-country-name: SI
+docker-registry-cert-organization-name: XLAB
+docker-registry-cert-email-address: matej.pevec@xlab.si
+postgres_env:
+  POSTGRES_USER: username
+  POSTGRES_PASSWORD: password
+  POSTGRES_DB: postgres
+xopera_env:
+  XOPERA_GIT_TYPE: gitlab
+  XOPERA_GIT_URL: https://gitlab.com
+  XOPERA_GIT_AUTH_TOKEN: Xk8ss2hNHCFsi88vZ8c-
+  XOPERA_VERBOSE_MODE: debug
+  XOPERA_DATABASE_IP: xopera-postgres
+  XOPERA_DATABASE_NAME: postgres
+  XOPERA_DATABASE_USER: username
+  XOPERA_DATABASE_PASSWORD: password

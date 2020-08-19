@@ -1,0 +1,18 @@
+- hosts: all
+  become: yes
+  tasks:  
+    - set_fact:
+        config_file_path: "{{ dir }}/{{ filename }}"
+
+    - name: add config file to host
+      block:
+      - file: path="{{ dir }}" state=directory
+      - file: path="{{ config_file_path }}" state=absent
+      - template:
+          src: "{{ template_name }}"
+          dest: "{{ config_file_path }}"
+
+    - name: Set attributes
+      set_stats:
+        data:
+          config_file_path:  "{{ config_file_path }}"          
