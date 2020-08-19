@@ -175,6 +175,12 @@ It can also be configured to custom get_input field name, but in this case, user
 
     curl -X "POST" -F "inputs_file=@path/to/file.yaml" localhost:5000/deploy/567858fc-a1e8-43b4-91f5-cb04ec8be90b
 
+## Setting up OpenStack
+### Setting the default user
+When deploying the xOpera Rest API using the provided templates to an OpenStack server, make sure to edit the xOpera-rest-blueprint/tests/input.yaml file and setup the necessary settings marked with "[setting]".
+At the end of the file, there is a section/dict called "xopera_env" with a comment "#settings for OS fallback".
+After the comment there is a default configuration template without the values set, so either use those or, even better, download your openrc file from the OpenStack server and copy the env variables set by it into this dictionary following the same format as the example settings provided.
+
 ## Docker registry connection
 ### Local docker registry
 To run docker image registry locally, run the following command:
