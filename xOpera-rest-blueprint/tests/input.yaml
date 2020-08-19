@@ -1,4 +1,4 @@
-ssh-key-name: test_mp
+ssh-key-name: [KEYPAIR]
 image-name: "centos-7 x86_64"
 openstack-network-name: xlab
 security-groups: default,remote_access,sodalite-uc
@@ -10,7 +10,7 @@ docker-public-registry-url: registry.hub.docker.com
 docker-private-registry-url: 10.10.43.54
 docker-registry-cert-country-name: SI
 docker-registry-cert-organization-name: XLAB
-docker-registry-cert-email-address: matej.pevec@xlab.si
+docker-registry-cert-email-address: [MAIL-OPTIONAL]
 postgres_env:
   POSTGRES_USER: username
   POSTGRES_PASSWORD: password
@@ -18,9 +18,21 @@ postgres_env:
 xopera_env:
   XOPERA_GIT_TYPE: gitlab
   XOPERA_GIT_URL: https://gitlab.com
-  XOPERA_GIT_AUTH_TOKEN: Xk8ss2hNHCFsi88vZ8c-
+  XOPERA_GIT_AUTH_TOKEN: [TOKEN]
   XOPERA_VERBOSE_MODE: debug
   XOPERA_DATABASE_IP: xopera-postgres
   XOPERA_DATABASE_NAME: postgres
   XOPERA_DATABASE_USER: username
   XOPERA_DATABASE_PASSWORD: password
+  #settings for OS fallback
+  OS_PROJECT_DOMAIN_NAME: Default
+  OS_USER_DOMAIN_NAME: Default
+  OS_PROJECT_NAME: orchestrator
+  OS_TENANT_NAME: orchestrator
+  OS_USERNAME: [UNAME]
+  OS_PASSWORD: [PASS]
+  OS_AUTH_URL: [AUTH URL]
+  OS_INTERFACE: public
+  OS_IDENTITY_API_VERSION: 3
+  OS_REGION_NAME: RegionOne
+  OS_AUTH_PLUGIN: password
