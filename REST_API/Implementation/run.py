@@ -29,7 +29,7 @@ if not Settings.testing:
             log.info('SQL_database: PostgreSQL')
             break
         except psycopg2.Error as e:
-            log.error(f"Error while connecting to PostgreSQL for {i+1} time: {str(e)}")
+            log.error(f"Error while connecting to PostgreSQL for {i + 1} time: {str(e)}")
             time.sleep(1)
 
 try:
@@ -184,13 +184,13 @@ class DeployLog(Resource):
 class GitLog(Resource):
     git_log_parser = api.parser()
     git_log_parser.add_argument('version_tag', type=str, help='version_tag of blueprint', required=False)
-    git_log_parser.add_argument('all', type=inputs.boolean, help='show all database entries, not just last one', required=False)
+    git_log_parser.add_argument('all', type=inputs.boolean, help='show all database entries, not just last one',
+                                required=False)
 
     @info.expect(git_log_parser)
     @info.response(400, "Log file not found", just_message_model)
     @info.response(200, 'OK')  # , log_model)
     def get(self, blueprint_token):
-
         args = GitLog.git_log_parser.parse_args()
         version_tag = args.get('version_tag')
         all = args.get('all')
@@ -405,7 +405,6 @@ class ManageCsar(Resource):
         if status_code == 200:
             version_tags = [version_tag] if version_tag else SQL_database.get_version_tags(blueprint_token)
             for tag in version_tags:
-
                 SQL_database.save_git_transaction_data(blueprint_token=blueprint_token,
                                                        version_tag=tag,
                                                        revision_msg=f"Deleted {'one version of ' if version_tag else ''}blueprint",

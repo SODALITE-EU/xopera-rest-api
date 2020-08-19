@@ -36,7 +36,6 @@ def deploy(deployment_location: Path, inputs_file: FileStorage = None):
 
 
 def undeploy(deployment_location: Path, inputs_file: FileStorage = None):
-
     log.info("Orchestrating with xOpera...")
 
     timestamp_start = timestamp_util.datetime_now_to_string()

@@ -9,7 +9,6 @@ from .connectors import Connector
 
 
 class GitCsarDB:
-
     class GitCsarDBError(Exception):
         pass
 

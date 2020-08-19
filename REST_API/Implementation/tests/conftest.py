@@ -8,6 +8,7 @@ from run import flask_app
 from gitCsarDB import GitCsarDB
 from gitCsarDB.connectors import MockConnector
 
+
 @pytest.fixture
 def client():
     # db_fd, flaskr.app.config['DATABASE'] = tempfile.mkstemp()
