@@ -12,10 +12,6 @@ from util import xopera_util, timestamp_util
 
 
 def deploy(deployment_location: Path, inputs_file: FileStorage = None):
-
-    # add generic rc file to deployment_location
-    xopera_util.generic_rc_file(path=deployment_location)
-
     log.info("Orchestrating with xOpera...")
 
     timestamp_start = timestamp_util.datetime_now_to_string()
@@ -27,14 +23,6 @@ def deploy(deployment_location: Path, inputs_file: FileStorage = None):
         inputs_yaml = yaml.safe_load(inputs_file.read().decode('utf-8'))
         inputs_dict = inputs_yaml or dict()
         inputs_filename = inputs_file.filename
-
-    # extract OS_USERNAME and OS_PASSWORD
-    if "OS_USERNAME" in inputs_dict and "OS_PASSWORD" in inputs_dict:
-        os_username = inputs_dict["OS_USERNAME"]
-        os_password = inputs_dict["OS_PASSWORD"]
-        inputs_dict.pop("OS_USERNAME", None)
-        inputs_dict.pop("OS_PASSWORD", None)
-        xopera_util.replace_username_and_password(f"{deployment_location}/openrc.sh", os_username, os_password)
 
     log.debug(f"inputs_file: \n{inputs_dict}")
 
@@ -49,9 +37,6 @@ def deploy(deployment_location: Path, inputs_file: FileStorage = None):
 
 def undeploy(deployment_location: Path, inputs_file: FileStorage = None):
 
-    # add generic rc file to deployment_location
-    xopera_util.generic_rc_file(path=deployment_location)
-
     log.info("Orchestrating with xOpera...")
 
     timestamp_start = timestamp_util.datetime_now_to_string()
@@ -60,14 +45,6 @@ def undeploy(deployment_location: Path, inputs_file: FileStorage = None):
     if inputs_file:
         inputs_yaml = yaml.safe_load(inputs_file.read().decode('utf-8'))
         inputs_dict = inputs_yaml or dict()
-
-    # extract OS_USERNAME and OS_PASSWORD
-    if "OS_USERNAME" in inputs_dict and "OS_PASSWORD" in inputs_dict:
-        os_username = inputs_dict["OS_USERNAME"]
-        os_password = inputs_dict["OS_PASSWORD"]
-        inputs_dict.pop("OS_USERNAME", None)
-        inputs_dict.pop("OS_PASSWORD", None)
-        xopera_util.replace_username_and_password(f"{deployment_location}/openrc.sh", os_username, os_password)
 
     log.debug(f"inputs_file: \n{inputs_dict}")
     with (deployment_location / ".opera" / "inputs").open('w') as inputs_file:

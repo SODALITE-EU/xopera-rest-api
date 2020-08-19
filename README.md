@@ -29,15 +29,6 @@ To connect REST API to gitlab server:
     - XOPERA_GIT_URL=[url_to_your_gitlab_server]
     - XOPERA_GIT_AUTH_TOKEN=[your_personal_access_token]
  - optionally set some of [optional git config settings](#Optional-git-configuration-settings)
- 
- If non of options above is available, xOpera REST API can use its internal filesystem as git server (MockConnector).
- This option has a big limitation of not enabling users to inspect blueprints as on github.com, gitlab.com or any other gitlab server.
- To connect REST API with MockConnector to internal filesystem:
- - export following environmental variables:
-    - XOPERA_GIT_TYPE=mock
- - optionally set some of [optional git config settings](#Optional-git-configuration-settings)
- 
- Note: Mock connector is default option which is used in case of missing XOPERA_GIT_TYPE environmental variable.
 
 
 #### Optional git configuration settings
@@ -83,13 +74,6 @@ System packages can be installed using:
 xOpera REST API needs root CA pair and client key cert pair. Required certs and keys can be installed with:
 
     sudo ./Installation/xopera-certs.sh
-
-### Openstack setup
-This step if required only if working with openstack. Run:
-
-    ./Installation/openstack_setup.sh [openstack.rc location]
-
-On prompt, openstack password must be entered.
     
 ### SSH keys
 xOpera needs SSH key pair with `xOpera` substring in name in `/root/.ssh` dir. It can be generated using

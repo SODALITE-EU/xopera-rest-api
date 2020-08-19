@@ -10,12 +10,8 @@ entry_definitions="$6"
 eval "$(ssh-agent)" >>"/dev/null"
 cd "${0%/*}/../.." || exit
 
-password="$(ansible-vault view --vault-id prod@settings/sec.yml settings/vault.yml)"
 cd "$path" || exit
 {
-echo "Adding openrc key"
-. openrc.sh <<<"$password"
-echo "Entered"
 echo "Launching xOpera"
 
 if [ -z "$inputs_file" ]

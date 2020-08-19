@@ -10,12 +10,6 @@ from pathlib import Path
 from settings import Settings
 
 
-def generic_rc_file(path: Path):
-    if not Settings.testing:
-        rc_file_path = f"{Settings.implementation_dir}/settings/openrc.sh"
-        shutil.copy(str(rc_file_path), str(path / Path('openrc.sh')))
-
-
 def deployment_location(session_token: uuid, blueprint_token: uuid):
     return Path(Settings.deployment_data) / Path(str(blueprint_token) / Path(str(session_token)))
 
@@ -33,32 +27,6 @@ def parse_path(path: Path):
     if not path.parent.parent == Path(Settings.deployment_data):
         return None, None
     return blueprint_token, session_token
-
-
-def replace_username_and_password(rc_file_path: str, username, password):
-
-    openrc_file = open(rc_file_path, 'r')
-    file_lines = openrc_file.readlines()
-    openrc_file.close()
-
-    password_lines = [(i, line) for i, line in enumerate(file_lines) if "OS_PASSWORD" in line]
-    to_be_removed = password_lines[0]
-    to_be_replaced = password_lines[1]
-    replacement = f'export OS_PASSWORD="{password}"\n'
-    file_lines[to_be_replaced[0]] = replacement
-    del file_lines[to_be_removed[0]]
-
-    username_lines = [(i, line) for i, line in enumerate(file_lines) if "OS_USERNAME" in line]
-    to_be_replaced = username_lines[0]
-    replacement = f'export OS_USERNAME="{username}"\n'
-    file_lines[to_be_replaced[0]] = replacement
-
-    echo_lines = [(i, line) for i, line in enumerate(file_lines) if 'echo "Please enter' in line]
-    del file_lines[echo_lines[0][0]]
-
-    openrc_file = open(rc_file_path, 'w')
-    openrc_file.write("".join(file_lines))
-    openrc_file.close()
 
 
 def configure_ssh_keys():

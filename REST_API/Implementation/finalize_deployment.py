@@ -68,11 +68,6 @@ def main():
     if inputs_file:
         (deploy_location / inputs_file).unlink()
 
-    # remove openrc file
-    openrc_path = deploy_location / Path('openrc.sh')
-    if openrc_path.exists():
-        openrc_path.unlink()
-
     # save deployment data to database
     revision_msg = git_util.after_job_commit_msg(token=blueprint_token, mode=mode)
     version_tag = xopera_util.read_version_tag(deploy_location=deploy_location)

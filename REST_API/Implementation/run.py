@@ -44,7 +44,7 @@ CSAR_db = csardb_service.GitDB(**Settings.git_config)
 log.info(f"GitCsarDB with {str(CSAR_db.connection.git_connector)}")
 
 flask_app = Flask(__name__)
-api = Api(app=flask_app, version='0.2.4', title="xOpera REST API",
+api = Api(app=flask_app, version='0.2.0', title="xOpera REST API",
           description="xOpera REST API with xOpera==0.5.7\n\n"
                       "Standard scenarios of using REST api:\n\n"
                       "FIRST RUN\n"

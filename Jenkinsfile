@@ -25,8 +25,6 @@ pipeline {
        git_url = "https://gitlab.com"
        git_auth_token = credentials('git-auth-token')
        verbose_mode = "debug"
-       openrc_file = credentials('atos-openrc')
-       ansible_vault_file = credentials('ansible-vault')
        ca_crt_file = credentials('xopera-ca-crt')
        ca_key_file = credentials('xopera-ca-key')
    }
@@ -39,8 +37,6 @@ pipeline {
         stage('Build and push xopera-flask') {
             when { tag "*" }
             steps {
-                sh "cp -f $openrc_file REST_API/Implementation/settings/openrc.sh"
-                sh "cp -f $ansible_vault_file REST_API/Implementation/settings/vault.yml"
                 sh "cd REST_API; docker build -t xopera-flask -f Dockerfile-flask ."
                 sh "docker tag xopera-flask $docker_registry_ip/xopera-flask"
                 sh "docker push $docker_registry_ip/xopera-flask"
@@ -82,7 +78,7 @@ pipeline {
             when { tag "*" }
             steps {
                 sh "virtualenv venv"
-                sh ". venv/bin/activate; python -m pip install -U 'opera[openstack]<0.5'"
+                sh ". venv/bin/activate; python -m pip install -U 'opera[openstack]==0.5.7'"
                 sh ". venv/bin/activate; python -m pip install docker"
                 sh ". venv/bin/activate; ansible-galaxy install -r REST_API/requirements.yml"
             }
