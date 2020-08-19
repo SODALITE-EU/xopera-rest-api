@@ -175,15 +175,6 @@ It can also be configured to custom get_input field name, but in this case, user
 
     curl -X "POST" -F "inputs_file=@path/to/file.yaml" localhost:5000/deploy/567858fc-a1e8-43b4-91f5-cb04ec8be90b
 
-### Using non default user
-xOpera by default uses administrator's credentials (provided during configuration of REST API) to login to Openstack.
-If some non default user must be used, his credentials can be submitted wit inputs file, provided to `/deploy` endpoint:
-
-    ...
-    OS_USERNAME: [username]
-    OS_PASSWORD: [password]
-    ...
-
 ## Docker registry connection
 ### Local docker registry
 To run docker image registry locally, run the following command:
