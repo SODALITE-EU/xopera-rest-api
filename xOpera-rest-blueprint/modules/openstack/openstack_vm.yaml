@@ -28,7 +28,10 @@ node_types:
         type: string 
       username:  
         description: Username for SSH connection 
-        type: string         
+        type: string
+      identity_file:
+        description: Path to the SSH key on the orchestrator
+        type: string
     attributes:  
       id:  
         description: OpenStack id of the VM 
@@ -50,13 +53,14 @@ node_types:
         operations:
           create:  
             inputs:  
-              network:                  { default: { get_property: [ SELF, network  ] } } 
-              flavor:                   { default: { get_property: [ SELF, flavor   ] } } 
-              key_name:                 { default: { get_property: [ SELF, key_name ] } } 
-              image:                    { default: { get_property: [ SELF, image    ] } } 
-              security_groups:          { default: { get_property: [ SELF, security_groups ] } } 
-              vm_name:                  { default: { get_property: [ SELF, name ] } } 
-              ansible_user:             { default: { get_property: [ SELF, username ] } } 
+              network:                  { default: { get_property: [ SELF, network          ] } }
+              flavor:                   { default: { get_property: [ SELF, flavor           ] } }
+              key_name:                 { default: { get_property: [ SELF, key_name         ] } }
+              image:                    { default: { get_property: [ SELF, image            ] } }
+              security_groups:          { default: { get_property: [ SELF, security_groups  ] } }
+              vm_name:                  { default: { get_property: [ SELF, name             ] } }
+              ansible_user:             { default: { get_property: [ SELF, username         ] } }
+              identity_file:            { default: { get_property: [ SELF, identity_file    ] } }
             implementation: playbooks/vm_create.yml 
           delete:  
             inputs:  
