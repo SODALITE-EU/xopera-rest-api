@@ -1,0 +1,41 @@
+# OPENSTACK SETTINGS
+ssh-key-name: [SSH KEY NAME]
+image-name: "centos-7 x86_64"
+openstack-network-name: xlab
+security-groups: default,remote_access,sodalite-uc
+flavor-name: m1.medium
+identity_file: [PATH TO SSH KEY]
+# DOCKER SETTINGS
+docker-network: sodalite
+dockerhub-user: 
+dockerhub-pass: 
+docker-public-registry-url: registry.hub.docker.com
+docker-private-registry-url: [PRIVATE REGISTRY IP/URL]
+docker-registry-cert-country-name: SI
+docker-registry-cert-organization-name: XLAB
+docker-registry-cert-email-address: [MAIL - OPTIONAL]
+# POSTGRES SETTINGS
+postgres_env:
+  POSTGRES_USER: username
+  POSTGRES_PASSWORD: password
+  POSTGRES_DB: postgres
+# XOPERA SETTINGS
+xopera_env:
+  XOPERA_VERBOSE_MODE: debug
+  # XOPERA GIT SETTINGS
+  XOPERA_GIT_TYPE: gitlab
+  XOPERA_GIT_URL: https://gitlab.com
+  XOPERA_GIT_AUTH_TOKEN: [AUTH TOKEN]
+  # XOPERA POSTGRES CONNECTION
+  XOPERA_DATABASE_IP: xopera-postgres
+  XOPERA_DATABASE_NAME: postgres
+  XOPERA_DATABASE_USER: username
+  XOPERA_DATABASE_PASSWORD: password
+  # XOPERA OPENSTACK DEPLOYMENT FALLBACK SETTINGS
+  OS_AUTH_URL: [OPENSTACK API URL]
+  OS_PROJECT_ID: [OPENSTACK PROJECT ID]
+  OS_PROJECT_NAME: "SODALITE"
+  OS_USER_DOMAIN_NAME: "xlab"
+  OS_USERNAME: [OPENSTACK USERNAME]
+  OS_PASSWORD: [OPENSTACK PASSWORD]
+  OS_REGION_NAME: "xlab"

@@ -85,7 +85,8 @@ def to_CSAR(blueprint_name: str, blueprint_dir: Path, no_meta: bool = False, ent
 
         yaml_files = glob.glob(str(tmp_blueprint_path) + "/*.yaml") + glob.glob(str(tmp_blueprint_path) + "/*.yml")
         if len(yaml_files) != 1:
-            raise MultipleDefinitionsFoundException('CSAR should contain a single .yaml / .yml file in root dir, multiple found')
+            raise MultipleDefinitionsFoundException(
+                'CSAR should contain a single .yaml / .yml file in root dir, multiple found')
 
         entry_definitions_path = Path(yaml_files[0])
         entry_definitions = yaml.safe_load(entry_definitions_path.open('r'))
@@ -181,11 +182,13 @@ def validate_csar(csar: Path, raise_exceptions=False):
         yaml_files = glob.glob(str(tmp_blueprint_path) + "/*.yaml") + glob.glob(str(tmp_blueprint_path) + "/*.yml")
         if len(yaml_files) > 1:
             if raise_exceptions:
-                raise MultipleDefinitionsFoundException('without metadata file, CSAR should contain a single .yaml / .yml file in root dir, multiple found')
+                raise MultipleDefinitionsFoundException(
+                    'without metadata file, CSAR should contain a single .yaml / .yml file in root dir, multiple found')
             return False
         elif len(yaml_files) == 0:
             if raise_exceptions:
-                raise NoEntryDefinitionsFoundException('without metadata file, CSAR should contain a single .yaml / .yml file in root dir, None found')
+                raise NoEntryDefinitionsFoundException(
+                    'without metadata file, CSAR should contain a single .yaml / .yml file in root dir, None found')
             return False
 
         entry_definitions_path = Path(yaml_files[0])

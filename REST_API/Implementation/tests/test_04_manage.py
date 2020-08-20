@@ -207,5 +207,3 @@ class TestUser:
 
         resp = client.get(f"/manage/{blueprint_token}/user")
         assert_that(resp.json['collaborators']).is_not_empty().is_equal_to(['foo'])
-
-

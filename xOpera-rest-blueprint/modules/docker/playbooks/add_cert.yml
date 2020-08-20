@@ -2,20 +2,12 @@
 - hosts: all
   become_user: root
   become: yes
-  
+
   vars:
     pip_install_packages:
-      - name: docker
       - name: cryptography
-    docker_package: "docker-ce-19.03.5-3.el7"
 
   tasks:
-    - name: Set attributes
-      set_stats:
-        data:
-          registry_ip:  "{{ registry_ip }}"
-          ansible_ip:   "{{ ansible_default_ipv4.address }}"
-
     - name: Create certs and storage folders
       block:
         - file:
@@ -28,10 +20,10 @@
     - name: Copy root CA files
       block:
         - copy:
-            src: "{{ ca_crt_location }}"
+            src: ca.crt
             dest: "/home/xopera/certs/ca.crt"
         - copy:
-            src: "{{ ca_key_location }}"
+            src: ca.key
             dest: "/home/xopera/certs/ca.key"
 
     - name: Install root CA
@@ -47,9 +39,9 @@
         - openssl_csr:
             path: "/home/xopera/certs/image.docker.local.csr"
             privatekey_path: "/home/xopera/certs/image.docker.local.key"
-            country_name: SI
-            organization_name: XLAB
-            email_address: dragan.radolovic@xlab.si
+            country_name: "{{ country_name }}"
+            organization_name: "{{ organization_name }}"
+            email_address:  "{{ email_address }}"
             common_name: "image.docker.local"
             subject_alt_name: "IP:{{ public_ipv4_address }}"
         - openssl_certificate:
@@ -57,7 +49,7 @@
             csr_path: "/home/xopera/certs/image.docker.local.csr"
             ownca_path: "/home/xopera/certs/ca.crt"
             ownca_privatekey_path: "/home/xopera/certs/ca.key"
-            provider: ownca
+            provider: "ownca"
         - file:
             state: absent
             path: "/home/xopera/certs/image.docker.local.csr"
@@ -71,17 +63,5 @@
         - command: "cp /home/xopera/certs/image.docker.local.key /etc/docker/certs.d/{{ registry_ip }}"
         - command: "cp /home/xopera/certs/image.docker.local.crt /etc/docker/certs.d/{{ registry_ip }}/image.docker.local.cert"
 
-    - name: Configure the docker mtu for OpenStack and restart docker host
-      block:
-        - lineinfile:
-            path: /etc/docker/daemon.json
-            line: "{\"mtu\": 1450}"
-            create: yes
-        - service:
-            name: docker
-            state: restarted
-
   roles:
-    - geerlingguy.repo-epel
-    - geerlingguy.pip
-    - geerlingguy.docker
+    - role: geerlingguy.pip

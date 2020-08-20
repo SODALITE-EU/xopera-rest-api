@@ -18,7 +18,7 @@ def test_init_existing(mock: MockConnector):
     repo_name = 'test_repo'
     assert mock.init_repo(repo_name), "Could not create 'test_repo', test useless"
     assert not mock.init_repo(repo_name), "method 'init_repo' did not block attempt to reinitialize " \
-                                                    "existing repository "
+                                          "existing repository "
 
 
 def test_repo_exists_false(mock: MockConnector):

@@ -68,13 +68,13 @@ class GitDB:
             shutil.rmtree(str(path))
 
         return {
-            'message': "Revision saved to GitDB",
-            'blueprint_token': result['token'],
-            'url': https_url,
-            'commit_sha': result['commit_sha'],
-            'version_tag': result['version_tag'],
-            'users': users
-        }, None
+                   'message': "Revision saved to GitDB",
+                   'blueprint_token': result['token'],
+                   'url': https_url,
+                   'commit_sha': result['commit_sha'],
+                   'version_tag': result['version_tag'],
+                   'users': users
+               }, None
 
     def get_revision(self, blueprint_token: uuid, dst: Path, version_tag: str = None):
         """

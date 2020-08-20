@@ -7,4 +7,4 @@
       os_security_group:  
         name: "{{ group_name }}"
         state: absent
-
+      ignore_errors: True

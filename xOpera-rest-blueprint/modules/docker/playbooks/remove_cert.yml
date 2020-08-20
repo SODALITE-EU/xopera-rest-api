@@ -2,9 +2,10 @@
 - hosts: all
   become_user: root
   become: yes
+
   vars:
     pip_install_packages:
-      - name: docker
+      - name: cryptography
         state: absent
 
   tasks:

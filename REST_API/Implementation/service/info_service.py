@@ -21,4 +21,3 @@ def check_status(session_token: str, format: str = 'short'):
     else:
         status_code = 202
     return json_dict, status_code
-

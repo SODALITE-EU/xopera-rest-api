@@ -29,14 +29,14 @@ To connect REST API to gitlab server:
     - XOPERA_GIT_URL=[url_to_your_gitlab_server]
     - XOPERA_GIT_AUTH_TOKEN=[your_personal_access_token]
  - optionally set some of [optional git config settings](#Optional-git-configuration-settings)
- 
+
  If non of options above is available, xOpera REST API can use its internal filesystem as git server (MockConnector).
  This option has a big limitation of not enabling users to inspect blueprints as on github.com, gitlab.com or any other gitlab server.
  To connect REST API with MockConnector to internal filesystem:
  - export following environmental variables:
     - XOPERA_GIT_TYPE=mock
  - optionally set some of [optional git config settings](#Optional-git-configuration-settings)
- 
+
  Note: Mock connector is default option which is used in case of missing XOPERA_GIT_TYPE environmental variable.
 
 
@@ -83,13 +83,6 @@ System packages can be installed using:
 xOpera REST API needs root CA pair and client key cert pair. Required certs and keys can be installed with:
 
     sudo ./Installation/xopera-certs.sh
-
-### Openstack setup
-This step if required only if working with openstack. Run:
-
-    ./Installation/openstack_setup.sh [openstack.rc location]
-
-On prompt, openstack password must be entered.
     
 ### SSH keys
 xOpera needs SSH key pair with `xOpera` substring in name in `/root/.ssh` dir. It can be generated using
@@ -191,14 +184,11 @@ It can also be configured to custom get_input field name, but in this case, user
 
     curl -X "POST" -F "inputs_file=@path/to/file.yaml" localhost:5000/deploy/567858fc-a1e8-43b4-91f5-cb04ec8be90b
 
-### Using non default user
-xOpera by default uses administrator's credentials (provided during configuration of REST API) to login to Openstack.
-If some non default user must be used, his credentials can be submitted wit inputs file, provided to `/deploy` endpoint:
-
-    ...
-    OS_USERNAME: [username]
-    OS_PASSWORD: [password]
-    ...
+## Setting up OpenStack
+### Setting the default user
+When deploying the xOpera Rest API using the provided templates to an OpenStack server, make sure to edit the xOpera-rest-blueprint/tests/input.yaml file and setup the necessary settings marked with "[setting]".
+At the end of the file, there is a section/dict called "xopera_env" with a comment "#settings for OS fallback".
+After the comment there is a default configuration template without the values set, so either use those or, even better, download your openrc file from the OpenStack server and copy the env variables set by it into this dictionary following the same format as the example settings provided.
 
 ## Docker registry connection
 ### Local docker registry

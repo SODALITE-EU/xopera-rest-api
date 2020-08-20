@@ -1,5 +1,3 @@
-
-
 def decode_tag(tag: str):
     """
     transform tag: str to tag: tuple
@@ -41,7 +39,7 @@ def next_major(tags: list, return_tuple=False):
     if not tags_sorted:
         next_tag_tuple = 1, 0
     else:
-        next_tag_tuple = tags_sorted[-1][0]+1, 0
+        next_tag_tuple = tags_sorted[-1][0] + 1, 0
 
     if return_tuple:
         return next_tag_tuple
