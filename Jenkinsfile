@@ -9,8 +9,8 @@ pipeline {
        flavor_name = "m1.medium"
        // DOCKER SETTINGS
        docker_network = "sodalite"
-       dockerhub_user = ""
-       dockerhub_pass = ""
+       // dockerhub_user = ""
+       // dockerhub_pass = ""
        docker_registry_ip = credentials('jenkins-docker-registry-ip')
        docker_registry_cert_country_name = "SI"
        docker_registry_cert_organization_name = "XLAB"
@@ -113,8 +113,8 @@ pipeline {
                     identity_file: ${xOpera_ssh_key_file}
                     # DOCKER SETTINGS
                     docker-network: ${docker_network}
-                    dockerhub-user: ${dockerhub_user}
-                    dockerhub-pass: ${dockerhub_pass}
+                    dockerhub-user:
+                    dockerhub-pass:
                     docker-public-registry-url: ${docker_public_registry_url}
                     docker-private-registry-url: ${docker_registry_ip}
                     docker-registry-cert-country-name: ${docker_registry_cert_country_name}
