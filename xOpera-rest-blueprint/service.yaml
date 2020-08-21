@@ -86,7 +86,7 @@ topology_template:
     sodalite-vm:  
       type: sodalite.nodes.OpenStack.VM 
       properties:  
-        name:  sodalite-demo_mp
+        name:             "xOpera"
         key_name:         { get_input: ssh-key-name } 
         image:            { get_input: image-name }
         network:          { get_input: openstack-network-name } 
