@@ -156,7 +156,7 @@ pipeline {
                     // PRINT THE INPUT YAML FILE
                     sh 'cat xOpera-rest-blueprint/input.yaml'
                     // DEPLOY XOPERA REST API
-                    sh ". venv/bin/activate; cd xOpera-rest-blueprint; opera deploy service.yaml -i input.yaml"
+                    sh ". venv/bin/activate; cd xOpera-rest-blueprint; rm -r .opera; opera deploy service.yaml -i input.yaml"
                 }
             }
         }
