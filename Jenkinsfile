@@ -149,7 +149,7 @@ pipeline {
                       OS_PASSWORD: ${OS_PASSWORD}
                       OS_AUTH_URL: ${OS_AUTH_URL}
                       OS_INTERFACE: ${OS_INTERFACE}
-                      OS_IDENTITY_API_VERSION: \"${OS_IDENTITY_API_VERSION}\"
+                      OS_IDENTITY_API_VERSION: \\"${OS_IDENTITY_API_VERSION}\\"
                       OS_REGION_NAME: ${OS_REGION_NAME}
                       OS_AUTH_PLUGIN: ${OS_AUTH_PLUGIN}" >> xOpera-rest-blueprint/input.yaml
                     """.stripIndent()
