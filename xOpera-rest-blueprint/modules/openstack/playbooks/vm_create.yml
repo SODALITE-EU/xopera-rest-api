@@ -27,7 +27,7 @@
         ansible_host: "{{ server_info.server.public_v4 }}"
         ansible_user: "{{ ansible_user }}"
         ansible_ssh_common_args: >
-          -o IdentityFile= {{ identity_file }}
+          -o IdentityFile={{ identity_file }}
           -o BatchMode=yes
           -o UserKnownHostsFile=/dev/null
           -o StrictHostKeyChecking=no
