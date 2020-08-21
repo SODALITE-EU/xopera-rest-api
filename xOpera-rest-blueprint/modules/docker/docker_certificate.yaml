@@ -42,8 +42,8 @@ node_types:
               organization_name:        { default: { get_property: [ SELF, organization_name ] } }
               email_address:            { default: { get_property: [ SELF, email_address ] } } 
               public_ipv4_address:      { default: { get_attribute: [ SELF, host, public_address ] } }
-              ca_crt:                   { default: { get_attribute: [ SELF, ca_crt ] } }
-              ca_key:                   { default: { get_attribute: [ SELF, ca_key ] } }
+              ca_crt:                   { default: { get_property: [ SELF, ca_crt ] } }
+              ca_key:                   { default: { get_property: [ SELF, ca_key ] } }
             implementation:
               primary: playbooks/add_cert.yml
           delete:
