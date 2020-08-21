@@ -121,6 +121,8 @@ pipeline {
                     docker-registry-cert-country-name: ${docker_registry_cert_country_name}
                     docker-registry-cert-organization-name: ${docker_registry_cert_organization_name}
                     docker-registry-cert-email-address: ${docker_registry_cert_email_address}
+                    docker_ca_crt: ${ca_crt_file}
+                    docker_ca_key: ${ca_key_file}
                     # POSTGRES SETTINGS
                     postgres_env:
                       postgres_user: ${postgres_user}
@@ -153,9 +155,6 @@ pipeline {
                     """.stripIndent()
                     // PRINT THE INPUT YAML FILE
                     sh 'cat xOpera-rest-blueprint/input.yaml'
-                    // COPY DOCKER CERTIFICATES
-                    sh 'cp ${ca_crt_file} xOpera-rest-blueprint/modules/docker/artifacts/'
-                    sh 'cp ${ca_key_file} xOpera-rest-blueprint/modules/docker/artifacts/'
                     // DEPLOY XOPERA REST API
                     sh ". venv/bin/activate; cd xOpera-rest-blueprint; opera deploy service.yaml -i input.yaml"
                 }

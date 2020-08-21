@@ -53,6 +53,10 @@ topology_template:
       type: map
     identity_file:
       type: string
+    docker_ca_crt:
+      type: string
+    docker_ca_key:
+      type: string
 
   node_templates: 
 
@@ -86,7 +90,7 @@ topology_template:
     sodalite-vm:  
       type: sodalite.nodes.OpenStack.VM 
       properties:  
-        name:             "xOpera"
+        name:             "xOpera_new"
         key_name:         { get_input: ssh-key-name } 
         image:            { get_input: image-name }
         network:          { get_input: openstack-network-name } 
@@ -125,6 +129,8 @@ topology_template:
         country_name:        { get_input: docker-registry-cert-country-name }
         organization_name:   { get_input: docker-registry-cert-organization-name }
         email_address:       { get_input: docker-registry-cert-email-address }
+        ca_crt:              { get_input: docker_ca_crt }
+        ca_key:              { get_input: docker_ca_key }
       requirements:
         - host: sodalite-vm 
         - dependency: docker-host        

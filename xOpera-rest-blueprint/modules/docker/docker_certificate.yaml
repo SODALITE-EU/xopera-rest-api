@@ -22,6 +22,14 @@ node_types:
         type: string
         description: The emailAddress field of the certificate signing request subject.
         required: true
+      ca_crt:
+        type: string
+        description: ca.crt file location
+        required: true
+      ca_key:
+        type: string
+        description: ca.key file location
+        required: true
 
     interfaces:
       Standard:
@@ -33,12 +41,11 @@ node_types:
               country_name:             { default: { get_property: [ SELF, country_name ] } }
               organization_name:        { default: { get_property: [ SELF, organization_name ] } }
               email_address:            { default: { get_property: [ SELF, email_address ] } } 
-              public_ipv4_address:      { default: { get_attribute: [ SELF, host, public_address ] } }                                                
+              public_ipv4_address:      { default: { get_attribute: [ SELF, host, public_address ] } }
+              ca_crt:                   { default: { get_attribute: [ SELF, host, ca_crt ] } }
+              ca_key:                   { default: { get_attribute: [ SELF, host, ca_key ] } }
             implementation:
-              primary: playbooks/add_cert.yml 
-              dependencies: 
-                - artifacts/ca.crt
-                - artifacts/ca.key               
+              primary: playbooks/add_cert.yml
           delete:
             inputs:
               registry_ip:              { default: { get_property: [ SELF, registry_ip ] } }

@@ -20,10 +20,10 @@
     - name: Copy root CA files
       block:
         - copy:
-            src: ca.crt
+            src: "{{ ca_crt }}"
             dest: "/home/xopera/certs/ca.crt"
         - copy:
-            src: ca.key
+            src: "{{ ca_key }}"
             dest: "/home/xopera/certs/ca.key"
 
     - name: Install root CA
