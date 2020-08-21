@@ -7,8 +7,8 @@ flavor-name: m1.medium
 identity_file: [PATH TO SSH KEY]
 # DOCKER SETTINGS
 docker-network: sodalite
-dockerhub-user: 
-dockerhub-pass: 
+dockerhub-user:
+dockerhub-pass:
 docker-public-registry-url: registry.hub.docker.com
 docker-private-registry-url: [PRIVATE REGISTRY IP/URL]
 docker-registry-cert-country-name: SI
