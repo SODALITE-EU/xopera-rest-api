@@ -157,7 +157,7 @@ pipeline {
                     sh 'cp ${ca_crt_file} xOpera-rest-blueprint/modules/docker/artifacts/'
                     sh 'cp ${ca_key_file} xOpera-rest-blueprint/modules/docker/artifacts/'
                     // DEPLOY XOPERA REST API
-                    sh ". venv/bin/activate; cd xOpera-rest-blueprint; opera deploy -i input.yaml xopera service.yaml"
+                    sh ". venv/bin/activate; cd xOpera-rest-blueprint; opera deploy service.yaml -i input.yaml"
                 }
             }
         }
