@@ -105,12 +105,12 @@ class Connector:
         """
         pass
 
-    def clone(self, repo_name, workdir: Path):
+    def clone(self, repo_name, repo_dst: Path):
         """
         clones repo
         Args:
             repo_name: repo name to be cloned
-            workdir: path to dir, where repo will be cloned.
+            repo_dst: path to dir, where repo will be cloned.
 
         Returns: success: path to cloned repo
 
@@ -200,12 +200,12 @@ class MockConnector(Connector):
         except git.exc.GitCommandError:
             return False
 
-    def clone(self, repo_name, workdir: Path):
+    def clone(self, repo_name, repo_dst: Path):
 
         if not self.repo_exist(repo_name):
             return None
         local_link = f"{str(self.workdir)}/{repo_name}"
-        return git.Repo.clone_from(local_link, str(workdir / Path(repo_name)))
+        return git.Repo.clone_from(local_link, str(repo_dst))
 
     def get_commits_list(self, repo_name):
         """
@@ -320,14 +320,14 @@ class GitlabConnector(Connector):
         project.delete()
         return n_of_tags
 
-    def clone(self, repo_name, workdir: Path):
+    def clone(self, repo_name, repo_dst: Path):
         gl = Gitlab(url=self.url, private_token=self.auth_token)
         gl.auth()
         current_user = gl.user
         username = current_user.username
 
         https_link = f'https://{username}:{self.auth_token}@' + self.url[8:] + f"/{username}/{repo_name}.git"
-        return git.Repo.clone_from(https_link, str(workdir / Path(repo_name)))
+        return git.Repo.clone_from(https_link, str(repo_dst))
 
     def get_commits_list(self, repo_name):
         """
@@ -412,10 +412,10 @@ class GithubConnector(Connector):
             raise self.PermissionDenied(f'Authentication token does not have rights to delete repo {repo_name}')
         return n_of_tags
 
-    def clone(self, repo_name, workdir: Path):
+    def clone(self, repo_name, repo_dst: Path):
 
         https_link = f'https://{self.token}:x-oauth-basic@github.com/{self.username}/{repo_name}'
-        return git.Repo.clone_from(https_link, str(workdir / Path(repo_name)))
+        return git.Repo.clone_from(https_link, str(repo_dst))
 
     def get_commits_list(self, repo_name):
         """
