@@ -32,7 +32,7 @@ class GitCsarDB:
     def save_CSAR(self, csar_path: Path, csar_token: uuid, message: str = None, minor_to_increment: str = None):
         if not self.CSAR_exists(csar_token):
             self.git_connector.init_repo(self.repo_name(csar_token))
-        # repo_path = self.workdir / Path(self.repo_name(csar_token))
+
         repo_path = self.generate_repo_path(csar_token)
         shutil.rmtree(path=repo_path, ignore_errors=True)
         repo = self.git_connector.clone(repo_name=self.repo_name(csar_token), repo_dst=repo_path)
@@ -50,11 +50,12 @@ class GitCsarDB:
             tag_name = tag_util.next_minor(repo.tags, minor_to_increment)
         else:
             tag_name = tag_util.next_major(repo.tags)
-        commit_obj = repo.index.commit(message=f'gitCsarDB: {message or tag_name}')
+        commit_msg = f'gitCsarDB: {message or tag_name}'
+        commit_obj = repo.index.commit(message=commit_msg)
         commit_sha = str(commit_obj)
-        tag = repo.create_tag(path=tag_name, message=message, ref=commit_obj)
         repo.remotes.origin.push()
-        repo.remotes.origin.push(tag.name)
+
+        self.add_tag(csar_token, commit_sha, tag_name, commit_msg)
         shutil.rmtree(path=repo_path)
         return {
             'success': True,
@@ -64,13 +65,13 @@ class GitCsarDB:
         }
 
     def add_tag(self, csar_token: uuid, commit_sha: str, tag: str, tag_msg: str = None):
-        self.git_connector.add_tag(repo_name=csar_token, commit_sha=commit_sha, tag=tag, tag_msg=tag_msg)
+        self.git_connector.add_tag(repo_name=self.repo_name(csar_token), commit_sha=commit_sha,
+                                   tag=tag, tag_msg=tag_msg)
 
     def get_CSAR(self, csar_token, version_tag=None, dst: Path = None):
         if not self.CSAR_exists(csar_token):
             raise FileNotFoundError(f"CSAR with token '{csar_token}' not found")
 
-        # git_clone_path = self.workdir / Path(self.repo_name(csar_token))
         git_clone_path = self.generate_repo_path(csar_token)
         shutil.rmtree(path=git_clone_path, ignore_errors=True)
         self.git_connector.clone(repo_name=self.repo_name(csar_token), repo_dst=git_clone_path)
@@ -123,9 +124,11 @@ class GitCsarDB:
         repo_name = self.repo_name(csar_token)
         return self.git_connector.get_commits_list(repo_name)
 
-    def get_tags_list(self, csar_token):
+    def get_tag_msg(self, csar_token, tag_name=None):
+        repo_name = self.repo_name(csar_token)
+        return self.git_connector.get_tag_msg(repo_name=repo_name, tag=tag_name)
 
-        # repo_path = self.workdir / Path(self.repo_name(csar_token))
+    def get_tags_list(self, csar_token):
         repo_path = self.generate_repo_path(csar_token)
         shutil.rmtree(path=repo_path, ignore_errors=True)
         repo = self.git_connector.clone(repo_name=self.repo_name(csar_token), repo_dst=repo_path)

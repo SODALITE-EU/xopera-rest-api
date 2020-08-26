@@ -242,3 +242,12 @@ class TestDeploy:
         done, resp_status = TestDeploy.monitor(client, session_token, timeout=20)
         assert_that(done).is_true()
         assert_that(resp_status.json['state']).is_equal_to('done')
+
+    def test_undeploy_before_deploy(self, client, csar_1):
+
+        resp = client.post("/manage", data=csar_1)
+        blueprint_token = resp.json['blueprint_token']
+
+        # try_to_undeploy
+        resp = client.delete(f"/deploy/{blueprint_token}")
+        assert_that(resp.status_code).is_equal_to(403)
