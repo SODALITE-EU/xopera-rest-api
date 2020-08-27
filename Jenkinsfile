@@ -5,7 +5,7 @@ pipeline {
        ssh_key_name = "jenkins-opera"
        image_name = "centos7"
        network_name = "orchestrator-network"
-       security_groups = "default,sodalite-remote-access,sodalite-rest"
+       security_groups = "default,sodalite-remote-access,sodalite-rest,sodalite-uc"
        flavor_name = "m1.medium"
        // DOCKER SETTINGS
        docker_network = "sodalite"
