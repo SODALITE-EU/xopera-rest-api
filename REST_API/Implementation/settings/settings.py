@@ -32,7 +32,7 @@ class Settings:
 
     # gitCsarDB config
     git_config = None
-    workdir = Path("/tmp/xopera/git_db/")
+    workdir = Path("/tmp/xopera/git_db/mockConnector")
 
     @staticmethod
     def load_settings():

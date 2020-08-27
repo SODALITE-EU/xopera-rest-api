@@ -278,7 +278,7 @@ class Deploy(Resource):
             return {"message": 'Did not find blueprint with token: {} and version_id: {} '.format(
                 blueprint_token, version_tag or 'any')}, 404
 
-        last_message, error = CSAR_db.get_last_commit_msg(blueprint_token)
+        last_message, error = CSAR_db.get_tag_msg(blueprint_token, tag_name=version_tag)
         if last_message is not None:
             if git_util.after_job_commit_msg(token=blueprint_token, mode='deploy') not in last_message:
                 return {"message": f"Blueprint with token: {blueprint_token}, and version_tag: {version_tag or 'any'} "
@@ -391,7 +391,7 @@ class ManageCsar(Resource):
         force = args.get('force')
 
         if not force:
-            last_message, _ = CSAR_db.get_last_commit_msg(blueprint_token)
+            last_message, _ = CSAR_db.get_tag_msg(blueprint_token, tag_name=version_tag)
             if last_message is not None:
                 if git_util.after_job_commit_msg(token=blueprint_token, mode='deploy') in last_message:
                     log.info('Cannot delete, undeploy not done yet')

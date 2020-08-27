@@ -149,6 +149,23 @@ class TestDelete:
         resp = client.delete(f"/manage/{blueprint_token}")
         assert_that(resp.status_code).is_equal_to(403)
 
+    def test_delete_before_undeploy_version_tag(self, client, csar_1, csar_2, csar_3):
+        # upload local blueprint
+        resp = client.post(f"/manage", data=csar_1)
+        blueprint_token = resp.json['blueprint_token']
+
+        # upload again, mock revision_msg after deploy
+        resp = client.post(f"/manage/{blueprint_token}?revision_msg="
+                           f"{git_util.after_job_commit_msg(token=blueprint_token, mode='deploy')}", data=csar_2)
+        version_tag = resp.json['version_tag']
+        # upload again, mock revision_msg after undeploy
+        resp = client.post(f"/manage/{blueprint_token}?revision_msg="
+                           f"{git_util.after_job_commit_msg(token=blueprint_token, mode='undeploy')}", data=csar_3)
+
+        # try to delete 2nd revision (deploy)
+        resp = client.delete(f"/manage/{blueprint_token}?version_tag={version_tag}")
+        assert_that(resp.status_code).is_equal_to(403)
+
     def test_delete_after_undeploy(self, client, csar_1, csar_2):
         # upload local blueprint
         resp = client.post(f"/manage", data=csar_1)

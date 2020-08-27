@@ -1,6 +1,7 @@
 import shutil
 import uuid
 from pathlib import Path
+import time
 
 import git
 
@@ -17,7 +18,7 @@ class GitCsarDB:
 
     def __init__(self, connector: Connector, workdir="/tmp/git_db", repo_prefix='gitDB_',
                  commit_name="SODALITE-xOpera-REST-API", commit_mail="some-email@xlab.si",
-                 guest_permissions="reporter"):
+                 guest_permissions="reporter", timeout=60):
         self.git_connector = connector
         self.workdir = Path(workdir)
         self.workdir.mkdir(exist_ok=True)
@@ -25,32 +26,55 @@ class GitCsarDB:
         self.guest_permissions = guest_permissions
         self.commit_name = commit_name
         self.commit_mail = commit_mail
+        self.timeout = timeout
+
+    def generate_repo_path(self, csar_token):
+        return self.workdir / Path(str(uuid.uuid4())) / Path(self.repo_name(csar_token))
 
     def save_CSAR(self, csar_path: Path, csar_token: uuid, message: str = None, minor_to_increment: str = None):
         if not self.CSAR_exists(csar_token):
             self.git_connector.init_repo(self.repo_name(csar_token))
-        repo_path = self.workdir / Path(self.repo_name(csar_token))
-        shutil.rmtree(path=repo_path, ignore_errors=True)
-        repo = self.git_connector.clone(repo_name=self.repo_name(csar_token), workdir=self.workdir)
 
-        repo.config_writer().set_value("user", "name", self.commit_name).release()
-        repo.config_writer().set_value("user", "email", self.commit_mail).release()
+        repo_path = self.generate_repo_path(csar_token)
+        start_time = time.time()
+        while True:
+            try:
+                shutil.rmtree(path=repo_path, ignore_errors=True)
+                repo = self.git_connector.clone(repo_name=self.repo_name(csar_token), repo_dst=repo_path)
 
-        try:
-            repo.git.rm('*')
-        except git.exc.GitCommandError:
-            pass
-        self.copy_content(csar_path, repo_path)
-        repo.git.add('--all')
-        if minor_to_increment:
-            tag_name = tag_util.next_minor(repo.tags, minor_to_increment)
-        else:
-            tag_name = tag_util.next_major(repo.tags)
-        commit_obj = repo.index.commit(message=f'gitCsarDB: {message or tag_name}')
-        commit_sha = str(commit_obj)
-        tag = repo.create_tag(path=tag_name, message=message, ref=commit_obj)
-        repo.remotes.origin.push()
-        repo.remotes.origin.push(tag.name)
+                repo.config_writer().set_value("user", "name", self.commit_name).release()
+                repo.config_writer().set_value("user", "email", self.commit_mail).release()
+
+                try:
+                    repo.git.rm('*')
+                except git.exc.GitCommandError:
+                    pass
+                self.copy_content(csar_path, repo_path)
+                repo.git.add('--all')
+                if minor_to_increment:
+                    tag_name = tag_util.next_minor(repo.tags, minor_to_increment)
+                else:
+                    tag_name = tag_util.next_major(repo.tags)
+                commit_msg = f'gitCsarDB: {message or tag_name}'
+                commit_obj = repo.index.commit(message=commit_msg)
+                commit_sha = str(commit_obj)
+                repo.remotes.origin.push()
+                self.add_tag(csar_token, commit_sha, tag_name, commit_msg)
+                break
+            except Exception as e:
+
+                if time.time() - start_time > self.timeout:
+                    # 5 min
+                    shutil.rmtree(path=repo_path)
+                    return {
+                        'success': False,
+                        'message': f'Timeout of {self.timeout}s exceeded',
+                        'exception': str(e)
+                    }
+                else:
+                    # apparently, there was a fail in pushing repo back to remote. Just repeat procedure.
+                    pass
+
         shutil.rmtree(path=repo_path)
         return {
             'success': True,
@@ -60,15 +84,16 @@ class GitCsarDB:
         }
 
     def add_tag(self, csar_token: uuid, commit_sha: str, tag: str, tag_msg: str = None):
-        self.git_connector.add_tag(repo_name=csar_token, commit_sha=commit_sha, tag=tag, tag_msg=tag_msg)
+        self.git_connector.add_tag(repo_name=self.repo_name(csar_token), commit_sha=commit_sha,
+                                   tag=tag, tag_msg=tag_msg)
 
     def get_CSAR(self, csar_token, version_tag=None, dst: Path = None):
         if not self.CSAR_exists(csar_token):
             raise FileNotFoundError(f"CSAR with token '{csar_token}' not found")
 
-        git_clone_path = self.workdir / Path(self.repo_name(csar_token))
+        git_clone_path = self.generate_repo_path(csar_token)
         shutil.rmtree(path=git_clone_path, ignore_errors=True)
-        self.git_connector.clone(repo_name=self.repo_name(csar_token), workdir=self.workdir)
+        self.git_connector.clone(repo_name=self.repo_name(csar_token), repo_dst=git_clone_path)
         if version_tag:
             try:
                 g = git.Git(git_clone_path)
@@ -118,11 +143,14 @@ class GitCsarDB:
         repo_name = self.repo_name(csar_token)
         return self.git_connector.get_commits_list(repo_name)
 
-    def get_tags_list(self, csar_token):
+    def get_tag_msg(self, csar_token, tag_name=None):
+        repo_name = self.repo_name(csar_token)
+        return self.git_connector.get_tag_msg(repo_name=repo_name, tag=tag_name)
 
-        repo_path = self.workdir / Path(self.repo_name(csar_token))
+    def get_tags_list(self, csar_token):
+        repo_path = self.generate_repo_path(csar_token)
         shutil.rmtree(path=repo_path, ignore_errors=True)
-        repo = self.git_connector.clone(repo_name=self.repo_name(csar_token), workdir=self.workdir)
+        repo = self.git_connector.clone(repo_name=self.repo_name(csar_token), repo_dst=repo_path)
         tags = [str(tag) for tag in repo.tags]
         shutil.rmtree(path=repo_path)
         return tags

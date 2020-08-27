@@ -83,7 +83,7 @@ def test_clone(mock: MockConnector):
     assert mock.repo_exist(repo_name), "Could not create repo, test useless"
 
     desired_path = Path(mock.workdir / 'mock_repo')
-    repo = mock.clone(repo_name, workdir=desired_path)
+    repo = mock.clone(repo_name, repo_dst=desired_path)
     assert repo is not None
     assert not repo.bare, "Repo does not exist"
 
@@ -93,5 +93,36 @@ def test_clone_non_existing(mock: MockConnector):
     assert not mock.repo_exist(repo_name), "Repo exists, test useless"
 
     desired_path = Path(mock.workdir / 'mock_repo')
-    repo = mock.clone(repo_name, workdir=desired_path)
+    repo = mock.clone(repo_name, repo_dst=desired_path)
     assert repo is None, "Repo exists"
+
+
+def test_get_tag_msg(mock: MockConnector):
+    repo_name = 'test_repo'
+    mock.init_repo(repo_name)
+    assert mock.get_tag_msg(repo_name) == '', "Repo should have no tags"
+    desired_path = Path(mock.workdir / 'mock_repo')
+    repo = mock.clone(repo_name, repo_dst=desired_path)
+
+    # add some commit
+    (desired_path / "file.txt").touch()
+    repo.git.add('--all')
+    commit_obj = repo.index.commit(message='commit_msg')
+    commit_sha = str(commit_obj)
+    repo.remotes.origin.push()
+
+    mock.add_tag(repo_name, commit_sha, tag='v1.0', tag_msg='tag msg')
+    assert mock.get_tag_msg(repo_name) == 'tag msg'
+    assert mock.get_tag_msg(repo_name, 'v1.0') == 'tag msg'
+
+    # add another commit
+    (desired_path / "file2.txt").touch()
+    repo.git.add('--all')
+    commit_obj = repo.index.commit(message='commit_msg')
+    commit_sha = str(commit_obj)
+    repo.remotes.origin.push()
+
+    mock.add_tag(repo_name, commit_sha, tag='v1.1', tag_msg='another tag msg')
+    assert mock.get_tag_msg(repo_name) == 'another tag msg'
+    assert mock.get_tag_msg(repo_name, 'v1.1') == 'another tag msg'
+    assert mock.get_tag_msg(repo_name, 'v1.0') == 'tag msg'

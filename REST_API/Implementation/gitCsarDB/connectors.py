@@ -105,12 +105,12 @@ class Connector:
         """
         pass
 
-    def clone(self, repo_name, workdir: Path):
+    def clone(self, repo_name, repo_dst: Path):
         """
         clones repo
         Args:
             repo_name: repo name to be cloned
-            workdir: path to dir, where repo will be cloned.
+            repo_dst: path to dir, where repo will be cloned.
 
         Returns: success: path to cloned repo
 
@@ -120,6 +120,12 @@ class Connector:
     def get_commits_list(self, repo_name):
         """
         Gets list of commits, (pairs (commit_msg, commit_sha))
+        """
+        pass
+
+    def get_tag_msg(self, repo_name, tag=None):
+        """
+        Gets commit message of commit with tag=[tag] or last commit
         """
         pass
 
@@ -146,10 +152,12 @@ class MockConnector(Connector):
         repo_path = self.workdir / Path(repo_name)
         if repo_path.exists():
             return False  # repo already exist, could not initialize
-        git.Repo.init(repo_path, bare=True)
+        repo = git.Repo.init(repo_path, bare=True)
         collaborators = json.load(self.collab_file.open('r'))
         collaborators[repo_name] = []
         json.dump(collaborators, self.collab_file.open('w'))
+        repo.config_writer().set_value("user", "name", "MockConnector").release()
+        repo.config_writer().set_value("user", "email", "no-reply@xlab.si").release()
         return True
 
     def repo_exist(self, repo_name: str):
@@ -200,12 +208,12 @@ class MockConnector(Connector):
         except git.exc.GitCommandError:
             return False
 
-    def clone(self, repo_name, workdir: Path):
+    def clone(self, repo_name, repo_dst: Path):
 
         if not self.repo_exist(repo_name):
             return None
         local_link = f"{str(self.workdir)}/{repo_name}"
-        return git.Repo.clone_from(local_link, str(workdir / Path(repo_name)))
+        return git.Repo.clone_from(local_link, str(repo_dst))
 
     def get_commits_list(self, repo_name):
         """
@@ -214,6 +222,25 @@ class MockConnector(Connector):
         repo = git.Repo(self.get_repo_url(repo_name))
         commits = list(repo.iter_commits('master'))
         return [(commit.hexsha, commit.message) for commit in commits]
+
+    def get_tag_msg(self, repo_name, tag=None):
+        """
+        Gets tag/release message of release with tag=[tag] or last release
+        """
+        repo = git.Repo(self.get_repo_url(repo_name))
+
+        tags = repo.tags
+
+        if tag:
+            try:
+                return [tagref.tag.message for tagref in tags if str(tagref) == tag][0]
+
+            except IndexError:
+                return ''
+        try:
+            return tags[-1].tag.message
+        except IndexError:
+            return ''
 
 
 class GitlabConnector(Connector):
@@ -320,14 +347,14 @@ class GitlabConnector(Connector):
         project.delete()
         return n_of_tags
 
-    def clone(self, repo_name, workdir: Path):
+    def clone(self, repo_name, repo_dst: Path):
         gl = Gitlab(url=self.url, private_token=self.auth_token)
         gl.auth()
         current_user = gl.user
         username = current_user.username
 
         https_link = f'https://{username}:{self.auth_token}@' + self.url[8:] + f"/{username}/{repo_name}.git"
-        return git.Repo.clone_from(https_link, str(workdir / Path(repo_name)))
+        return git.Repo.clone_from(https_link, str(repo_dst))
 
     def get_commits_list(self, repo_name):
         """
@@ -338,6 +365,23 @@ class GitlabConnector(Connector):
         project = gl.projects.get(project_id)
         commits = project.commits.list()
         return [(commit.id, commit.message) for commit in commits]
+
+    def get_tag_msg(self, repo_name, tag=None):
+        """
+        Gets commit message of commit with tag=[tag] or last commit
+        """
+        gl = Gitlab(url=self.url, private_token=self.auth_token)
+        project_id = self.__project_id(project_name=repo_name)
+        project = gl.projects.get(project_id)
+        tags = project.tags.list()
+
+        if tag:
+            try:
+                return [tag_item.message for tag_item in tags if tag_item.name == tag][0]
+
+            except IndexError:
+                return ''
+        return tags[0].message
 
 
 class GithubConnector(Connector):
@@ -391,16 +435,28 @@ class GithubConnector(Connector):
 
     def add_tag(self, repo_name: str, commit_sha: str, tag: str, tag_msg: str = None):
         repo = self.__get_repo(repo_name)
-        t = repo.create_git_tag(tag=tag, message=tag_msg, object=commit_sha, type='commit')
-        repo.create_git_ref('refs/tags/{}'.format(t.tag), t.sha)
+
+        repo.create_git_tag_and_release(tag=tag, tag_message=tag_msg, release_name=tag, release_message=tag_msg,
+                                        object=commit_sha, type='commit')
 
     def delete_tag(self, repo_name: str, tag: str):
         repo = self.__get_repo(repo_name)
+
+        release_done, tag_done = False, False
+
+        for release in repo.get_releases():
+            if release.tag_name == tag:
+                release.delete_release()
+                release_done = True
+                break
+
         for ref in repo.get_git_refs():
             if ref.ref == f'refs/tags/{tag}':
                 ref.delete()
-                return True
-        return False
+                tag_done = True
+                break
+
+        return release_done and tag_done
 
     def delete_repo(self, repo_name: str):
         repo = self.__get_repo(repo_name)
@@ -412,10 +468,10 @@ class GithubConnector(Connector):
             raise self.PermissionDenied(f'Authentication token does not have rights to delete repo {repo_name}')
         return n_of_tags
 
-    def clone(self, repo_name, workdir: Path):
+    def clone(self, repo_name, repo_dst: Path):
 
         https_link = f'https://{self.token}:x-oauth-basic@github.com/{self.username}/{repo_name}'
-        return git.Repo.clone_from(https_link, str(workdir / Path(repo_name)))
+        return git.Repo.clone_from(https_link, str(repo_dst))
 
     def get_commits_list(self, repo_name):
         """
@@ -424,3 +480,18 @@ class GithubConnector(Connector):
         repo = self.__get_repo(repo_name)
         commits = repo.get_commits()
         return [(commit.sha, commit.commit.message) for commit in commits]
+
+    def get_tag_msg(self, repo_name, tag=None):
+        """
+        Gets tag/release message of release with tag=[tag] or last release
+        """
+        repo = self.__get_repo(repo_name)
+        releases = repo.get_releases()
+
+        if tag:
+            try:
+                return [release.body for release in releases if release.title == tag][0]
+
+            except IndexError:
+                return ''
+        return releases[0].body

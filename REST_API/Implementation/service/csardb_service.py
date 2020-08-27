@@ -108,11 +108,10 @@ class GitDB:
         except Exception as e:
             return None, str(e)
 
-    def get_last_commit_msg(self, blueprint_token: uuid):
+    def get_tag_msg(self, blueprint_token: uuid, tag_name=None):
         try:
-            commits_list = self.connection.get_commits_list(csar_token=blueprint_token)
-            last_msg = commits_list[0][1]  # [(sha1, msg1), (sha2, msg2),...]
-            return last_msg, None
+            msg = self.connection.get_tag_msg(csar_token=blueprint_token, tag_name=tag_name)
+            return msg, None
         except Exception as e:
             return None, str(e)
 

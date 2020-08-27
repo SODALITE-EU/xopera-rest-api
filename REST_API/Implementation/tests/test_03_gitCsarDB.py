@@ -87,3 +87,24 @@ def test_add_user(db: GitCsarDB, generic_dir: Path):
     assert db.CSAR_exists(csar_token), "Did not correctly saved repo, test useless"
 
     assert db.add_user(csar_token, generic_user), "could not save user"
+
+
+def test_get_tag_msg(db: GitCsarDB, generic_dir: Path):
+    csar_token = uuid.uuid4()
+
+    # save generic CSAR
+    db.save_CSAR(csar_path=generic_dir, csar_token=csar_token)
+    assert db.CSAR_exists(csar_token), "Did not correctly saved repo, test useless"
+
+    assert db.get_tag_msg(csar_token=csar_token) == 'gitCsarDB: v1.0'
+    assert db.get_tag_msg(csar_token=csar_token, tag_name='v1.0') == 'gitCsarDB: v1.0'
+
+    # save another generic CSAR
+    db.save_CSAR(csar_path=generic_dir, csar_token=csar_token, message='custom_message')
+    assert db.CSAR_exists(csar_token), "Did not correctly saved repo, test useless"
+
+    assert db.get_tag_msg(csar_token=csar_token) == 'gitCsarDB: custom_message'
+
+    assert db.get_tag_msg(csar_token=csar_token, tag_name='v1.0') == 'gitCsarDB: v1.0'
+    assert db.get_tag_msg(csar_token=csar_token, tag_name='v2.0') == 'gitCsarDB: custom_message'
+
