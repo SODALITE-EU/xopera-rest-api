@@ -30,7 +30,7 @@ RUN pip install --find-links=/root/wheels -r requirements.txt
 
 # Install required ansible libraries
 RUN ansible-galaxy install geerlingguy.docker && \
-    ansible-galaxy install geerlingguy.pip && \
+    ansible-galaxy install geerlingguy.pip,1.3.0 && \
     ansible-galaxy install geerlingguy.repo-epel
 
 # We copy codebase into the image
