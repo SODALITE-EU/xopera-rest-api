@@ -9,7 +9,7 @@ class Settings:
     implementation_dir = Path(__file__).absolute().parent.parent
 
     # ssh config
-    ssh_keys_location = Path("/root/.ssh/")
+    ssh_keys_location = Path("~/.ssh/")
     key_pair = ""
 
     # deployment config
