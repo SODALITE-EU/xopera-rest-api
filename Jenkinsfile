@@ -52,10 +52,11 @@ pipeline {
         }
         stage('test xOpera') {
             environment {
-            XOPERA_TESTING = True
+            XOPERA_TESTING = true
             }
             steps {
                 sh  """ #!/bin/bash 
+                        printenv
                         cd REST_API/
                         pip3 install -r requirements.txt
                         cd Implementation/
