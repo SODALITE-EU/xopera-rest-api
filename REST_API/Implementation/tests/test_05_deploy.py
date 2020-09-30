@@ -23,10 +23,13 @@ class TestDeploy:
             resp = client.get(f"/info/status?token={session_token}")
 
             if resp.json['state'] != 'running':
+                resp = client.get(f"/info/log/deployment?session_token={session_token}")   
+                fail(resp.json)
                 return True, resp
 
             time.sleep(1)
-
+        resp = client.get(f"/info/log/deployment?session_token={session_token}")   
+        fail(resp.json)
         return False, None
 
     def test_deploy_json_keys_error(self, client):
