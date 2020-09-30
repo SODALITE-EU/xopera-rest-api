@@ -52,7 +52,7 @@ pipeline {
         }
         stage('test xOpera') {
             environment {
-            XOPERA_TESTING = true
+            XOPERA_TESTING = "True"
             }
             steps {
                 sh  """ #!/bin/bash 
