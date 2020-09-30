@@ -55,9 +55,8 @@ pipeline {
             XOPERA_TESTING = "True"
             }
             steps {
-                sh  """ #!/bin/bash 
-                        rm *.xml
-                        rm sonar-project.properties
+                sh  """ #!/bin/bash                         
+                        rm -f sonar-project.properties
                         ls -l
                         virtualenv venv
                         . venv/bin/activate
