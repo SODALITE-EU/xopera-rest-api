@@ -2,7 +2,7 @@ xOpera-rest-blueprint/inputs/
 #IDE Folders
 venv/
 .idea/
-
+.venv/
 #Development files
 .opera/
 xOpera-rest-blueprint/SODALITE-openrc.sh

@@ -50,6 +50,36 @@ pipeline {
                 checkout scm
             }
         }
+        stage('test xOpera') {
+            environment {
+            XOPERA_TESTING = "True"
+            }
+            steps {
+                sh  """ #!/bin/bash                         
+                        virtualenv venv
+                        . venv/bin/activate
+                        cd REST_API/
+                        pip3 install -r requirements.txt
+                        cd Implementation/
+                        touch *.xml
+                        python3 -m pytest --pyargs -s tests --junitxml="results.xml" --cov=gitCsarDB --cov=blueprint_converters --cov=settings  --cov=service --cov=util --cov-report xml tests/
+                    """
+                junit 'REST_API/Implementation/results.xml'
+            }
+        }
+        stage('SonarQube analysis'){
+            environment {
+            scannerHome = tool 'SonarQubeScanner'
+            }
+            steps {
+                withSonarQubeEnv('SonarCloud') {
+                    sh  """ #!/bin/bash
+                            cd REST_API/Implementation/
+                            ${scannerHome}/bin/sonar-scanner
+                        """    
+                }
+            }
+        }
         stage('Build and push xopera-flask') {
             when { tag "*" }
             steps {
