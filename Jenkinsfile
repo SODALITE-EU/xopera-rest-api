@@ -57,6 +57,8 @@ pipeline {
             steps {
                 sh  """ #!/bin/bash 
                         rm *.xml
+                        rm sonar-project.properties
+                        ls -l
                         virtualenv venv
                         . venv/bin/activate
                         cd REST_API/
