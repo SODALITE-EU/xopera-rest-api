@@ -51,12 +51,14 @@ pipeline {
             }
         }
         stage('test xOpera') {
+            environment {
+            XOPERA_TESTING = True
+            }
             steps {
                 sh  """ #!/bin/bash 
                         cd REST_API/
                         pip3 install -r requirements.txt
                         cd Implementation/
-                        export XOPERA_TESTING=True
                         python3 -m pytest --pyargs -s tests --junitxml="results.xml" --cov=gitCsarDB --cov=blueprint_converters --cov=settings  --cov=service --cov=util --cov-report xml tests/
                     """
                 junit 'results.xml'
