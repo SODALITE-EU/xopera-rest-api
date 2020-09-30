@@ -56,6 +56,7 @@ pipeline {
             }
             steps {
                 sh  """ #!/bin/bash 
+                        chmod -R 777 REST_API/
                         printenv
                         cd REST_API/
                         pip3 install -r requirements.txt
