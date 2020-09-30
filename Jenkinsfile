@@ -58,9 +58,10 @@ pipeline {
                 sh  """ #!/bin/bash 
                         virtualenv venv
                         . venv/bin/activate
-                        printenv 
-                        pip3 install -r REST_API/requirements.txt       
-                        python3 -m pytest --pyargs -s REST_API/Implementation/tests --junitxml="results.xml" --cov=REST_API/Implementation/service  --cov-report xml REST_API/Implementation/tests/
+                        cd REST_API/
+                        pip3 install -r requirements.txt
+                        cd Implementation/
+                        python3 -m pytest --pyargs -s tests --junitxml="results.xml" --cov=gitCsarDB --cov=blueprint_converters --cov=settings  --cov=service --cov=util --cov-report xml tests/
                     """
                 junit 'results.xml'
             }
