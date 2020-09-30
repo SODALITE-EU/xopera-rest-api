@@ -56,11 +56,10 @@ pipeline {
             }
             steps {
                 sh  """ #!/bin/bash 
-                        chmod -R 777 REST_API/
-                        printenv
- 
-                        pip3 install -r REST_API/requirements.txt
-       
+                        virtualenv venv
+                        venv/bin/activate
+                        printenv 
+                        pip3 install -r REST_API/requirements.txt       
                         python3 -m pytest --pyargs -s REST_API/Implementation/tests --junitxml="results.xml" --cov=REST_API/Implementation/service  --cov-report xml REST_API/Implementation/tests/
                     """
                 junit 'results.xml'
