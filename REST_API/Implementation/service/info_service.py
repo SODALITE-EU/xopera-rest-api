@@ -1,4 +1,5 @@
 import json
+import time
 
 from settings import Settings
 
@@ -9,9 +10,19 @@ def check_status(session_token: str, format: str = 'short'):
     if deploy_dir is None:
         return {'message': f'Could not find session with session_token {session_token}'}, 404
     for file_path in (deploy_dir / ".opera" / "instances").glob("*"):
-        parsed = json.load(open(file_path, 'r'))
-        component_name = parsed['tosca_name']['data']
-        json_dict['nodes'][component_name] = parsed if format == 'long' else parsed['state']['data']
+        # it seems that reading JSON from file xOpera writes
+        # can cause a race condition
+        # this should be improved
+        count = 0
+        while count < 10:
+            try:
+                parsed = json.load(open(file_path, 'r'))
+                component_name = parsed['tosca_name']['data']
+                json_dict['nodes'][component_name] = parsed if format == 'long' else parsed['state']['data']
+                break
+            except:
+                count += 1
+                time.sleep(0.01)
 
     log_json_path = next(deploy_dir.glob("*.json"), None)
     if log_json_path:
