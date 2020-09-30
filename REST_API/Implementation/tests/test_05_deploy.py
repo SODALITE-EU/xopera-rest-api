@@ -23,14 +23,11 @@ class TestDeploy:
             resp = client.get(f"/info/status?token={session_token}")
 
             if resp.json['state'] != 'running':
-                resp = client.get(f"/info/log/deployment?session_token={session_token}")   
-                fail(resp.json)
                 return True, resp
 
             time.sleep(1)
-        resp = client.get(f"/info/log/deployment?session_token={session_token}")   
-        fail(resp.json)
-        return False, None
+        resp = client.get(f"/info/log/deployment?session_token={session_token}")        
+        return False, resp
 
     def test_deploy_json_keys_error(self, client):
         resp = client.post(f"/deploy/{'42'}")
@@ -103,7 +100,7 @@ class TestDeploy:
         session_token = resp_deploy.json['session_token']
 
         done, resp_statue = TestDeploy.monitor(client, session_token, timeout=20)
-        assert_that(done).is_true()
+        assert_that(done, resp_statue.json).is_true()
         assert_that(resp_statue.json['state']).is_equal_to('done')
         assert_that(resp_statue.status_code).is_equal_to(201)
 
