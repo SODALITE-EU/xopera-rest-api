@@ -56,6 +56,7 @@ pipeline {
             }
             steps {
                 sh  """ #!/bin/bash 
+                        rm *.xml
                         virtualenv venv
                         . venv/bin/activate
                         cd REST_API/
