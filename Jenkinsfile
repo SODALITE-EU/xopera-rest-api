@@ -62,7 +62,7 @@ pipeline {
                         pip3 install -r requirements.txt
                         cd Implementation/
                         touch *.xml
-                        python3 -m pytest --pyargs -s tests --junitxml="results.xml" --cov=gitCsarDB --cov=blueprint_converters --cov=settings  --cov=service --cov=util --cov-report xml tests/
+                        python3 -m pytest --pyargs -s tests --junitxml="results.xml" --cov=./ --cov=./gitCsarDB --cov=./blueprint_converters --cov=./settings  --cov=./service --cov=./util --cov-report xml tests/
                     """
                 junit 'REST_API/Implementation/results.xml'
             }
