@@ -105,7 +105,6 @@ class TestToCsarSimple:
         csar_path = CSAR_unpacked / 'CSAR-ok'
         dst_path = CSAR_unpacked / 'CSAR-dummy'
         dst_path_with_zip = Path(str(dst_path) + '.zip')
-        dst_path.unlink()
 
         assert blueprint2CSAR.to_CSAR_simple(csar_path, dst_path, raise_exceptions=False)
         assert dst_path_with_zip.exists()
