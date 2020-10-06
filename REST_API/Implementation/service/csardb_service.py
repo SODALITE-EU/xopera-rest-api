@@ -115,23 +115,6 @@ class GitDB:
         except Exception as e:
             return None, str(e)
 
-    def get_revision_as_CSAR(self, blueprint_token: uuid, dst: Path, version_tag: str = None):
-        """
-        Retrieves blueprint and returns it as path to CSAR
-
-        """
-        tmp_dir = f'/tmp/{uuid.uuid4()}'
-        revision_path = self.get_revision(blueprint_token, Path(tmp_dir), version_tag)
-        if not revision_path:
-            return None
-        try:
-            blueprint_to_csar_simple(src=revision_path, dst=dst, raise_exceptions=True)
-        except Exception as e:
-            log.error(f"Could not convert revision {blueprint_token} {version_tag} to CSAR: {str(e)}")
-            return None
-        shutil.rmtree(tmp_dir, ignore_errors=True)
-        return Path(f"{str(dst)}.zip")
-
     def delete_blueprint(self, blueprint_token, version_tag: str = None):
         """
         Deletes blueprint(s).
