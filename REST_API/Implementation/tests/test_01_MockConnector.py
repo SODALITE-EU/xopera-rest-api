@@ -48,6 +48,9 @@ def test_add_collaborator(mock: MockConnector):
     collaborators = json.load(mock.collab_file.open('r'))
     assert len(collaborators[repo_name]) == 1, "repo should have just one collaborator"
 
+    # test adding user to nonexistent repo
+    assert not mock.add_collaborator("nonexistent_repo", username)
+
 
 def test_get_collaborators(mock: MockConnector):
     repo_name = 'test_repo'
@@ -61,6 +64,9 @@ def test_get_collaborators(mock: MockConnector):
     assert len(collaborators) == 2
     assert collaborators[0] == username1
     assert collaborators[1] == username2
+
+    # test getting user from nonexistent repo
+    assert len(mock.get_collaborators("nonexistent_repo")) == 0
 
 
 def test_delete_existing_repo(mock: MockConnector):
@@ -126,3 +132,25 @@ def test_get_tag_msg(mock: MockConnector):
     assert mock.get_tag_msg(repo_name) == 'another tag msg'
     assert mock.get_tag_msg(repo_name, 'v1.1') == 'another tag msg'
     assert mock.get_tag_msg(repo_name, 'v1.0') == 'tag msg'
+
+
+def test_get_commits_list(mock: MockConnector):
+    repo_name = 'test_repo'
+    mock.init_repo(repo_name)
+    repo_path = Path(mock.workdir / 'mock_repo')
+    repo = mock.clone(repo_name, repo_dst=repo_path)
+
+    # add some commit
+    (repo_path / "file.txt").touch()
+    repo.git.add('--all')
+    commit_msg = 'commit_msg'
+    commit_obj = repo.index.commit(message=commit_msg)
+    commit_sha = str(commit_obj)
+    repo.remotes.origin.push()
+
+    commit_list = mock.get_commits_list(repo_name)
+    assert len(commit_list) == 1
+    assert commit_list[0][0] == commit_sha
+    assert commit_list[0][1] == commit_msg
+
+

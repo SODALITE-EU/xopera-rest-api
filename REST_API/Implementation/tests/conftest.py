@@ -3,6 +3,8 @@ import uuid
 
 import git
 import pytest
+import os
+import shutil
 
 from run import flask_app
 from gitCsarDB import GitCsarDB
@@ -73,6 +75,19 @@ def file_data(file_name, file_type='CSAR'):
     path_to_csar = Path(__file__).parent / 'CSAR' / file_name
     data = {file_type: (open(path_to_csar, 'rb'), file_name)}
     return data
+
+
+@pytest.fixture
+def CSAR_unpacked():
+    return Path(__file__).parent / 'CSAR_unpacked'
+
+
+@pytest.fixture
+def get_workdir_path():
+    workdir_path = Path(__file__).parent / 'workdir' / str(uuid.uuid4())
+    os.makedirs(workdir_path)
+    yield workdir_path
+    shutil.rmtree(workdir_path)
 
 
 @pytest.fixture
