@@ -1,5 +1,5 @@
 # xopera-rest-api
-![Build](https://github.com/SODALITE-EU/xopera-rest-api/workflows/Build/badge.svg?branch=master)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=SODALITE-EU_xopera-rest-api&metric=alert_status)](https://sonarcloud.io/dashboard?id=SODALITE-EU_xopera-rest-api)
 
 Implementation of the xOpera orchestrator REST API
 
