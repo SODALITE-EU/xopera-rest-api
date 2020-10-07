@@ -71,23 +71,6 @@ class TestPostMultipleVersions:
 
 class TestDelete:
 
-    @staticmethod
-    def monitor(session_token, job, url, timeout):
-        done = False
-        resp = None
-        time_start = time.time()
-        while not done:
-            resp = requests.get(url=url + "/info/status", params={'token': session_token})
-            try:
-                status = resp.json()[job]
-                done = True
-            except KeyError:
-                if time.time() - time_start > timeout:
-                    break
-                time.sleep(1)
-                pass
-        return done, resp
-
     def test_json_keys_error(self, client):
         resp = client.delete(f"/manage/{42}")
         assert_that(resp.status_code).is_equal_to(404)
@@ -116,7 +99,6 @@ class TestDelete:
         token = resp.json['blueprint_token']
         client.post(f"/manage/{token}", data=csar_2)
         client.post(f"/manage/{token}", data=csar_3)
-        # responses = [resp] + [client.post(f"/manage/{token}", data=csar_data) for _ in range(3)]
 
         resp = client.delete(f"/manage/{token}")
         assert_that(resp.status_code).is_equal_to(200)
@@ -127,8 +109,9 @@ class TestDelete:
         # upload 3 times under same token
         resp_1 = client.post("/manage", data=csar_1)
         token = resp_1.json['blueprint_token']
+
         resp_2 = client.post(f"/manage/{token}", data=csar_2)
-        resp_3 = client.post(f"/manage/{token}", data=csar_3)
+        client.post(f"/manage/{token}", data=csar_3)
 
         resp_delete = client.delete(f"/manage/{token}?version_tag={resp_2.json['version_tag']}")
         assert_that(resp_delete.status_code).is_equal_to(200)
@@ -142,8 +125,8 @@ class TestDelete:
         blueprint_token = resp.json['blueprint_token']
 
         # upload again, mock revision_msg after deploy
-        resp = client.post(f"/manage/{blueprint_token}?revision_msg="
-                           f"{git_util.after_job_commit_msg(token=blueprint_token, mode='deploy')}", data=csar_2)
+        client.post(f"/manage/{blueprint_token}?revision_msg="
+                    f"{git_util.after_job_commit_msg(token=blueprint_token, mode='deploy')}", data=csar_2)
 
         # try to delete
         resp = client.delete(f"/manage/{blueprint_token}")
@@ -159,8 +142,8 @@ class TestDelete:
                            f"{git_util.after_job_commit_msg(token=blueprint_token, mode='deploy')}", data=csar_2)
         version_tag = resp.json['version_tag']
         # upload again, mock revision_msg after undeploy
-        resp = client.post(f"/manage/{blueprint_token}?revision_msg="
-                           f"{git_util.after_job_commit_msg(token=blueprint_token, mode='undeploy')}", data=csar_3)
+        client.post(f"/manage/{blueprint_token}?revision_msg="
+                    f"{git_util.after_job_commit_msg(token=blueprint_token, mode='undeploy')}", data=csar_3)
 
         # try to delete 2nd revision (deploy)
         resp = client.delete(f"/manage/{blueprint_token}?version_tag={version_tag}")
@@ -172,8 +155,8 @@ class TestDelete:
         blueprint_token = resp.json['blueprint_token']
 
         # upload again, mock revision_msg after undeploy
-        resp = client.post(f"/manage/{blueprint_token}?revision_msg="
-                           f"{git_util.after_job_commit_msg(token=blueprint_token, mode='undeploy')}", data=csar_2)
+        client.post(f"/manage/{blueprint_token}?revision_msg="
+                    f"{git_util.after_job_commit_msg(token=blueprint_token, mode='undeploy')}", data=csar_2)
 
         # try to delete
         resp = client.delete(f"/manage/{blueprint_token}")
@@ -185,8 +168,8 @@ class TestDelete:
         blueprint_token = resp.json['blueprint_token']
 
         # upload again, mock revision_msg after deploy
-        resp = client.post(f"/manage/{blueprint_token}?revision_msg="
-                           f"{git_util.after_job_commit_msg(token=blueprint_token, mode='deploy')}", data=csar_2)
+        client.post(f"/manage/{blueprint_token}?revision_msg="
+                    f"{git_util.after_job_commit_msg(token=blueprint_token, mode='deploy')}", data=csar_2)
 
         # try to delete with force
         resp = client.delete(f"/manage/{blueprint_token}?force={True}")

@@ -9,14 +9,6 @@ from util import timestamp_util
 class TestDeploy:
 
     @staticmethod
-    def corrupt_blueprint(blueprint: dict):
-        blueprint_corrupted = copy.deepcopy(blueprint)
-        tosca = blueprint_corrupted['tosca_definition']['content']
-        tosca_corrupted = tosca.replace('topology_template', 'top010gy_template')
-        blueprint_corrupted['tosca_definition']['content'] = tosca_corrupted
-        return blueprint_corrupted
-
-    @staticmethod
     def monitor(client, session_token, timeout=10):
         time_start = time.time()
         while time.time() - time_start < timeout:
