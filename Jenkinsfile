@@ -55,9 +55,10 @@ pipeline {
             XOPERA_TESTING = "True"
             }
             steps {
-                sh  """ #!/bin/bash                         
-                        virtualenv venv
-                        . venv/bin/activate
+                sh  """ #!/bin/bash
+                        rm -rf venv
+                        python3 -m venv venv-test
+                        . venv-test/bin/activate
                         cd REST_API/
                         pip3 install -r requirements.txt
                         cd Implementation/
@@ -83,17 +84,23 @@ pipeline {
         stage('Build and push xopera-flask') {
             when { tag "*" }
             steps {
-                sh "cd REST_API; docker build -t xopera-flask -f Dockerfile-flask ."
-                sh "docker tag xopera-flask $docker_registry_ip/xopera-flask"
-                sh "docker push $docker_registry_ip/xopera-flask"
+                sh """#!/bin/bash
+                    cd REST_API
+                    docker build -t xopera-flask -f Dockerfile-flask .
+                    docker tag xopera-flask $docker_registry_ip/xopera-flask
+                    docker push $docker_registry_ip/xopera-flask
+                   """
             }
         }
         stage('Build and push xopera-nginx') {
             when { tag "*" }
             steps {
-                sh "cd REST_API; docker build -t xopera-nginx -f Dockerfile-nginx ."
-                sh "docker tag xopera-nginx $docker_registry_ip/xopera-nginx"
-                sh "docker push $docker_registry_ip/xopera-nginx"
+                sh """#!/bin/bash
+                    cd REST_API
+                    docker build -t xopera-nginx -f Dockerfile-nginx .
+                    docker tag xopera-nginx $docker_registry_ip/xopera-nginx
+                    docker push $docker_registry_ip/xopera-nginx
+                   """
             }
         }
         stage('Push xopera-flask to DockerHub') {
@@ -123,10 +130,13 @@ pipeline {
         stage('Install dependencies') {
             when { tag "*" }
             steps {
-                sh "virtualenv venv"
-                sh ". venv/bin/activate; python -m pip install -U 'opera[openstack]==0.5.7'"
-                sh ". venv/bin/activate; python -m pip install docker"
-                sh ". venv/bin/activate; ansible-galaxy install -r REST_API/requirements.yml"
+                sh """#!/bin/bash
+                    python3 -m venv venv-deploy
+                    . venv-deploy/bin/activate
+                    python3 -m pip install --upgrade pip
+                    python3 -m pip install 'opera[openstack]==0.5.7' docker
+                    ansible-galaxy install -r REST_API/requirements.yml
+                   """
             }
         }
         stage('Deploy to openstack') {
@@ -186,7 +196,7 @@ pipeline {
                     // PRINT THE INPUT YAML FILE
                     sh 'cat xOpera-rest-blueprint/input.yaml'
                     // DEPLOY XOPERA REST API
-                    sh ". venv/bin/activate; cd xOpera-rest-blueprint; rm -r -f .opera; opera deploy service.yaml -i input.yaml"
+                    sh ". venv-deploy/bin/activate; cd xOpera-rest-blueprint; rm -r -f .opera; opera deploy service.yaml -i input.yaml"
                 }
             }
         }
