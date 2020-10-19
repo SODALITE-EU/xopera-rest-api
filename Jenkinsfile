@@ -54,13 +54,33 @@ pipeline {
         stage('Build xopera-flask') {
             when {
                 allOf {
-                    expression{env.BRANCH_NAME != 'master'}
+                    expression{tag "*"}
                     expression{env.BRANCH_NAME =~ /^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/}
                 }
              }
             steps {
                 sh """#!/bin/bash
                     echo "Is production"
+                   """
+            }
+        }
+        stage('Just on tags') {
+            when {
+                allOf {
+                    expression{tag "*"}
+                }
+             }
+            steps {
+                sh """#!/bin/bash
+                    echo "This is tag"
+                   """
+            }
+        }
+        stage('Just on tags') {
+
+            steps {
+                sh """#!/bin/bash
+                    echo "This is normal commit"
                    """
             }
         }
