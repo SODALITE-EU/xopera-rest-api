@@ -69,7 +69,6 @@ pipeline {
         stage('Build xopera-nginx') {
             when {
                 expression {
-                    tag "*"
                     isNotProduction = !(env.BRANCH_NAME =~ /v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)/)
                 }
             }
