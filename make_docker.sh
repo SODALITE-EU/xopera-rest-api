@@ -32,6 +32,8 @@ if [ $# -gt 3 ] || [ $# -lt 2 ] || [[ "$1" != "build" && "$1" != "push" ]] ; the
     exit 1
 fi
 
+git fetch --tags
+
 ACTION=$1
 IMAGE=$2
 FILE=${3:-Dockerfile}

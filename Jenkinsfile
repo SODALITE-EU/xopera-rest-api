@@ -54,7 +54,7 @@ pipeline {
             steps {
                 withDockerRegistry(credentialsId: 'jenkins-sodalite.docker_token', url: '') {
                     sh  """#!/bin/bash
-                            git fetch --tags
+                            # git fetch --tags
                             ./make_docker.sh push sodaliteh2020/xopera-flask
                         """
                 }
