@@ -44,21 +44,30 @@ JENKINS_BRANCH=${CHANGE_BRANCH:-$GIT_BRANCH}
 # Detect if under Jenkins; if not, use DEFAULT_BRANCH
 BRANCH=${JENKINS_BRANCH:-$DEFAULT_BRANCH}
 
-if [ "$BRANCH" != "master" ]; then
-    VERSION="${VERSION}+${BRANCH}"
+#if [ "$BRANCH" != "master" ]; then
+#    VERSION="${VERSION}+${BRANCH}"
 
-else
-    if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-        echo "Skipping untagged commit on master"
+#else
+#    if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+#        echo "Skipping untagged commit on master"
 	#  exit 0
-    fi
-fi
+#    fi
+#fi
 
 # check Semantic versioning compliance
 if [[ ! "$VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*))?(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?$ ]]; then
         echo "SemVal failure"
 	      # exit 0
 fi
+
+# Check if production ready
+if [[ "$VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+then
+  PRODUCTION=True
+else
+  PRODUCTION=False
+fi
+
 
 # debug section
 echo "ACTION: $ACTION"
@@ -69,6 +78,8 @@ echo "DATE: $DATE"
 echo "DEFAULT_BRANCH: $DEFAULT_BRANCH"
 echo "JENKINS_BRANCH: $JENKINS_BRANCH"
 echo "BRANCH: $BRANCH"
+echo "PRODUCTION: $PRODUCTION"
+
 
 exit 0
 
