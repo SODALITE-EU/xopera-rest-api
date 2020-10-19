@@ -76,7 +76,7 @@ pipeline {
                    """
             }
         }
-        stage('Just on tags') {
+        stage('always') {
 
             steps {
                 sh """#!/bin/bash
