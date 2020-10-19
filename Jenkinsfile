@@ -53,9 +53,9 @@ pipeline {
 
         stage('Build xopera-flask') {
             when {
-                expression {
-                    tag "*"
-                    isProduction = env.BRANCH_NAME =~ /v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)/
+                allOf {
+                    expression{env.BRANCH_NAME != 'master'}
+                    expression{env.BRANCH_NAME =~ /v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)/}
                 }
              }
             steps {
