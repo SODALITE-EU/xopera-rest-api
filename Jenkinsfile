@@ -60,24 +60,8 @@ pipeline {
              }
             steps {
                 sh """#!/bin/bash
-                    cd REST_API
                     echo "Is production"
-                    # ../make_docker.sh build xopera-flask Dockerfile-flask
                    """
-            }
-        }
-        stage('Build xopera-nginx') {
-            when {
-                expression {
-                    isNotProduction = !(env.BRANCH_NAME =~ /v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)/)
-                }
-            }
-            steps {
-                sh """#!/bin/bash
-                    cd REST_API
-                    echo "Is not prodcution"
-                    # ../make_docker.sh build xopera-nginx Dockerfile-nginx
-                    """
             }
         }
     }
