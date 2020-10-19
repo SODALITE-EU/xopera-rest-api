@@ -51,6 +51,7 @@ pipeline {
             }
         }
         stage('Test make_docker.sh'){
+            when { tag "*" }
             steps {
                 withDockerRegistry(credentialsId: 'jenkins-sodalite.docker_token', url: '') {
                     sh  """#!/bin/bash
