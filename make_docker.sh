@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 #
-# Builds or push an image.
-# Commits on branches (not master) are tagged with the branch name.
-# Commits on master are tagged with latest and with the version number
+# Build or push an image.
+# Images for staging are pushed to sodalite-private-registry on ${docker_registry_ip}
+# Images with production-ready version are pushed to both sodalite-private-registry and dockerhub: sodaliteh2020 repository
+
+# Images from tagged commits are tagged with git tag
+# Images from non-tagged commits are tagged with <last_git_tag>-<commits_since_tag>-<abbreviated_commit_sha>
 #
 # Usage:
 #   $0 [build|push] <image-name> [Dockerfile-filename]
+# image name is pure name without repository (image-name, not sodaliteh2020/image-name)
 
 build() {
     # set -x
@@ -14,16 +18,21 @@ build() {
 }
 
 push() {
-    # set -x
-    docker tag "${IMAGE}":latest "${IMAGE}":"${VERSION}"
-    docker push "${IMAGE}":"${VERSION}"
-    docker push "${IMAGE}":latest
-    # set +x
-    # if [ "$BRANCH" = "master" ]; then
-    #     set -x
-    #     docker push ${IMAGE}:latest
-    #     set +x
-    # fi
+    set -x
+    docker tag "${IMAGE}":latest "${REGISTRY_IP}/${IMAGE}:${VERSION}"
+    docker tag "${IMAGE}":latest "${REGISTRY_IP}/${IMAGE}:latest"
+    docker push "${REGISTRY_IP}/${IMAGE}:${VERSION}"
+    docker push "${REGISTRY_IP}/${IMAGE}:latest"
+    set +x
+    if [ "$PRODUCTION" = true ]; then
+
+      set -x
+      docker tag "${IMAGE}":latest sodaliteh2020/"${IMAGE}:${VERSION}"
+      docker tag "${IMAGE}":latest sodaliteh2020/"${IMAGE}:latest"
+      docker push sodaliteh2020/"${IMAGE}:${VERSION}"
+      docker push sodaliteh2020/"${IMAGE}:latest"
+      set +x
+    fi
 }
 
 
@@ -39,20 +48,9 @@ IMAGE=$2
 FILE=${3:-Dockerfile}
 VERSION=$(git describe --tag --always | sed -e"s/^v//")
 DATE=$(date -u +%Y-%m-%dT%H:%M:%S)
-DEFAULT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-JENKINS_BRANCH=${CHANGE_BRANCH:-$GIT_BRANCH}
-# Detect if under Jenkins; if not, use DEFAULT_BRANCH
-BRANCH=${JENKINS_BRANCH:-$DEFAULT_BRANCH}
-
-#if [ "$BRANCH" != "master" ]; then
-#    VERSION="${VERSION}+${BRANCH}"
-
-#else
-#    if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-#        echo "Skipping untagged commit on master"
-	#  exit 0
-#    fi
-#fi
+# Detect if under Jenkins; if not, use DEFAULT_REGISTRY
+DEFAULT_REGISTRY=localhost
+REGISTRY_IP=${docker_registry_ip:-$DEFAULT_REGISTRY}
 
 # check Semantic versioning compliance
 if [[ ! "$VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*))?(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?$ ]]; then
@@ -63,9 +61,9 @@ fi
 # Check if production ready
 if [[ "$VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
 then
-  PRODUCTION=True
+  PRODUCTION=true
 else
-  PRODUCTION=False
+  PRODUCTION=false
 fi
 
 
@@ -75,14 +73,7 @@ echo "IMAGE: $IMAGE"
 echo "FILE: $FILE"
 echo "VERSION: $VERSION"
 echo "DATE: $DATE"
-echo "DEFAULT_BRANCH: $DEFAULT_BRANCH"
-echo "JENKINS_BRANCH: $JENKINS_BRANCH"
-echo "BRANCH: $BRANCH"
 echo "PRODUCTION: $PRODUCTION"
-
-printenv
-
-exit 0
 
 
 if [ "$ACTION" = "build" ]; then
