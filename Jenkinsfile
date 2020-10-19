@@ -55,7 +55,7 @@ pipeline {
             when {
                 allOf {
                     expression{env.BRANCH_NAME != 'master'}
-                    expression{env.BRANCH_NAME =~ /^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)/}
+                    expression{env.BRANCH_NAME =~ /^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/}
                 }
              }
             steps {
