@@ -56,8 +56,8 @@ BRANCH=${JENKINS_BRANCH:-$DEFAULT_BRANCH}
 
 # check Semantic versioning compliance
 if [[ ! "$VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*))?(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?$ ]]; then
-        echo "SemVal failure"
-	      # exit 0
+        echo "Version does not comply with Semantic versioning 2.0.0 (https://semver.org/spec/v2.0.0.html)"
+	      exit 1
 fi
 
 # Check if production ready
@@ -80,6 +80,7 @@ echo "JENKINS_BRANCH: $JENKINS_BRANCH"
 echo "BRANCH: $BRANCH"
 echo "PRODUCTION: $PRODUCTION"
 
+printenv
 
 exit 0
 
