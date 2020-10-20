@@ -51,7 +51,44 @@ pipeline {
             }
         }
 
-        stage('Build xopera-flask') {
+        stage('Build xopera-nginx') {
+            when { tag "*" }
+            steps {
+                sh """#!/bin/bash
+                    cd REST_API
+                    ../make_docker.sh build xopera-nginx Dockerfile-nginx
+                    """
+            }
+        }
+
+        stage('Push xopera-nginx to sodalite-private-registry') {
+            when { tag "*" }
+            steps {
+                withDockerRegistry(credentialsId: 'jenkins-sodalite.docker_token', url: '') {
+                    sh  """#!/bin/bash
+                            ./make_docker.sh push xopera-nginx staging
+                        """
+                }
+            }
+        }
+
+        stage('Push xopera-nginx to DockerHub') {
+            when {
+                allOf {
+                    expression{tag "*"}
+                    expression{env.BRANCH_NAME =~ /^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/}
+                }
+             }
+            steps {
+                withDockerRegistry(credentialsId: 'jenkins-sodalite.docker_token', url: '') {
+                    sh  """#!/bin/bash
+                            ./make_docker.sh push xopera-nginx production
+                        """
+                }
+            }
+        }
+
+        stage('Production with tag') {
             when {
                 allOf {
                     expression{tag "*"}
@@ -60,7 +97,7 @@ pipeline {
              }
             steps {
                 sh """#!/bin/bash
-                    echo "Is production"
+                    echo "Is production and tag"
                    """
             }
         }
