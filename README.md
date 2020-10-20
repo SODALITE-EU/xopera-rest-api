@@ -5,7 +5,7 @@ Implementation of the xOpera orchestrator REST API
 
 ## Prerequisites
     
-    - Ubuntu 18.04
+    - Ubuntu 18.04 or newer
     - Python 3.6 with pip 20.0.2 or newer
     - Docker engine 19.03 or newer
 
