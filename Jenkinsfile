@@ -52,8 +52,13 @@ pipeline {
         }
 
         stage('Build xopera-nginx') {
-            // Build on every tag
-            when { tag "*" }
+            // Staging on every Semantic version compliant tag
+            when {
+                allOf {
+                    expression{tag "*"}
+                    expression{env.BRANCH_NAME =~ /^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*))?(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?$/}
+                }
+             }
             steps {
                 sh """#!/bin/bash
                     cd REST_API
@@ -63,8 +68,13 @@ pipeline {
         }
 
         stage('Push xopera-nginx to sodalite-private-registry') {
-            // Staging on every tag
-            when { tag "*" }
+            // Staging on every Semantic version compliant tag
+            when {
+                allOf {
+                    expression{tag "*"}
+                    expression{env.BRANCH_NAME =~ /^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*))?(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?$/}
+                }
+             }
             steps {
                 withDockerRegistry(credentialsId: 'jenkins-sodalite.docker_token', url: '') {
                     sh  """#!/bin/bash
