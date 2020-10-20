@@ -13,29 +13,19 @@
 # image name is pure name without repository (image-name, not sodaliteh2020/image-name)
 
 build() {
-    # set -x
+    set -x
     docker build --build-arg VERSION="${VERSION}" --build-arg DATE="${DATE}" -t "${IMAGE}":latest -f "${FILE}" .
-   # set +x
+    set +x
 }
 
 push() {
-    # always push to staging
+
     set -x
-    docker tag "${IMAGE}":latest "${REGISTRY_IP}/${IMAGE}:${VERSION}"
-    docker tag "${IMAGE}":latest "${REGISTRY_IP}/${IMAGE}:latest"
-    docker push "${REGISTRY_IP}/${IMAGE}:${VERSION}"
-    docker push "${REGISTRY_IP}/${IMAGE}:latest"
+    docker tag "${IMAGE}":latest "${TARGET_REGISTRY}/${IMAGE}:${VERSION}"
+    docker tag "${IMAGE}":latest "${TARGET_REGISTRY}/${IMAGE}:latest"
+    docker push "${TARGET_REGISTRY}/${IMAGE}:${VERSION}"
+    docker push "${TARGET_REGISTRY}/${IMAGE}:latest"
     set +x
-
-    if [ "$TARGET" = 'production' ]; then
-
-      set -x
-      docker tag "${IMAGE}":latest sodaliteh2020/"${IMAGE}:${VERSION}"
-      docker tag "${IMAGE}":latest sodaliteh2020/"${IMAGE}:latest"
-      docker push sodaliteh2020/"${IMAGE}:${VERSION}"
-      docker push sodaliteh2020/"${IMAGE}:latest"
-      set +x
-    fi
 }
 
 
@@ -58,11 +48,17 @@ if [ "$ACTION" = 'build' ];
   else
     TARGET=${3:-staging}
 fi
+
+if [[ "$ACTION" = 'push' ]]; then
+  if [[ "$TARGET" = 'production' ]]; then
+    TARGET_REGISTRY=sodaliteh2020
+  else
+    TARGET_REGISTRY=${docker_registry_ip:-localhost}
+  fi
+fi
+
 VERSION=$(git describe --tag --always | sed -e"s/^v//")
 DATE=$(date -u +%Y-%m-%dT%H:%M:%S)
-# Detect if under Jenkins; if not, use DEFAULT_REGISTRY
-DEFAULT_REGISTRY=localhost
-REGISTRY_IP=${docker_registry_ip:-$DEFAULT_REGISTRY}
 
 # check Semantic versioning compliance
 if [[ ! "$VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*))?(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?$ ]]; then
@@ -87,6 +83,7 @@ echo "FILE: $FILE"
 echo "VERSION: $VERSION"
 echo "DATE: $DATE"
 echo "TARGET: $TARGET"
+echo "TARGET_REGISTRY: $TARGET_REGISTRY"
 
 
 if [ "$ACTION" = "build" ]; then

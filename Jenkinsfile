@@ -52,6 +52,7 @@ pipeline {
         }
 
         stage('Build xopera-nginx') {
+            // Build on every tag
             when { tag "*" }
             steps {
                 sh """#!/bin/bash
@@ -62,6 +63,7 @@ pipeline {
         }
 
         stage('Push xopera-nginx to sodalite-private-registry') {
+            // Staging on every tag
             when { tag "*" }
             steps {
                 withDockerRegistry(credentialsId: 'jenkins-sodalite.docker_token', url: '') {
@@ -73,6 +75,7 @@ pipeline {
         }
 
         stage('Push xopera-nginx to DockerHub') {
+            // Only on production tags (MAJOR.MINOR.PATCH)
             when {
                 allOf {
                     expression{tag "*"}
@@ -88,34 +91,5 @@ pipeline {
             }
         }
 
-        stage('Production with tag') {
-            when {
-                allOf {
-                    expression{tag "*"}
-                    expression{env.BRANCH_NAME =~ /^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/}
-                }
-             }
-            steps {
-                sh """#!/bin/bash
-                    echo "Is production and tag"
-                   """
-            }
-        }
-        stage('Just on tags') {
-            when {tag "*"}
-            steps {
-                sh """#!/bin/bash
-                    echo "This is tag"
-                   """
-            }
-        }
-        stage('always') {
-
-            steps {
-                sh """#!/bin/bash
-                    echo "This is normal commit"
-                   """
-            }
-        }
     }
 }
