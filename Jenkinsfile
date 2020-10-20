@@ -65,11 +65,7 @@ pipeline {
             }
         }
         stage('Just on tags') {
-            when {
-                allOf {
-                    expression{tag "*"}
-                }
-             }
+            when {tag "*"}
             steps {
                 sh """#!/bin/bash
                     echo "This is tag"
