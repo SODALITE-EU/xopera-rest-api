@@ -77,58 +77,112 @@ pipeline {
                     sh  """ #!/bin/bash
                             cd REST_API/Implementation/
                             ${scannerHome}/bin/sonar-scanner
-                        """    
+                        """
                 }
             }
         }
-        stage('Build and push xopera-flask') {
-            when { tag "*" }
+        stage('Build xopera-flask') {
+            // Staging on every Semantic version compliant tag
+            when {
+                allOf {
+                    expression{tag "*"}
+                    expression{env.BRANCH_NAME =~ /^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*))?(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?$/}
+                }
+             }
             steps {
                 sh """#!/bin/bash
                     cd REST_API
-                    docker build -t xopera-flask -f Dockerfile-flask .
-                    docker tag xopera-flask $docker_registry_ip/xopera-flask
-                    docker push $docker_registry_ip/xopera-flask
-                   """
+                    ../make_docker.sh build xopera-flask Dockerfile-flask
+                    """
             }
         }
-        stage('Build and push xopera-nginx') {
-            when { tag "*" }
+        stage('Build xopera-nginx') {
+            // Staging on every Semantic version compliant tag
+            when {
+                allOf {
+                    expression{tag "*"}
+                    expression{env.BRANCH_NAME =~ /^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*))?(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?$/}
+                }
+            }
             steps {
                 sh """#!/bin/bash
                     cd REST_API
-                    docker build -t xopera-nginx -f Dockerfile-nginx .
-                    docker tag xopera-nginx $docker_registry_ip/xopera-nginx
-                    docker push $docker_registry_ip/xopera-nginx
-                   """
+                    ../make_docker.sh build xopera-nginx Dockerfile-nginx
+                    """
             }
         }
-        stage('Push xopera-flask to DockerHub') {
-            when { tag "*" }
+        stage('Push xopera-flask to sodalite-private-registry') {
+            // Staging on every Semantic version compliant tag
+            when {
+                allOf {
+                    expression{tag "*"}
+                    expression{env.BRANCH_NAME =~ /^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*))?(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?$/}
+                }
+            }
             steps {
                 withDockerRegistry(credentialsId: 'jenkins-sodalite.docker_token', url: '') {
                     sh  """#!/bin/bash
-                            docker tag xopera-flask sodaliteh2020/xopera-flask
-                            git fetch --tags
-                            ./make_docker.sh push sodaliteh2020/xopera-flask
+                            ./make_docker.sh push xopera-flask staging
+                        """
+                }
+            }
+        }
+        stage('Push xopera-nginx to sodalite-private-registry') {
+            // Staging on every Semantic version compliant tag
+            when {
+                allOf {
+                    expression{tag "*"}
+                    expression{env.BRANCH_NAME =~ /^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*))?(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?$/}
+                }
+            }
+            steps {
+                withDockerRegistry(credentialsId: 'jenkins-sodalite.docker_token', url: '') {
+                    sh  """#!/bin/bash
+                            ./make_docker.sh push xopera-nginx staging
+                        """
+                }
+            }
+        }
+        stage('Push xopera-flask to DockerHub') {
+            // Only on production tags (MAJOR.MINOR.PATCH)
+            when {
+                allOf {
+                    expression{tag "*"}
+                    expression{env.BRANCH_NAME =~ /^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/}
+                }
+            }
+            steps {
+                withDockerRegistry(credentialsId: 'jenkins-sodalite.docker_token', url: '') {
+                    sh  """#!/bin/bash
+                            ./make_docker.sh push xopera-flask production
                         """
                 }
             }
         }
         stage('Push xopera-nginx to DockerHub') {
-            when { tag "*" }
+            // Only on production tags (MAJOR.MINOR.PATCH)
+            when {
+                allOf {
+                    expression{tag "*"}
+                    expression{env.BRANCH_NAME =~ /^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/}
+                }
+            }
             steps {
                 withDockerRegistry(credentialsId: 'jenkins-sodalite.docker_token', url: '') {
                     sh  """#!/bin/bash
-                            docker tag xopera-nginx sodaliteh2020/xopera-nginx
-                            git fetch --tags
-                            ./make_docker.sh push sodaliteh2020/xopera-nginx
+                            ./make_docker.sh push xopera-nginx production
                         """
                 }
             }
         }
-        stage('Install dependencies') {
-            when { tag "*" }
+        stage('Install deploy dependencies') {
+            // Only for production versions
+            when {
+                allOf {
+                    expression{tag "*"}
+                    expression{env.BRANCH_NAME =~ /^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/}
+                }
+            }
             steps {
                 sh """#!/bin/bash
                     python3 -m venv venv-deploy
@@ -140,7 +194,13 @@ pipeline {
             }
         }
         stage('Deploy to openstack') {
-            when { tag "*" }
+            // Only for production versions
+            when {
+                allOf {
+                    expression{tag "*"}
+                    expression{env.BRANCH_NAME =~ /^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/}
+                }
+            }
             steps {
                 withCredentials([sshUserPrivateKey(credentialsId: 'xOpera_ssh_key', keyFileVariable: 'xOpera_ssh_key_file', usernameVariable: 'xOpera_ssh_username')]) {
                     // BUILD THE INPUTS FILE
@@ -200,5 +260,6 @@ pipeline {
                 }
             }
         }
+
     }
 }
