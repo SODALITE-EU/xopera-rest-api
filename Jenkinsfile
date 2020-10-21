@@ -45,9 +45,19 @@ pipeline {
        ca_key_file = credentials('xopera-ca-key')
 
        // CI-CD vars
-       TAG_SEM_VAR = """${sh(
+       TAG_SEM_VER_COMPLIANT = """${sh(
                 returnStdout: true,
                 script: './env_helper.sh SemVar $BRANCH_NAME'
+            )}"""
+
+       TAG_MAJOR_RELEASE = """${sh(
+                returnStdout: true,
+                script: './env_helper.sh MajRel $BRANCH_NAME'
+            )}"""
+
+       TAG_PRODUCTION = """${sh(
+                returnStdout: true,
+                script: './env_helper.sh Prod $BRANCH_NAME'
             )}"""
    }
     stages {
@@ -58,7 +68,10 @@ pipeline {
         }
         stage('print env_vars'){
             steps {
-                sh "echo $TAG_SEM_VAR"
+                sh "echo 'TAG: $BRANCH_NAME'"
+                sh "echo 'Tag is compliant with SemVar 2.0.0 $TAG_SEM_VER_COMPLIANT'"
+                sh "echo 'Tag is Major release $TAG_MAJOR_RELEASE'"
+                sh "echo 'Tag is production $TAG_PRODUCTION'"
                 error("Check env vars")
 
             }
