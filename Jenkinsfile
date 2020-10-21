@@ -47,7 +47,7 @@ pipeline {
        // CI-CD vars
        TAG_SEM_VAR = """${bash(
                 returnStdout: true,
-                script: './env_helper.sh Semvar $BRANCH_NAME'
+                script: './env_helper.sh SemVar $BRANCH_NAME'
             )}"""
    }
     stages {
