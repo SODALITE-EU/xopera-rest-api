@@ -10,27 +10,27 @@ VALUE=$2
 SemVar() {
   if [[ "$VALUE" =~ ^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*))?(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?$ ]];
   then
-    echo "true\c"
+    echo true | tr -d '\n'
 	else
-	  echo "false\c"
+	  echo false | tr -d '\n'
   fi
 }
 
 SemVarProd() {
   if [[ "$VALUE" =~ ^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]];
   then
-    echo true
+    echo true | tr -d '\n'
 	else
-	  echo false
+	  echo false | tr -d '\n'
   fi
 }
 
 MajorRelease() {
   if [[ "$VALUE" = "M18" ]] || [[ "$VALUE" = "M24" ]] || [[ "$VALUE" = "M36" ]];
   then
-    echo true
+    echo true | tr -d '\n'
 	else
-	  echo false
+	  echo false | tr -d '\n'
   fi
 }
 
@@ -38,9 +38,9 @@ Production(){
 
   if [[ "$(SemVarProd)" = true ]] || [[ "$(MajorRelease)" = true ]];
   then
-    echo true
+    echo true | tr -d '\n'
 	else
-	  echo false
+	  echo false | tr -d '\n'
   fi
 
 }
