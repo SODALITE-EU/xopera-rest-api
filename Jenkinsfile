@@ -45,7 +45,7 @@ pipeline {
        ca_key_file = credentials('xopera-ca-key')
 
        // CI-CD vars
-       TAG_SEM_VAR = """${bash(
+       TAG_SEM_VAR = """${sh(
                 returnStdout: true,
                 script: './env_helper.sh SemVar $BRANCH_NAME'
             )}"""
