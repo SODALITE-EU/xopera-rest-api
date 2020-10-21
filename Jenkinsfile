@@ -70,7 +70,7 @@ pipeline {
             steps {
                 sh """ #!/bin/bash
                 echo 'TAG: $BRANCH_NAME'
-                echo 'Tag is compliant with SemVar 2.0.0 a$TAG_SEM_VER_COMPLIANT'a
+                echo 'Tag is compliant with SemVar 2.0.0 $TAG_SEM_VER_COMPLIANT'
                 echo 'Tag is Major release $TAG_MAJOR_RELEASE'
                 echo 'Tag is production $TAG_PRODUCTION'
                 """
@@ -133,7 +133,7 @@ pipeline {
                 allOf {
                     expression{tag "*"}
                     expression{
-                        TAG_SEM_VER_COMPLIANT == true || TAG_MAJOR_RELEASE == true
+                        TAG_SEM_VER_COMPLIANT == 'true' || TAG_MAJOR_RELEASE == 'true'
                     }
                 }
             }
@@ -150,7 +150,7 @@ pipeline {
                 allOf {
                     expression{tag "*"}
                     expression{
-                        TAG_SEM_VER_COMPLIANT == true || TAG_MAJOR_RELEASE == true
+                        TAG_SEM_VER_COMPLIANT == 'true' || TAG_MAJOR_RELEASE == 'true'
                     }
                 }
             }
@@ -168,7 +168,7 @@ pipeline {
                 allOf {
                     expression{tag "*"}
                     expression{
-                        TAG_SEM_VER_COMPLIANT == true || TAG_MAJOR_RELEASE == true
+                        TAG_SEM_VER_COMPLIANT == 'true' || TAG_MAJOR_RELEASE == 'true'
                     }
                 }
             }
@@ -186,7 +186,7 @@ pipeline {
                 allOf {
                     expression{tag "*"}
                     expression{
-                        TAG_PRODUCTION == true
+                        TAG_PRODUCTION == 'true'
                     }
                 }
             }
@@ -204,7 +204,7 @@ pipeline {
                 allOf {
                     expression{tag "*"}
                     expression{
-                        TAG_PRODUCTION == true
+                        TAG_PRODUCTION == 'true'
                     }
                 }
             }
@@ -222,7 +222,7 @@ pipeline {
                 allOf {
                     expression{tag "*"}
                     expression{
-                        TAG_PRODUCTION == true
+                        TAG_PRODUCTION == 'true'
                     }
                 }
             }
@@ -242,7 +242,7 @@ pipeline {
                 allOf {
                     expression{tag "*"}
                     expression{
-                        TAG_PRODUCTION == true
+                        TAG_PRODUCTION == 'true'
                     }
                 }
             }
