@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 #
 # Set of Regular expressions / checks to be used with Jenkins
+# Usage:
+#   $0 [SemVar|SemVarProd|MajRel|Prod] <tag>
 
 FUNC=$1
 VALUE=$2
 
 SemVar() {
-  if [[ "$VALUE" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*))?(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?$ ]];
+  if [[ "$VALUE" =~ ^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*))?(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?$ ]];
   then
     echo true
 	else
@@ -15,7 +17,7 @@ SemVar() {
 }
 
 SemVarProd() {
-  if [[ "$VALUE" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]];
+  if [[ "$VALUE" =~ ^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]];
   then
     echo true
 	else
@@ -43,25 +45,25 @@ Production(){
 
 }
 
-# checking semantic versioning compliance
+# checks compliance with Semantic versioning 2.0.0 (https://semver.org/spec/v2.0.0.html)
 if [[ "$FUNC" = "SemVar" ]]; then
   SemVar
   exit
 fi
 
-# checking semantic versioning for production
+# checks compliance with MAJOR.MINOR.PATCH part of Semantic versioning 2.0.0 (https://semver.org/spec/v2.0.0.html)
 if [[ "$FUNC" = "SemVarProd" ]]; then
   SemVarProd
   exit
 fi
 
-# checking major release (M18,M24,M36)
+# checks if tag in form of major release (M18,M24,M36)
 if [[ "$FUNC" = "MajRel" ]]; then
   MajorRelease
   exit
 fi
 
-# checking production (SemVarProd or MajorRelease)
+# checks if tag ready for production (SemVarProd or MajorRelease)
 if [[ "$FUNC" = "Prod" ]]; then
   Production
   exit

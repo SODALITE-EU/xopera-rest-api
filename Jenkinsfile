@@ -72,8 +72,6 @@ pipeline {
                 sh "echo 'Tag is compliant with SemVar 2.0.0 $TAG_SEM_VER_COMPLIANT'"
                 sh "echo 'Tag is Major release $TAG_MAJOR_RELEASE'"
                 sh "echo 'Tag is production $TAG_PRODUCTION'"
-                error("Check env vars")
-
             }
 
         }
@@ -109,11 +107,13 @@ pipeline {
             }
         }
         stage('Build xopera-flask') {
-            // Staging on every Semantic version compliant tag
+            // Staging on every Semantic version compliant tag or major release (M18,M24,M36)
             when {
                 allOf {
                     expression{tag "*"}
-                    expression{env.BRANCH_NAME =~ /^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*))?(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?$/}
+                    expression{
+                        TAG_SEM_VER_COMPLIANT == true || TAG_MAJOR_RELEASE == true
+                    }
                 }
              }
             steps {
@@ -124,11 +124,13 @@ pipeline {
             }
         }
         stage('Build xopera-nginx') {
-            // Staging on every Semantic version compliant tag
+            // Staging on every Semantic version compliant tag or major release (M18,M24,M36)
             when {
                 allOf {
                     expression{tag "*"}
-                    expression{env.BRANCH_NAME =~ /^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*))?(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?$/}
+                    expression{
+                        TAG_SEM_VER_COMPLIANT == true || TAG_MAJOR_RELEASE == true
+                    }
                 }
             }
             steps {
@@ -139,11 +141,13 @@ pipeline {
             }
         }
         stage('Push xopera-flask to sodalite-private-registry') {
-            // Staging on every Semantic version compliant tag
+            // Staging on every Semantic version compliant tag or major release (M18,M24,M36)
             when {
                 allOf {
                     expression{tag "*"}
-                    expression{env.BRANCH_NAME =~ /^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*))?(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?$/}
+                    expression{
+                        TAG_SEM_VER_COMPLIANT == true || TAG_MAJOR_RELEASE == true
+                    }
                 }
             }
             steps {
@@ -155,11 +159,13 @@ pipeline {
             }
         }
         stage('Push xopera-nginx to sodalite-private-registry') {
-            // Staging on every Semantic version compliant tag
+            // Staging on every Semantic version compliant tag or major release (M18,M24,M36)
             when {
                 allOf {
                     expression{tag "*"}
-                    expression{env.BRANCH_NAME =~ /^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*))?(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?$/}
+                    expression{
+                        TAG_SEM_VER_COMPLIANT == true || TAG_MAJOR_RELEASE == true
+                    }
                 }
             }
             steps {
@@ -171,11 +177,13 @@ pipeline {
             }
         }
         stage('Push xopera-flask to DockerHub') {
-            // Only on production tags (MAJOR.MINOR.PATCH)
+            // Only on production tags
             when {
                 allOf {
                     expression{tag "*"}
-                    expression{env.BRANCH_NAME =~ /^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/}
+                    expression{
+                        TAG_PRODUCTION == true
+                    }
                 }
             }
             steps {
@@ -187,11 +195,13 @@ pipeline {
             }
         }
         stage('Push xopera-nginx to DockerHub') {
-            // Only on production tags (MAJOR.MINOR.PATCH)
+            // Only on production tags
             when {
                 allOf {
                     expression{tag "*"}
-                    expression{env.BRANCH_NAME =~ /^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/}
+                    expression{
+                        TAG_PRODUCTION == true
+                    }
                 }
             }
             steps {
@@ -203,11 +213,13 @@ pipeline {
             }
         }
         stage('Install deploy dependencies') {
-            // Only for production versions
+            // Only on production tags
             when {
                 allOf {
                     expression{tag "*"}
-                    expression{env.BRANCH_NAME =~ /^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/}
+                    expression{
+                        TAG_PRODUCTION == true
+                    }
                 }
             }
             steps {
@@ -221,11 +233,13 @@ pipeline {
             }
         }
         stage('Deploy to openstack') {
-            // Only for production versions
+            // Only on production tags
             when {
                 allOf {
                     expression{tag "*"}
-                    expression{env.BRANCH_NAME =~ /^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/}
+                    expression{
+                        TAG_PRODUCTION == true
+                    }
                 }
             }
             steps {
