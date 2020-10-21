@@ -43,12 +43,23 @@ pipeline {
        // DOCKER CERTIFICATES
        ca_crt_file = credentials('xopera-ca-crt')
        ca_key_file = credentials('xopera-ca-key')
+
+       // CI-CD vars
+       TAG_SEM_VAR = (env.BRANCH_NAME =~ /^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*))?(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?$/)
    }
     stages {
         stage ('Pull repo code from github') {
             steps {
                 checkout scm
             }
+        }
+        stage('print env_vars'){
+            steps {
+                sh "echo $TAG_SEM_VAR"
+                error("Check env vars")
+
+            }
+
         }
         stage('test xOpera') {
             environment {
