@@ -10,9 +10,9 @@ VALUE=$2
 SemVar() {
   if [[ "$VALUE" =~ ^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*))?(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?$ ]];
   then
-    echo true
+    echo "true\c"
 	else
-	  echo false
+	  echo "false\c"
   fi
 }
 

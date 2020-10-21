@@ -70,7 +70,7 @@ pipeline {
             steps {
                 sh """ #!/bin/bash
                 echo 'TAG: $BRANCH_NAME'
-                echo 'Tag is compliant with SemVar 2.0.0 $TAG_SEM_VER_COMPLIANT'
+                echo 'Tag is compliant with SemVar 2.0.0 a$TAG_SEM_VER_COMPLIANT'a
                 echo 'Tag is Major release $TAG_MAJOR_RELEASE'
                 echo 'Tag is production $TAG_PRODUCTION'
                 """
@@ -81,9 +81,7 @@ pipeline {
             environment {
             XOPERA_TESTING = "True"
             }
-            when {
-                expression{ false }
-             }
+            when { expression{ false } }
             steps {
                 sh  """ #!/bin/bash
                         rm -rf venv
@@ -102,6 +100,7 @@ pipeline {
             environment {
             scannerHome = tool 'SonarQubeScanner'
             }
+            when { expression{ false } }
             steps {
                 withSonarQubeEnv('SonarCloud') {
                     sh  """ #!/bin/bash
