@@ -45,7 +45,10 @@ pipeline {
        ca_key_file = credentials('xopera-ca-key')
 
        // CI-CD vars
-       TAG_SEM_VAR = (env.BRANCH_NAME =~ /^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*))?(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?$/)
+       TAG_SEM_VAR = """${bash(
+                returnStdout: true,
+                script: './env_helper.sh Semvar $BRANCH_NAME'
+            )}"""
    }
     stages {
         stage ('Pull repo code from github') {
