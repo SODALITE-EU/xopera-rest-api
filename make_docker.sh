@@ -61,18 +61,18 @@ VERSION=$(git describe --tag --always | sed -e"s/^v//")
 DATE=$(date -u +%Y-%m-%dT%H:%M:%S)
 
 # check Semantic versioning compliance
-if [[ ! "$VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*))?(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?$ ]]; then
-        echo "Version '$VERSION' does not comply with Semantic versioning 2.0.0 (https://semver.org/spec/v2.0.0.html)"
-	      exit 1
-fi
+#if [[ ! "$VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*))?(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?$ ]]; then
+#        echo "Version '$VERSION' does not comply with Semantic versioning 2.0.0 (https://semver.org/spec/v2.0.0.html)"
+#	      exit 1
+#fi
 
 # Check if production ready
-if [[ "$TARGET" = 'production' ]]; then
-  if [[ ! "$VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
-    echo "Cannot push to production, version '$VERSION' does not comply with Semantic versioning 2.0.0 (https://semver.org/spec/v2.0.0.html)"
-    exit 1
-  fi
-fi
+#if [[ "$TARGET" = 'production' ]]; then
+#  if [[ ! "$VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+#    echo "Cannot push to production, version '$VERSION' does not comply with Semantic versioning 2.0.0 (https://semver.org/spec/v2.0.0.html)"
+#    exit 1
+#  fi
+#fi
 
 
 # debug section
