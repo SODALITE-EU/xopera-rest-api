@@ -47,22 +47,22 @@ pipeline {
        // CI-CD vars
        TAG_SEM_VER_COMPLIANT = """${sh(
                 returnStdout: true,
-                script: './env_helper.sh SemVar $BRANCH_NAME'
+                script: './validate_tag.sh SemVar $BRANCH_NAME'
             )}"""
 
        TAG_MAJOR_RELEASE = """${sh(
                 returnStdout: true,
-                script: './env_helper.sh MajRel $BRANCH_NAME'
+                script: './validate_tag.sh MajRel $BRANCH_NAME'
             )}"""
 
        TAG_PRODUCTION = """${sh(
                 returnStdout: true,
-                script: './env_helper.sh production $BRANCH_NAME'
+                script: './validate_tag.sh production $BRANCH_NAME'
             )}"""
 
        TAG_STAGING = """${sh(
                 returnStdout: true,
-                script: './env_helper.sh staging $BRANCH_NAME'
+                script: './validate_tag.sh staging $BRANCH_NAME'
             )}"""
    }
     stages {
