@@ -57,7 +57,12 @@ pipeline {
 
        TAG_PRODUCTION = """${sh(
                 returnStdout: true,
-                script: './env_helper.sh Prod $BRANCH_NAME'
+                script: './env_helper.sh production $BRANCH_NAME'
+            )}"""
+
+       TAG_STAGING = """${sh(
+                returnStdout: true,
+                script: './env_helper.sh staging $BRANCH_NAME'
             )}"""
    }
     stages {
@@ -73,6 +78,7 @@ pipeline {
                 echo 'Tag is compliant with SemVar 2.0.0 $TAG_SEM_VER_COMPLIANT'
                 echo 'Tag is Major release $TAG_MAJOR_RELEASE'
                 echo 'Tag is production $TAG_PRODUCTION'
+                echo 'Tag is staging $TAG_STAGING'
                 """
             }
 
@@ -116,7 +122,7 @@ pipeline {
                 allOf {
                     expression{tag "*"}
                     expression{
-                        TAG_SEM_VER_COMPLIANT == 'true' || TAG_MAJOR_RELEASE == 'true'
+                        TAG_STAGING == 'true' || TAG_PRODUCTION == 'true'
                     }
                 }
              }
@@ -133,7 +139,7 @@ pipeline {
                 allOf {
                     expression{tag "*"}
                     expression{
-                        TAG_SEM_VER_COMPLIANT == 'true' || TAG_MAJOR_RELEASE == 'true'
+                        TAG_STAGING == 'true' || TAG_PRODUCTION == 'true'
                     }
                 }
             }
@@ -150,7 +156,7 @@ pipeline {
                 allOf {
                     expression{tag "*"}
                     expression{
-                        TAG_SEM_VER_COMPLIANT == 'true' || TAG_MAJOR_RELEASE == 'true'
+                        TAG_STAGING == 'true' || TAG_PRODUCTION == 'true'
                     }
                 }
             }
@@ -168,7 +174,7 @@ pipeline {
                 allOf {
                     expression{tag "*"}
                     expression{
-                        TAG_SEM_VER_COMPLIANT == 'true' || TAG_MAJOR_RELEASE == 'true'
+                        TAG_STAGING == 'true' || TAG_PRODUCTION == 'true'
                     }
                 }
             }
