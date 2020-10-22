@@ -161,7 +161,7 @@ class TestDeploy:
 
         session_token = resp.json['session_token']
 
-        done, resp = TestDeploy.monitor(client, session_token, timeout=20)
+        done, resp = TestDeploy.monitor(client, session_token, timeout=100)
         assert_that(done).is_true()
         assert_that(resp.json['state']).is_equal_to('done')
 
