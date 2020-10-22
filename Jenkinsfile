@@ -87,7 +87,6 @@ pipeline {
             environment {
             XOPERA_TESTING = "True"
             }
-            when { expression{ false } }
             steps {
                 sh  """ #!/bin/bash
                         rm -rf venv
@@ -106,7 +105,6 @@ pipeline {
             environment {
             scannerHome = tool 'SonarQubeScanner'
             }
-            when { expression{ false } }
             steps {
                 withSonarQubeEnv('SonarCloud') {
                     sh  """ #!/bin/bash

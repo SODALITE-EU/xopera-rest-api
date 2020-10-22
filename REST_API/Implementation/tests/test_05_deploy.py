@@ -91,7 +91,7 @@ class TestDeploy:
 
         session_token = resp_deploy.json['session_token']
 
-        done, resp_statue = TestDeploy.monitor(client, session_token, timeout=20)
+        done, resp_statue = TestDeploy.monitor(client, session_token, timeout=100)
         assert_that(done, resp_statue.json).is_true()
         assert_that(resp_statue.json['state']).is_equal_to('done')
         assert_that(resp_statue.status_code).is_equal_to(201)
@@ -128,7 +128,7 @@ class TestDeploy:
         assert_that(resp_deploy.status_code).is_equal_to(202)
         session_token = resp_deploy.json['session_token']
 
-        done, resp_status = TestDeploy.monitor(client, session_token, timeout=20)
+        done, resp_status = TestDeploy.monitor(client, session_token, timeout=100)
 
         assert_that(done).is_true()
         assert_that(resp_status.json['state']).is_equal_to('failed')
@@ -145,7 +145,7 @@ class TestDeploy:
         assert_that(resp_deploy.status_code).is_equal_to(202)
         session_token = resp_deploy.json['session_token']
 
-        done, resp_status = TestDeploy.monitor(client, session_token, timeout=20)
+        done, resp_status = TestDeploy.monitor(client, session_token, timeout=100)
 
         assert_that(done).is_true()
         assert_that(resp_status.json['state']).is_equal_to('failed')
@@ -175,7 +175,7 @@ class TestDeploy:
 
         session_token = resp.json['session_token']
 
-        done, resp = TestDeploy.monitor(client, session_token, timeout=20)
+        done, resp = TestDeploy.monitor(client, session_token, timeout=100)
         assert_that(done).is_true()
         assert_that(resp.json['state']).is_equal_to('done')
 
@@ -184,7 +184,7 @@ class TestDeploy:
         session_token = resp.json['session_token']
         assert_that(session_token).is_not_none()
 
-        done, resp = TestDeploy.monitor(client, session_token, timeout=20)
+        done, resp = TestDeploy.monitor(client, session_token, timeout=100)
         assert_that(done).is_true()
         assert_that(resp.json['state']).is_equal_to('failed')
 
@@ -198,7 +198,7 @@ class TestDeploy:
 
         session_token = resp.json['session_token']
 
-        done, resp = TestDeploy.monitor(client, session_token, timeout=20)
+        done, resp = TestDeploy.monitor(client, session_token, timeout=100)
         assert_that(done).is_true()
         assert_that(resp.json['state']).is_equal_to('done')
 
@@ -207,7 +207,7 @@ class TestDeploy:
         session_token = resp.json['session_token']
         assert_that(session_token).is_not_none()
 
-        done, resp = TestDeploy.monitor(client, session_token, timeout=20)
+        done, resp = TestDeploy.monitor(client, session_token, timeout=100)
         assert_that(done).is_true()
         assert_that(resp.json['state']).is_equal_to('done')
 
@@ -221,7 +221,7 @@ class TestDeploy:
         assert_that(resp_deploy.status_code).is_equal_to(202)
         session_token = resp_deploy.json['session_token']
 
-        done, resp_status = TestDeploy.monitor(client, session_token, timeout=20)
+        done, resp_status = TestDeploy.monitor(client, session_token, timeout=100)
 
         assert_that(done).is_true()
         assert_that(resp_status.json['state']).is_equal_to('done')
@@ -231,7 +231,7 @@ class TestDeploy:
         resp = client.delete(f"/deploy/{blueprint_token}")
         session_token = resp.json['session_token']
 
-        done, resp_status = TestDeploy.monitor(client, session_token, timeout=20)
+        done, resp_status = TestDeploy.monitor(client, session_token, timeout=100)
         assert_that(done).is_true()
         assert_that(resp_status.json['state']).is_equal_to('done')
 
