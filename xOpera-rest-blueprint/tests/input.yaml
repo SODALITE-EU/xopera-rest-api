@@ -1,6 +1,7 @@
 # OPENSTACK SETTINGS
 ssh-key-name: [SSH KEY NAME]
 image-name: "centos-7 x86_64"
+vm-name: xOpera
 openstack-network-name: xlab
 security-groups: default,remote_access,sodalite-uc
 flavor-name: m1.medium
