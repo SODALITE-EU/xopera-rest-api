@@ -25,7 +25,7 @@ pipeline {
        verbose_mode = "debug"
        // GIT SETTINGS
        git_type = "gitlab"
-       git_url = "https://gitlab.com"
+       git_server_url = "https://gitlab.com"
        git_auth_token = credentials('git-auth-token')
        // OPENSTACK DEPLOYMENT FALLBACK SETTINGS
        OS_PROJECT_DOMAIN_NAME = "Default"
@@ -83,6 +83,24 @@ pipeline {
             }
 
         }
+        stage('Test envsubst'){
+        environment {
+            vm_name = 'xOpera'
+        }
+            steps {
+               sh """ #!/bin/bash
+               echo $git_server_url
+               envsubst < xOpera-rest-blueprint/tests/input.yaml.tmpl > inputs-generated.yaml
+               cat inputs-generated.yaml
+
+               """
+               error("konec")
+
+
+            }
+
+        }
+
         stage('test xOpera') {
             environment {
             XOPERA_TESTING = "True"
@@ -257,6 +275,7 @@ pipeline {
                     echo "# OPENSTACK SETTINGS
                     ssh-key-name: ${ssh_key_name}
                     image-name: ${image_name}
+                    vm-name: xOpera
                     openstack-network-name: ${network_name}
                     security-groups: ${security_groups}
                     flavor-name: ${flavor_name}
@@ -282,7 +301,7 @@ pipeline {
                       XOPERA_VERBOSE_MODE: ${verbose_mode}
                       # XOPERA GIT SETTINGS
                       XOPERA_GIT_TYPE: ${git_type}
-                      XOPERA_GIT_URL: https://gitlab.com
+                      XOPERA_GIT_URL: ${git_url}
                       XOPERA_GIT_AUTH_TOKEN: ${git_auth_token}
                       # XOPERA POSTGRES CONNECTION
                       XOPERA_DATABASE_IP: ${postgres_address}
