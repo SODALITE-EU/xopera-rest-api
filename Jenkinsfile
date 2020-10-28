@@ -25,7 +25,7 @@ pipeline {
        verbose_mode = "debug"
        // GIT SETTINGS
        git_type = "gitlab"
-       git_url = "https://gitlab.com"
+       git_server_url = "https://gitlab.com"
        git_auth_token = credentials('git-auth-token')
        // OPENSTACK DEPLOYMENT FALLBACK SETTINGS
        OS_PROJECT_DOMAIN_NAME = "Default"
@@ -45,6 +45,7 @@ pipeline {
        ca_key_file = credentials('xopera-ca-key')
 
        // CI-CD vars
+       // When triggered from git tag, $BRANCH_NAME is actually tag_name
        TAG_SEM_VER_COMPLIANT = """${sh(
                 returnStdout: true,
                 script: './validate_tag.sh SemVar $BRANCH_NAME'
@@ -71,25 +72,25 @@ pipeline {
                 checkout scm
             }
         }
-        stage('print env_vars'){
+        stage('Inspect GIT TAG'){
             steps {
                 sh """ #!/bin/bash
                 echo 'TAG: $BRANCH_NAME'
-                echo 'Tag is compliant with SemVar 2.0.0 $TAG_SEM_VER_COMPLIANT'
-                echo 'Tag is Major release $TAG_MAJOR_RELEASE'
-                echo 'Tag is production $TAG_PRODUCTION'
-                echo 'Tag is staging $TAG_STAGING'
+                echo 'Tag is compliant with SemVar 2.0.0: $TAG_SEM_VER_COMPLIANT'
+                echo 'Tag is Major release: $TAG_MAJOR_RELEASE'
+                echo 'Tag is production: $TAG_PRODUCTION'
+                echo 'Tag is staging: $TAG_STAGING'
                 """
             }
 
         }
-        stage('test xOpera') {
+
+        stage('Test xOpera') {
             environment {
             XOPERA_TESTING = "True"
             }
             steps {
                 sh  """ #!/bin/bash
-                        rm -rf venv
                         python3 -m venv venv-test
                         . venv-test/bin/activate
                         cd REST_API/
@@ -115,9 +116,9 @@ pipeline {
             }
         }
         stage('Build xopera-flask') {
-            // Staging on every Semantic version compliant tag or major release (M18,M24,M36)
             when {
                 allOf {
+                    // Triggered on every tag, that is considered for staging or production
                     expression{tag "*"}
                     expression{
                         TAG_STAGING == 'true' || TAG_PRODUCTION == 'true'
@@ -132,7 +133,6 @@ pipeline {
             }
         }
         stage('Build xopera-nginx') {
-            // Staging on every Semantic version compliant tag or major release (M18,M24,M36)
             when {
                 allOf {
                     expression{tag "*"}
@@ -149,7 +149,7 @@ pipeline {
             }
         }
         stage('Push xopera-flask to sodalite-private-registry') {
-            // Staging on every Semantic version compliant tag or major release (M18,M24,M36)
+            // Push during staging and production
             when {
                 allOf {
                     expression{tag "*"}
@@ -167,7 +167,7 @@ pipeline {
             }
         }
         stage('Push xopera-nginx to sodalite-private-registry') {
-            // Staging on every Semantic version compliant tag or major release (M18,M24,M36)
+            // Push during staging and production
             when {
                 allOf {
                     expression{tag "*"}
@@ -221,12 +221,11 @@ pipeline {
             }
         }
         stage('Install deploy dependencies') {
-            // Only on production tags
             when {
                 allOf {
                     expression{tag "*"}
                     expression{
-                        TAG_PRODUCTION == 'true'
+                        TAG_STAGING == 'true' || TAG_PRODUCTION == 'true'
                     }
                 }
             }
@@ -240,7 +239,34 @@ pipeline {
                    """
             }
         }
-        stage('Deploy to openstack') {
+        stage('Deploy to openstack for staging') {
+            // Only on staging tags
+            when {
+                allOf {
+                    expression{tag "*"}
+                    expression{
+                        TAG_STAGING == 'true'
+                    }
+                }
+            }
+            environment {
+                // add env var for this stage only
+                vm_name = 'xOpera-dev'
+            }
+            steps {
+                withCredentials([sshUserPrivateKey(credentialsId: 'xOpera_ssh_key', keyFileVariable: 'xOpera_ssh_key_file', usernameVariable: 'xOpera_ssh_username')]) {
+                    sh """#!/bin/bash
+                        # create input.yaml file from template
+                        envsubst < xOpera-rest-blueprint/tests/input.yaml.tmpl > xOpera-rest-blueprint/input.yaml
+                        . venv-deploy/bin/activate
+                        cd xOpera-rest-blueprint
+                        rm -r -f .opera
+                        opera deploy service.yaml -i input.yaml
+                       """
+                }
+            }
+        }
+        stage('Deploy to openstack for production') {
             // Only on production tags
             when {
                 allOf {
@@ -250,62 +276,18 @@ pipeline {
                     }
                 }
             }
+            environment {
+                vm_name = 'xOpera'
+            }
             steps {
                 withCredentials([sshUserPrivateKey(credentialsId: 'xOpera_ssh_key', keyFileVariable: 'xOpera_ssh_key_file', usernameVariable: 'xOpera_ssh_username')]) {
-                    // BUILD THE INPUTS FILE
-                    sh """\
-                    echo "# OPENSTACK SETTINGS
-                    ssh-key-name: ${ssh_key_name}
-                    image-name: ${image_name}
-                    openstack-network-name: ${network_name}
-                    security-groups: ${security_groups}
-                    flavor-name: ${flavor_name}
-                    identity_file: ${xOpera_ssh_key_file}
-                    # DOCKER SETTINGS
-                    docker-network: ${docker_network}
-                    dockerhub-user: ${dockerhub_user}
-                    dockerhub-pass: ${dockerhub_pass}
-                    docker-public-registry-url: ${docker_public_registry_url}
-                    docker-private-registry-url: ${docker_registry_ip}
-                    docker-registry-cert-country-name: ${docker_registry_cert_country_name}
-                    docker-registry-cert-organization-name: ${docker_registry_cert_organization_name}
-                    docker-registry-cert-email-address: ${docker_registry_cert_email_address}
-                    docker_ca_crt: ${ca_crt_file}
-                    docker_ca_key: ${ca_key_file}
-                    # POSTGRES SETTINGS
-                    postgres_env:
-                      postgres_user: ${postgres_user}
-                      postgres_password: ${postgres_password}
-                      postgres_db: ${postgres_db}
-                    # XOPERA SETTINGS
-                    xopera_env:
-                      XOPERA_VERBOSE_MODE: ${verbose_mode}
-                      # XOPERA GIT SETTINGS
-                      XOPERA_GIT_TYPE: ${git_type}
-                      XOPERA_GIT_URL: https://gitlab.com
-                      XOPERA_GIT_AUTH_TOKEN: ${git_auth_token}
-                      # XOPERA POSTGRES CONNECTION
-                      XOPERA_DATABASE_IP: ${postgres_address}
-                      XOPERA_DATABASE_NAME: ${postgres_db}
-                      XOPERA_DATABASE_USER: ${postgres_user}
-                      XOPERA_DATABASE_PASSWORD: ${postgres_password}
-                      # OPENSTACK DEPLOYMENT FALLBACK SETTINGS
-                      OS_PROJECT_DOMAIN_NAME: ${OS_PROJECT_DOMAIN_NAME}
-                      OS_USER_DOMAIN_NAME: ${OS_USER_DOMAIN_NAME}
-                      OS_PROJECT_NAME: ${OS_PROJECT_NAME}
-                      OS_TENANT_NAME: ${OS_TENANT_NAME}
-                      OS_USERNAME: ${OS_USERNAME}
-                      OS_PASSWORD: ${OS_PASSWORD}
-                      OS_AUTH_URL: ${OS_AUTH_URL}
-                      OS_INTERFACE: ${OS_INTERFACE}
-                      OS_IDENTITY_API_VERSION: \\"${OS_IDENTITY_API_VERSION}\\"
-                      OS_REGION_NAME: ${OS_REGION_NAME}
-                      OS_AUTH_PLUGIN: ${OS_AUTH_PLUGIN}" >> xOpera-rest-blueprint/input.yaml
-                    """.stripIndent()
-                    // PRINT THE INPUT YAML FILE
-                    sh 'cat xOpera-rest-blueprint/input.yaml'
-                    // DEPLOY XOPERA REST API
-                    sh ". venv-deploy/bin/activate; cd xOpera-rest-blueprint; rm -r -f .opera; opera deploy service.yaml -i input.yaml"
+                    sh """#!/bin/bash
+                        envsubst < xOpera-rest-blueprint/tests/input.yaml.tmpl > xOpera-rest-blueprint/input.yaml
+                        . venv-deploy/bin/activate
+                        cd xOpera-rest-blueprint
+                        rm -r -f .opera
+                        opera deploy service.yaml -i input.yaml
+                       """
                 }
             }
         }
