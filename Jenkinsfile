@@ -45,6 +45,7 @@ pipeline {
        ca_key_file = credentials('xopera-ca-key')
 
        // CI-CD vars
+       // When triggered from git tag, $BRANCH_NAME is actually tag_name
        TAG_SEM_VER_COMPLIANT = """${sh(
                 returnStdout: true,
                 script: './validate_tag.sh SemVar $BRANCH_NAME'
@@ -90,7 +91,6 @@ pipeline {
             }
             steps {
                 sh  """ #!/bin/bash
-                        rm -rf venv
                         python3 -m venv venv-test
                         . venv-test/bin/activate
                         cd REST_API/
@@ -118,6 +118,7 @@ pipeline {
         stage('Build xopera-flask') {
             when {
                 allOf {
+                    // Triggered on every tag, that is considered for staging or production
                     expression{tag "*"}
                     expression{
                         TAG_STAGING == 'true' || TAG_PRODUCTION == 'true'
@@ -249,11 +250,13 @@ pipeline {
                 }
             }
             environment {
+                // add env var for this stage only
                 vm_name = 'xOpera-dev'
             }
             steps {
                 withCredentials([sshUserPrivateKey(credentialsId: 'xOpera_ssh_key', keyFileVariable: 'xOpera_ssh_key_file', usernameVariable: 'xOpera_ssh_username')]) {
                     sh """#!/bin/bash
+                        # create input.yaml file from template
                         envsubst < xOpera-rest-blueprint/tests/input.yaml.tmpl > xOpera-rest-blueprint/input.yaml
                         . venv-deploy/bin/activate
                         cd xOpera-rest-blueprint
