@@ -147,7 +147,7 @@ topology_template:
     xopera-postgres-container:
       type: sodalite.nodes.DockerizedComponent
       properties:
-        image_name: library/postgres:latest
+        image_name: library/postgres:13
         volumes:
           - "/home/postgres:/var/lib/postgresql/data"
         ports: ['5432:5432']
