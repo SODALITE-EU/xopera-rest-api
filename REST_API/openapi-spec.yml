@@ -1,0 +1,586 @@
+openapi: 3.0.1
+info:
+  version: 1.0.0
+  title: xOpera REST API
+  contact:
+    email: mihael.trajbaric@xlab.si
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  description: |+
+    xOpera REST API with xOpera==0.5.7
+
+    Standard scenarios of using REST api:
+
+    FIRST RUN
+    - GET key pair via ssh/keys/public download and register it on your openstack
+
+    DEPLOY
+    1) upload blueprint with POST to /manage
+     - new version of existing one must be POSTed to /manage/{blueprint_token}
+     - save blueprint_metadata, returned by API call -> it is the only way of accessing your blueprint afterwards
+     2) deploy last version of blueprint with POST to /deploy/{blueprint_token}
+    - optionally, inputs file to be used with template must also be uploaded within same API call
+    - another version can be specified by version_tag
+    - save session_token
+    3) using status_token from with GET to /info/status check status of your job
+    4) After completion, check logs with GET to /info/log/deployment
+
+    UNDEPLOY
+    1) undeploy blueprint with POST to /undeploy/{blueprint_token}
+    - optionally, inputs file to be used with template must also be uploaded within same API call
+     - optionally also in combination with version_tag
+     - save session_token
+     2) using status_token with GET to /info/status check status of your job
+    3) After completion, check logs with GET to /info/log/deployment
+    4) Delete all versions of blueprint from database with DELETE to /manage/{blueprint_token}
+    - to delete just specific version, use version_id or timestamp
+    - if deployment from template has not been undeployed yet, blueprint cannot be deleted-> use 'force' to override
+
+    ACCESS TO REPOSITORY WITH BLUEPRINTS
+    - xOpera REST API uses git backend for storing blueprints
+    - to obtain access, POST to /manage/<blueprint_token>/user endpoint username and invitation will be sent
+    - with GET to /manage/<blueprint_token>/user user can obtain list of collaborators and repo url
+
+    GIT LOGS
+    - Last transaction details for gitCsarDB can be inspected using /info/log/git/{blueprint_token} endpoint.
+    - optionally, logs inspection can be further specified with version_tag
+    - if all=True, all logs that satisfy blueprint_token and version_tag conditions will be returned
+
+
+servers:
+- url: /
+tags:
+- name: ssh
+  description: SSH key management
+- name: manage
+  description: save or delete blueprint
+- name: deploy
+  description: deploy blueprint
+- name: undeploy
+  description: undeploy blueprint
+- name: info
+  description: information about deployment
+paths:
+  /deploy/{blueprint_token}:
+    post:
+      tags:
+      - deploy
+      operationId: post_deploy
+      parameters:
+      - name: blueprint_token
+        in: path
+        description: token of blueprint
+        required: true
+        schema:
+          type: string
+      - name: version_tag
+        in: query
+        description: version_tag to deploy
+        schema:
+          type: string
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              properties:
+                inputs_file:
+                  type: string
+                  description: File with inputs for TOSCA template
+                  format: binary
+      responses:
+        202:
+          description: Deploy job accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/blueprint_metadata'
+        404:
+          description: Did not find blueprint
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/just_message'
+  /undeploy/{blueprint_token}:
+    post:
+      tags:
+      - undeploy
+      operationId: delete_deploy
+      parameters:
+      - name: blueprint_token
+        in: path
+        description: token of blueprint
+        required: true
+        schema:
+          type: string
+      - name: version_tag
+        in: query
+        description: version_tag to deploy
+        schema:
+          type: string
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              properties:
+                inputs_file:
+                  type: string
+                  description: File with inputs for TOSCA template
+                  format: binary
+      responses:
+        202:
+          description: Undeploy job accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/blueprint_metadata'
+        403:
+          description: Undeploy not allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/just_message'
+        404:
+          description: Did not find blueprint
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/just_message'
+  /info/log/deployment:
+    get:
+      tags:
+      - info
+      operationId: get_deploy_log
+      parameters:
+      - name: blueprint_token
+        in: query
+        description: token of blueprint
+        schema:
+          type: string
+      - name: session_token
+        in: query
+        description: token of session
+        schema:
+          type: string
+      responses:
+        200:
+          description: OK
+          content: {}
+        400:
+          description: Log file not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/just_message'
+  /info/log/git/{blueprint_token}:
+    get:
+      tags:
+      - info
+      operationId: get_git_log
+      parameters:
+      - name: blueprint_token
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: version_tag
+        in: query
+        description: version_tag of blueprint
+        schema:
+          type: string
+      - name: all
+        in: query
+        description: show all database entries, not just last one
+        schema:
+          type: boolean
+      responses:
+        200:
+          description: OK
+          content: {}
+        400:
+          description: Log file not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/just_message'
+  /info/status:
+    get:
+      tags:
+      - info
+      operationId: get_status
+      parameters:
+      - name: format
+        in: query
+        description: long or short
+        schema:
+          type: string
+      - name: token
+        in: query
+        description: session_token
+        schema:
+          type: string
+      responses:
+        201:
+          description: Job done
+          content: {}
+        202:
+          description: Job accepted, still running
+          content: {}
+        500:
+          description: Job failed
+          content: {}
+  /manage:
+    post:
+      tags:
+      - manage
+      operationId: post_new_blueprint_csar
+      parameters:
+      - name: revision_msg
+        in: query
+        description: Optional comment on submission
+        schema:
+          type: string
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - CSAR
+              properties:
+                CSAR:
+                  type: string
+                  description: TOSCA Cloud Service Archive
+                  format: binary
+        required: true
+      responses:
+        200:
+          description: Successfully saved blueprint to database
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/git_revision_metadata'
+        406:
+          description: Format not acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/just_message'
+  /manage/{blueprint_token}:
+    post:
+      tags:
+      - manage
+      operationId: post_manage_csar
+      parameters:
+      - name: blueprint_token
+        in: path
+        description: token of blueprint
+        required: true
+        schema:
+          type: string
+      - name: revision_msg
+        in: query
+        description: Optional comment on submission
+        schema:
+          type: string
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - CSAR
+              properties:
+                CSAR:
+                  type: string
+                  description: TOSCA Cloud Service Archive
+                  format: binary
+        required: true
+      responses:
+        200:
+          description: Successfully saved blueprint to database
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/git_revision_metadata'
+        404:
+          description: Blueprint token not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/just_message'
+        406:
+          description: Format not acceptable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/just_message'
+    delete:
+      tags:
+      - manage
+      operationId: delete_manage_csar
+      parameters:
+      - name: blueprint_token
+        in: path
+        description: token of blueprint
+        required: true
+        schema:
+          type: string
+      - name: version_tag
+        in: query
+        description: version_tag to delete
+        schema:
+          type: string
+      - name: force
+        in: query
+        description: force delete blueprint
+        schema:
+          type: boolean
+      responses:
+        200:
+          description: Successfully removed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/delete_metadata'
+        403:
+          description: Did not undeploy yet, not allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/just_message'
+        404:
+          description: Blueprint not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/delete_metadata'
+  /manage/{blueprint_token}/user:
+    get:
+      tags:
+      - manage
+      operationId: get_git_user_manage
+      parameters:
+      - name: blueprint_token
+        in: path
+        description: token of blueprint
+        required: true
+        schema:
+          type: string
+      responses:
+        200:
+          description: user list returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/just_message'
+        404:
+          description: blueprint not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/collaborators_list'
+        500:
+          description: DB error when getting user list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_msg'
+    post:
+      tags:
+      - manage
+      operationId: post_git_user_manage
+      parameters:
+      - name: blueprint_token
+        in: path
+        description: token of blueprint
+        required: true
+        schema:
+          type: string
+      - name: username
+        in: query
+        description: username of user to be added to repository with blueprint
+        required: true
+        schema:
+          type: string
+      responses:
+        201:
+          description: invite sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/just_message'
+        404:
+          description: blueprint not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/just_message'
+        500:
+          description: DB error when adding user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_msg'
+  /ssh/keys/public:
+    get:
+      tags:
+      - ssh
+      operationId: get_public_key
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/openstackKeyPair'
+        404:
+          description: ssh key pair missing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/just_message'
+components:
+  schemas:
+    openstackKeyPair:
+      required:
+      - key_pair_name
+      - public_key
+      type: object
+      properties:
+        key_pair_name:
+          type: string
+          description: Name of xOpera REST API's  private/public key pair
+        public_key:
+          type: string
+          description: Rest api's public key
+    just_message:
+      required:
+      - message
+      type: object
+      properties:
+        message:
+          type: string
+          description: return message
+    error_msg:
+      required:
+      - description
+      - stacktrace
+      type: object
+      properties:
+        description:
+          type: string
+          description: Error description
+        stacktrace:
+          type: string
+          description: Exception stacktrace
+    collaborators_list:
+      required:
+      - blueprint_token
+      - collaborators
+      - message
+      - repo_url
+      type: object
+      properties:
+        message:
+          type: string
+          description: return message
+        blueprint_token:
+          type: string
+          description: token of blueprint
+        repo_url:
+          type: string
+          description: Url to repository
+        collaborators:
+          type: array
+          description: List of collaborators
+          items:
+            type: string
+            description: Collaborator
+    blueprint_metadata:
+      required:
+      - blueprint_token
+      - message
+      - timestamp
+      - version_tag
+      type: object
+      properties:
+        message:
+          type: string
+          description: return message
+        blueprint_token:
+          type: string
+          description: token of blueprint
+        session_token:
+          type: string
+          description: token of deploying session
+        version_tag:
+          type: string
+          description: version_tag blueprint
+        timestamp:
+          type: string
+          description: timestamp of database entry
+          format: date-time
+    git_revision_metadata:
+      required:
+        - blueprint_token
+        - message
+        - timestamp
+        - version_tag
+      type: object
+      properties:
+        message:
+          type: string
+          description: return message
+        blueprint_token:
+          type: string
+          description: token of blueprint
+        url:
+          type: string
+          description: Url of git repository
+        commit_sha:
+          type: string
+          description: SHA-1 checksum of commit
+        version_tag:
+          type: string
+          description: version_tag blueprint
+        users:
+          type: array
+          description: List of users with access to git repository
+          items:
+            type: string
+        timestamp:
+          type: string
+          description: timestamp of database entry
+          format: date-time
+    delete_metadata:
+      required:
+      - blueprint_token
+      - deleted_database_entries
+      - force
+      - message
+      - version_tag
+      type: object
+      properties:
+        message:
+          type: string
+          description: return message
+        blueprint_token:
+          type: string
+          description: token of blueprint
+        version_tag:
+          type: string
+          description: id of current version of blueprint
+        deleted_database_entries:
+          type: integer
+          description: Number of deleted entries
+        force:
+          type: boolean
+          description: did we do it with force or not
+  responses:
+    MaskError:
+      description: When any error occurs on mask
+      content: {}
+    ParseError:
+      description: When a mask can't be parsed
+      content: {}

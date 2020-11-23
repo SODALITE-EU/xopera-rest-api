@@ -1,14 +1,19 @@
-assertpy==1.1
-Flask==1.1.2
-flask-restplus==0.13.0
-GitPython==3.1.7
+opera==0.6.2
 openstacksdk==0.48.0
-opera==0.5.7
-psycopg2-binary==2.8.5
+
+connexion >= 2.7.0; python_version>="3.6"
+connexion >= 2.3.0; python_version=="3.5"
+connexion >= 2.3.0; python_version=="3.4"
+connexion == 2.4.0; python_version<="2.7"
+python-dateutil >= 2.8.1
+tornado==6.0.4
+
+GitPython==3.1.7
 PyGithub==1.53
-pytest==6.0.1
-pytest-cov==2.10.1
 python-gitlab==2.4.0
-uWSGI==2.0.19.1
-validators==0.18.0
-Werkzeug==0.16.1
+
+psycopg2-binary==2.8.5
+
+twine
+wheel
+setuptools

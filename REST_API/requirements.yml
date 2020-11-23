@@ -1,4 +1,0 @@
-- src: geerlingguy.docker
-- src: geerlingguy.pip
-  version: 1.3.0
-- src: geerlingguy.repo-epel

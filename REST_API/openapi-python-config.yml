@@ -1,0 +1,12 @@
+# java -jar openapi-generator-cli-4.3.0.jar config-help --generator-name python-flask --full-details
+# java -jar openapi-generator-cli-4.3.0.jar config-help --generator-name python-flask --format yamlsample
+
+sortParamsByRequiredFlag: true
+# must be false, otherwise python files get sorted unintelligently, and commas in multiline lists don't match
+sortModelPropertiesByRequiredFlag: false
+ensureUniqueParams: true
+allowUnicodeIdentifiers: false
+prependFormOrBodyParameters: false
+packageName: opera.api.openapi
+controllerPackage: CONTROLLER_PACKAGE_MATCH_ANCHOR
+supportPython2: false

@@ -1,13 +1,10 @@
-# Ignore everything
-**
+.venv/
+.idea/
+*.iml
+gen/
+src/opera/api/openapi/
+Dockerfile
+*.jar
 
-# Allow files and directories
-!/Implementation/**
-!/tests/**
-!/requirements.txt
-!/Certs/**
-!/app.conf
-
-# Ignore some files inside tests
-
-**/.pytest_cache
+**/__pycache__/
+**/*.py[cod]
