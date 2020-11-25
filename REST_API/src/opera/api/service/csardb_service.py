@@ -49,7 +49,12 @@ class GitDB:
             CSAR_path = workdir / Path(CSAR.filename)
             workdir.mkdir(parents=True)
             CSAR.save(CSAR_path.open('wb'))
-            csar_to_blueprint(csar=CSAR_path, dst=path)
+            try:
+                csar_to_blueprint(csar=CSAR_path, dst=path)
+            except shutil.ReadError as e:
+                log.error(str(e))
+                shutil.rmtree(str(workdir))
+                return None, str(e)
             shutil.rmtree(str(workdir))
             try:
                 validate_csar(path, raise_exceptions=True)

@@ -3,6 +3,7 @@
 *.iml
 gen/
 src/opera/api/openapi/
+src/opera/api/storage/
 Dockerfile
 *.jar
 

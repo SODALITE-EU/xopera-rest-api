@@ -1,0 +1,7 @@
+TOSCA-Meta-File-Version: 1.1
+CSAR-Version: 1.3
+Created-By: SODALITE blueprint2CSAR tool
+Entry-Definitions: service.yaml
+Other-Definitions: other_definitions.yaml
+CSAR-name: hello
+CSAR-timestamp: 1587128948.762535

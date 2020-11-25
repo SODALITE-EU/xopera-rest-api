@@ -1,14 +1,12 @@
 import connexion
-import six
 
-from opera.api.openapi.models.blueprint_metadata import BlueprintMetadata  # noqa: E501
+from opera.api.openapi.models.blueprint_metadata import BlueprintMetadata
 from opera.api.openapi.models.git_revision_metadata import GitRevisionMetadata
-from opera.api.openapi.models.collaborators_list import CollaboratorsList  # noqa: E501
-from opera.api.openapi.models.delete_metadata import DeleteMetadata  # noqa: E501
-from opera.api.openapi.models.error_msg import ErrorMsg  # noqa: E501
-from opera.api.openapi.models.just_message import JustMessage  # noqa: E501
+from opera.api.openapi.models.collaborators_list import CollaboratorsList
+from opera.api.openapi.models.delete_metadata import DeleteMetadata
+from opera.api.openapi.models.error_msg import ErrorMsg
+from opera.api.openapi.models.just_message import JustMessage
 from opera.api.log import get_logger
-from opera.api.openapi import util
 from opera.api.settings import Settings
 from opera.api.service import csardb_service, sqldb_service
 from opera.api.util import git_util
@@ -19,10 +17,8 @@ CSAR_db = csardb_service.GitDB(**Settings.git_config)
 SQL_database = sqldb_service.connect(Settings.sql_config)
 
 
-def delete_manage_csar(blueprint_token, version_tag=None, force=None):  # noqa: E501
+def delete_manage_csar(blueprint_token, version_tag=None, force=None):
     """delete_manage_csar
-
-     # noqa: E501
 
     :param blueprint_token: token of blueprint
     :type blueprint_token: str
@@ -70,10 +66,8 @@ def delete_manage_csar(blueprint_token, version_tag=None, force=None):  # noqa: 
     ), status_code
 
 
-def get_git_user_manage(blueprint_token):  # noqa: E501
+def get_git_user_manage(blueprint_token):
     """get_git_user_manage
-
-     # noqa: E501
 
     :param blueprint_token: token of blueprint
     :type blueprint_token: str
@@ -99,10 +93,8 @@ def get_git_user_manage(blueprint_token):  # noqa: E501
                     error_msg or repo_error_msg), 500
 
 
-def post_git_user_manage(blueprint_token, username):  # noqa: E501
+def post_git_user_manage(blueprint_token, username):
     """post_git_user_manage
-
-     # noqa: E501
 
     :param blueprint_token: token of blueprint
     :type blueprint_token: str
@@ -123,15 +115,13 @@ def post_git_user_manage(blueprint_token, username):  # noqa: E501
                     error_msg), 500
 
 
-def post_manage_csar(blueprint_token, revision_msg=None):  # noqa: E501
+def post_manage_csar(blueprint_token, revision_msg=None):
     """post_manage_csar
 
      # noqa: E501
 
     :param blueprint_token: token of blueprint
     :type blueprint_token: str
-    :param csar: TOSCA Cloud Service Archive
-    :type csar: str
     :param revision_msg: Optional comment on submission
     :type revision_msg: str
 
@@ -156,7 +146,7 @@ def post_manage_csar(blueprint_token, revision_msg=None):  # noqa: E501
     return GitRevisionMetadata.from_dict(result), 200
 
 
-def post_new_blueprint_csar(revision_msg=None):  # noqa: E501
+def post_new_blueprint_csar(revision_msg=None):
     """post_new_blueprint_csar
 
      # noqa: E501
