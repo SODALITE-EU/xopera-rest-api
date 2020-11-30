@@ -167,7 +167,10 @@ paths:
       responses:
         200:
           description: OK
-          content: {}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/deploymentLogList'
         400:
           description: Log file not found
           content:
@@ -190,7 +193,7 @@ paths:
         description: version_tag of blueprint
         schema:
           type: string
-      - name: all
+      - name: fetch_all
         in: query
         description: show all database entries, not just last one
         schema:
@@ -198,7 +201,10 @@ paths:
       responses:
         200:
           description: OK
-          content: {}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/git_log_list'
         400:
           description: Log file not found
           content:
@@ -444,6 +450,89 @@ paths:
                 $ref: '#/components/schemas/just_message'
 components:
   schemas:
+    git_log_list:
+      type: array
+      items:
+        $ref: '#/components/schemas/git_log'
+    git_log:
+      required:
+        - blueprint_token
+        - git_backend
+        - job
+        - timestamp
+        - version_tag
+      type: object
+      properties:
+        blueprint_token:
+          type: string
+          description: Token of blueprint
+          format: uuid
+        commit_sha:
+          type: string
+          description: SHA-1 hash of commit
+        git_backend:
+          type: string
+          description: Type of connector
+        job:
+          type: string
+          description: Type of job
+          enum: [ update, delete ]
+        repo_url:
+          type: string
+          description: Url of git repository
+          format: uri
+        revision_msg:
+          type: string
+          description: Commit message
+        timestamp:
+          type: string
+          description: Commit timestamp
+          format: date-time
+        version_tag:
+          type: string
+          description: Git tag
+
+    deploymentLogList:
+      type: array
+      items:
+        $ref: '#/components/schemas/deploymentLog'
+
+    deploymentLog:
+      required:
+        - blueprint_token
+        - session_token
+        - log
+        - state
+        - job
+      type: object
+      properties:
+        blueprint_token:
+          type: string
+          description: Token of blueprint
+          format: uuid
+        session_token:
+          type: string
+          description: Token of session
+          format: uuid
+        job:
+          type: string
+          description: Type of job
+          enum: [ deploy, undeploy ]
+        log:
+          type: string
+          description: Log of session
+        state:
+          type: string
+          description: State of session
+          enum: [ done, failed ]
+        timestamp_start:
+          type: string
+          description: Start timestamp
+          format: date-time
+        timestamp_end:
+          type: string
+          description: End timestamp
+          format: date-time
     openstackKeyPair:
       required:
       - key_pair_name

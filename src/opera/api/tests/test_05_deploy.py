@@ -99,19 +99,18 @@ class TestDeploy:
         # check logs
 
         resp_log = client.get(f"/info/log/deployment?session_token={session_token}")
-        logs_json = {k: v for d in resp_log.json for k, v in d.items()}
-        log_timestamps = list(logs_json.keys())
-        # check just one log entry exists
-        assert_that(len(log_timestamps)).is_equal_to(1)
-        try:
-            timestamp_util.str_to_datetime(log_timestamps[0])
-            # datetime.datetime.strptime(log_timestamps[0], '%Y-%m-%dT%H:%M:%S.%f')
-        except ValueError:
-            fail('Incorrect timestamp format, should be "%Y-%m-%dT%H:%M:%S.%f"')
-        key = log_timestamps[0]
-        log = logs_json[key]
+
+        assert_that(len(resp_log.json)).is_equal_to(1)
+
+        log = resp_log.json[0]
+        print(log)
         assert_that(log).contains_only('session_token', 'blueprint_token', 'job', 'state',
                                        'timestamp_start', 'timestamp_end', 'log')
+        try:
+            timestamp_util.str_to_datetime(log['timestamp_start'])
+            timestamp_util.str_to_datetime(log['timestamp_end'])
+        except ValueError:
+            fail('Incorrect timestamp format, should be "%Y-%m-%dT%H:%M:%S.%f"')
         assert_that(log['session_token']).is_equal_to(session_token)
         assert_that(log['blueprint_token']).is_equal_to(blueprint_token)
         assert_that(log['job']).is_equal_to('deploy')
