@@ -83,6 +83,7 @@ paths:
         content:
           multipart/form-data:
             schema:
+              type: object
               properties:
                 inputs_file:
                   type: string
@@ -122,6 +123,7 @@ paths:
         content:
           multipart/form-data:
             schema:
+              type: object
               properties:
                 inputs_file:
                   type: string

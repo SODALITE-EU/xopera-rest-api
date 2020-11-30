@@ -27,7 +27,7 @@ class TestDeploy:
         assert_that(resp.json).is_not_none().contains_only("message")
 
     def test_undeploy_json_keys_error(self, client):
-        resp = client.delete(f"/deploy/{'42'}")
+        resp = client.post(f"/undeploy/{'42'}")
         assert_that(resp.status_code).is_equal_to(404)
         assert_that(resp.json).is_not_none().contains_only("message")
 
@@ -180,7 +180,7 @@ class TestDeploy:
         assert_that(resp.json['state']).is_equal_to('done')
 
         # undeploy
-        resp = client.delete(f"/deploy/{blueprint_token}")
+        resp = client.post(f"/undeploy/{blueprint_token}")
         session_token = resp.json['session_token']
         assert_that(session_token).is_not_none()
 
@@ -203,7 +203,7 @@ class TestDeploy:
         assert_that(resp.json['state']).is_equal_to('done')
 
         # undeploy
-        resp = client.delete(f"/deploy/{blueprint_token}", data=inputs_2)
+        resp = client.post(f"/undeploy/{blueprint_token}", data=inputs_2)
         session_token = resp.json['session_token']
         assert_that(session_token).is_not_none()
 
@@ -228,7 +228,7 @@ class TestDeploy:
         assert_that(resp_status.status_code).is_equal_to(201)
 
         # undeploy
-        resp = client.delete(f"/deploy/{blueprint_token}")
+        resp = client.post(f"/undeploy/{blueprint_token}")
         session_token = resp.json['session_token']
 
         done, resp_status = TestDeploy.monitor(client, session_token, timeout=100)
@@ -241,5 +241,5 @@ class TestDeploy:
         blueprint_token = resp.json['blueprint_token']
 
         # try_to_undeploy
-        resp = client.delete(f"/deploy/{blueprint_token}")
+        resp = client.post(f"/undeploy/{blueprint_token}")
         assert_that(resp.status_code).is_equal_to(403)

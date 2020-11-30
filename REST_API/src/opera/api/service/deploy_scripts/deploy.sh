@@ -25,6 +25,6 @@ fi
 echo $?
 
 } &> "$logfile"
-cd "../../../../"
+cd "../../../../../"
 
-"$interpreter" Implementation/finalize_deployment.py deploy "$path" "$timestamp_start" "$inputs_file"
+"$interpreter" -m opera.api.finalize_deployment deploy "$path" "$timestamp_start" "$inputs_file"

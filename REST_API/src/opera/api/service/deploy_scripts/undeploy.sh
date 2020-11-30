@@ -15,5 +15,6 @@ opera undeploy
 
 echo $?
 } &> "$logfile"
-cd "../../../../"
-"$interpreter" Implementation/finalize_deployment.py undeploy "$path" "$timestamp_start"
+cd "../../../../../"
+
+"$interpreter" -m opera.api.finalize_deployment undeploy "$path" "$timestamp_start"

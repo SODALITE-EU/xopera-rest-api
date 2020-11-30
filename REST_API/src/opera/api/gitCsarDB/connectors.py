@@ -268,9 +268,6 @@ class GitlabConnector(Connector):
         gl = Gitlab(url=self.url, private_token=self.auth_token)
         projects = gl.projects.list(search=f"{project_name}")
 
-        if len(projects) == 1:
-            return projects[0].id
-
         for project in projects:
             if project.name == project_name:
                 return project.id

@@ -182,7 +182,7 @@ class TestToCsar:
         assert (unpacked / 'TOSCA-Metadata').is_dir()
         metadata_path = unpacked / 'TOSCA-Metadata' / 'TOSCA.meta'
         assert metadata_path.exists()
-        metadata = yaml.load(metadata_path.open('r'))
+        metadata = yaml.load(metadata_path.open('r'), Loader=yaml.SafeLoader)
         assert isinstance(metadata, dict)
         assert all(key in metadata.keys() for key in ['TOSCA-Meta-File-Version', 'CSAR-Version',
                                                       'Created-By', 'Entry-Definitions',
