@@ -51,7 +51,7 @@ def configure_ssh_keys():
         return
 
     private_key_new, public_key_new = private_key, public_key
-    ip = re.search("\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", private_key)
+    ip = re.search(r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", private_key)
     if ip is not None:
         ip = ip.group()
         ip_hyphens = ip.replace(".", "-")

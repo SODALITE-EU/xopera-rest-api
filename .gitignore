@@ -1,9 +1,35 @@
-xOpera-rest-blueprint/inputs/
-#IDE Folders
-venv/
-.idea/
 .venv/
-#Development files
-.opera/
-xOpera-rest-blueprint/SODALITE-openrc.sh
-xOpera-rest-blueprint/redeploy_xopera.bash
+.idea/
+*.iml
+gen/
+src/opera/api/openapi/
+src/opera/api/storage/
+src/opera/api/deployment_data/
+nginx.conf
+docker-compose-editor.yml
+*.jar
+
+### Python ###
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
