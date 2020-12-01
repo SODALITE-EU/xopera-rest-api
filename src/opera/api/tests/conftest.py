@@ -3,7 +3,6 @@ import uuid
 
 import git
 import pytest
-import connexion
 import os
 import shutil
 

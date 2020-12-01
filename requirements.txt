@@ -1,25 +1,26 @@
 opera==0.6.2
-openstacksdk==0.48.0
+openstacksdk==0.52.0
 
 connexion >= 2.7.0; python_version>="3.6"
 connexion >= 2.3.0; python_version=="3.5"
 connexion >= 2.3.0; python_version=="3.4"
 connexion == 2.4.0; python_version<="2.7"
 python-dateutil >= 2.8.1
-tornado==6.0.4
+tornado==6.1
 
-GitPython==3.1.7
-PyGithub==1.53
-python-gitlab==2.4.0
+GitPython==3.1.11
+PyGithub==1.54
+python-gitlab==2.5.0
 
-psycopg2-binary==2.8.5
+psycopg2-binary==2.8.6
 
 # testing
 pytest
+pytest-cov
 assertpy
 validators
 
 # packaging
-twine
-wheel
-setuptools
+# twine
+# wheel
+# setuptools

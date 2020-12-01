@@ -94,9 +94,10 @@ pipeline {
                         python3 -m venv venv-test
                         . venv-test/bin/activate
                         pip3 install -r requirements.txt
+                        ./generate.sh
                         cd src/
                         touch *.xml
-                        python3 -m pytest --pyargs -s tests --junitxml="results.xml" --cov=./ --cov=./gitCsarDB --cov=./blueprint_converters --cov=./settings  --cov=./service --cov=./util --cov-report xml tests/
+                        python3 -m pytest --junitxml=results.xml --cov=./opera/api/ --cov=./opera/api/gitCsarDB --cov=./opera/api/blueprint_converters --cov=./opera/api/settings --cov=./opera/api/service --cov=./opera/api/util --cov=./opera/api/controllers --cov-report xml
                     """
                 junit 'src/results.xml'
             }
