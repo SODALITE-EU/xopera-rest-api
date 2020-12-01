@@ -109,7 +109,6 @@ pipeline {
             steps {
                 withSonarQubeEnv('SonarCloud') {
                     sh  """ #!/bin/bash
-                            cd src/
                             ${scannerHome}/bin/sonar-scanner
                         """
                 }
