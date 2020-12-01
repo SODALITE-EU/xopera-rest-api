@@ -93,13 +93,12 @@ pipeline {
                 sh  """ #!/bin/bash
                         python3 -m venv venv-test
                         . venv-test/bin/activate
-                        cd REST_API/
                         pip3 install -r requirements.txt
-                        cd Implementation/
+                        cd src/
                         touch *.xml
                         python3 -m pytest --pyargs -s tests --junitxml="results.xml" --cov=./ --cov=./gitCsarDB --cov=./blueprint_converters --cov=./settings  --cov=./service --cov=./util --cov-report xml tests/
                     """
-                junit 'REST_API/Implementation/results.xml'
+                junit 'src/results.xml'
             }
         }
         stage('SonarQube analysis'){
@@ -109,7 +108,7 @@ pipeline {
             steps {
                 withSonarQubeEnv('SonarCloud') {
                     sh  """ #!/bin/bash
-                            cd REST_API/Implementation/
+                            cd src/
                             ${scannerHome}/bin/sonar-scanner
                         """
                 }
