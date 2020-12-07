@@ -85,6 +85,18 @@ pipeline {
 
         }
 
+        stage('Build xopera-rest-api') {
+            steps {
+                withDockerRegistry(credentialsId: 'jenkins-sodalite.docker_token', url: '') {
+                    sh """#!/bin/bash
+                    ./make_docker.sh build xopera-rest-api
+                    ./make_docker.sh push xopera-rest-api production
+                    """
+                }
+
+            }
+        }
+
         stage('Test xOpera') {
             environment {
             XOPERA_TESTING = "True"
