@@ -1,8 +1,0 @@
-- hosts: all
-  gather_facts: yes
-  become: yes
-  tasks: 
-  - name: "Create a network"
-    docker_network:
-      name: "{{ docker_network_name }}"
-      state: present

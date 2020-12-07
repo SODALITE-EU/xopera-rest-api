@@ -1,9 +1,0 @@
-- hosts: all
-  gather_facts: no
-  become: yes
-  tasks: 
-    #network name is obtained from *.deploy file upon undeployment
-  - name: "Remove a network"
-    docker_network:
-      name: "{{ docker_network_name }}"
-      state: absent

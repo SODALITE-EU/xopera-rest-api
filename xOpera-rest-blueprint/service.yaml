@@ -7,7 +7,8 @@ imports:
   - modules/docker/docker_registry.yaml
   - modules/docker/docker_component.yaml
   - modules/docker/docker_certificate.yaml
-  - modules/sodalite/types.yaml
+  - modules/docker/docker_volume.yaml
+  - modules/misc/ssh/types.yaml
 
 topology_template:
 
@@ -49,15 +50,17 @@ topology_template:
     docker-registry-cert-email-address: 
       type: string
       default: ""
+    docker-registry-cert-path:
+      type: string
+      default: ""
+    docker-registry-cert-filex-prefix:
+      type: string
+      default: ""
     postgres_env:
       type: map
     xopera_env:
       type: map
     identity_file:
-      type: string
-    docker_ca_crt:
-      type: string
-    docker_ca_key:
       type: string
 
   node_templates: 
@@ -87,7 +90,7 @@ topology_template:
             protocol: tcp
             remote_ip_prefix: 0.0.0.0/0            
         group_name:  sodalite-uc 
-        group_description:  Sodalite UC security group     
+        group_description:  Sodalite UC security group
 
     sodalite-vm:  
       type: sodalite.nodes.OpenStack.VM 
@@ -122,7 +125,15 @@ topology_template:
         docker_registry_url: { get_input: docker-public-registry-url } 
       requirements:
         - host: sodalite-vm
-        - dependency: docker-host 
+        - dependency: docker-host
+
+    docker-private-registry:
+      type: sodalite.nodes.DockerRegistry
+      properties:
+        docker_registry_url: { get_input: docker-private-registry-url }
+      requirements:
+        - host: sodalite-vm
+        - dependency: docker-host
 
     docker-registry-certificate:
       type: sodalite.nodes.RegistryCertificate
@@ -131,67 +142,154 @@ topology_template:
         country_name:        { get_input: docker-registry-cert-country-name }
         organization_name:   { get_input: docker-registry-cert-organization-name }
         email_address:       { get_input: docker-registry-cert-email-address }
-        ca_crt:              { get_input: docker_ca_crt }
-        ca_key:              { get_input: docker_ca_key }
+        cert_path:          { get_input: docker-registry-cert-path }
+        cert_files_prefix:  { get_input: docker-registry-cert-filex-prefix }
       requirements:
         - host: sodalite-vm 
         - dependency: docker-host        
 
     # xopera-rest-api
     # https://github.com/SODALITE-EU/xopera-rest-api        
-    xopera-openstack-keys:
+    openstack-keys:
       type: sodalite.nodes.ConfigureKeys
       requirements:
         - host: sodalite-vm
 
-    xopera-postgres-container:
+    openapi-volume:
+      type: sodalite.nodes.DockerVolume
+      properties:
+        name: xopera-openapi
+      requirements:
+        - host: sodalite-vm
+
+    postgres:
       type: sodalite.nodes.DockerizedComponent
       properties:
         image_name: library/postgres:13
         volumes:
           - "/home/postgres:/var/lib/postgresql/data"
-        ports: ['5432:5432']
+#        ports: ['5432:5432']
         alias: xopera-postgres
         env: { get_input: postgres_env }
         docker_network_name:  { get_property: [ SELF, network, name ] }
+        labels:
+          traefik.enable: "true"
+          traefik.tcp.services.postgres.loadbalancer.server.port: "5432"
+          traefik.tcp.routers.postgres.rule: "HostSNI(`*`)"
+          traefik.tcp.routers.postgres.entrypoints: "postgres"
+
       requirements:
         - host:  docker-host
         - network: docker-network
         - registry: docker-public-registry 
 
-    xopera-flask-container:
+    api:
       type: sodalite.nodes.DockerizedComponent
       properties:
-        alias: xopera-flask
+        alias: xopera-rest-api
         docker_network_name:  { get_property: [ SELF, network, name ] }
-        image_name: sodaliteh2020/xopera-flask
+        image_name: xopera-rest-api
         restart_policy: always
         volumes:
-          - "/var/run/docker.sock:/var/run/docker.sock"
-          - "/root/.ssh/:/root/.ssh/"
-          - "/home/xopera/certs:/home/xopera/certs"
-        exposed_ports:  ['5000']
+          - /var/run/docker.sock:/var/run/docker.sock
+          - /root/.ssh/:/root/.ssh/
+          - /home/xopera/certs:/home/xopera/certs
+          - xopera-openapi:/app/opera/api/openapi/openapi/
+        labels:
+          traefik.enable: "true"
+          traefik.http.services.api.loadbalancer.server.port: "8080"
+          # http config
+          traefik.http.routers.api.rule: "PathPrefix(`/`)"
+          traefik.http.routers.api.entrypoints: "web"
+          # https config
+          traefik.http.routers.api-https.rule: "PathPrefix(`/`)"
+          traefik.http.routers.api-https.entrypoints: "websecure"
+          traefik.http.routers.api-https.tls: "true"
+        # exposed_ports:  ['5000']
         env: { get_input: xopera_env }
       requirements:
         - host: docker-host
-        - registry: docker-public-registry  
+        - registry: docker-private-registry
         - network: docker-network 
-        - dependency: xopera-openstack-keys
-        - dependency: xopera-postgres-container
+        - dependency: openstack-keys
+        - dependency: postgres
+        - dependency: openapi-volume
 
-    xopera-nginx-container:
+    ui:
       type: sodalite.nodes.DockerizedComponent
       properties:
-        alias: xopera-nginx
-        docker_network_name:  { get_property: [ SELF, network, name ] }
-        image_name: sodaliteh2020/xopera-nginx
+        alias: xopera-ui
+        docker_network_name: { get_property: [ SELF, network, name ] }
+        image_name: swaggerapi/swagger-ui:v3.37.0
         restart_policy: always
-        ports:  ['5001:443', '5000:80']
-        #exposed_ports:  ['443', '5000']
         volumes:
-          - "/home/xopera/certs:/etc/nginx/certs"
+          - xopera-openapi:/openapi:ro
+        env:
+          SWAGGER_JSON: /openapi/openapi.yaml
+        labels:
+          traefik.enable: "true"
+          traefik.http.services.ui.loadbalancer.server.port: "8080"
+          traefik.http.middlewares.stripprefix-ui.stripprefix.prefixes: "/ui"
+          # http config
+          traefik.http.routers.ui.entrypoints: "web"
+          traefik.http.routers.ui.rule: "PathPrefix(`/ui`)"
+          traefik.http.routers.ui.middlewares: "stripprefix-ui"
+          # https config
+          traefik.http.routers.ui-https.entrypoints: "websecure"
+          traefik.http.routers.ui-https.tls: "true"
+          traefik.http.routers.ui-https.rule: "PathPrefix(`/ui`)"
+          traefik.http.routers.ui-https.middlewares: "stripprefix-ui"
+      requirements:
+        - host: docker-host
+        - registry: docker-public-registry
+        - network: docker-network
+        - dependency: api
+        - dependency: openapi-volume
+
+
+    proxy:
+      type: sodalite.nodes.DockerizedComponent
+      properties:
+        alias: xopera-proxy
+        docker_network_name:  { get_property: [ SELF, network, name ] }
+        image_name: library/traefik:v2.3.4
+        command:
+          - "--accesslog=true"
+          - "--log.level=info"
+          - "--providers.docker=true"
+          - "--providers.docker.exposedbydefault=false"
+          # entrypoints
+          - "--entrypoints.web.address=:5000"
+          - "--entrypoints.websecure.address=:5001"
+          - "--entrypoints.postgres.address=:5432"
+          - "--entrypoints.traefik.address=:8080"
+          # http certs config
+          - "--providers.file.directory=/configuration/"
+          - "--providers.file.watch=true"
+          # dashboard
+          - "--api.dashboard=true"
+        restart_policy: always
+        ports:  ['5001:5001', '5000:5000', '8080:8080', '5432:5432']
+        volumes:
+          - /var/run/docker.sock:/var/run/docker.sock:ro
+          - ./nginx.conf:/etc/nginx/nginx.conf:ro
+          - ./certificates.toml:/configuration/certificates.toml:ro
+          - /home/xopera/certs:/etc/nginx/certs
+        labels:
+          traefik.enable: "true"
+          traefik.http.routers.traefik.rule: "(PathPrefix(`/traefik`) || PathPrefix(`/api`))"
+          traefik.http.routers.traefik.service: "api@internal"
+          traefik.http.routers.traefik.entrypoints: "traefik"
+          traefik.http.routers.traefik.tls: "true"
+          traefik.http.middlewares.strip.stripprefix.prefixes: "/traefik"
+          traefik.http.routers.traefik.middlewares: "auth, strip"
+          traefik.http.middlewares.auth.digestauth.removeheader: "true"
+          traefik.http.middlewares.auth.digestauth.users: "test:traefik:5200b80022bb7d8e8c8bf2eb34b985cb"
+
       requirements:
         - host: docker-host
         - registry: docker-public-registry   
         - network: docker-network           
-        - dependency: xopera-flask-container
+        - dependency: api
+        - dependency: ui
+        - dependency: postgres
