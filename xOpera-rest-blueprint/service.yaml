@@ -9,6 +9,7 @@ imports:
   - modules/docker/docker_certificate.yaml
   - modules/docker/docker_volume.yaml
   - modules/misc/ssh/types.yaml
+  - library/config/types.yaml
 
 topology_template:
 
@@ -53,15 +54,17 @@ topology_template:
     docker-registry-cert-path:
       type: string
       default: ""
-    docker-registry-cert-filex-prefix:
+    docker-registry-cert-files-prefix:
       type: string
       default: ""
     postgres_env:
       type: map
     xopera_env:
       type: map
-    identity_file:
-      type: string
+    ssh_config:
+      type: map
+#    identity_file:
+#      type: string
 
   node_templates: 
 
@@ -101,7 +104,10 @@ topology_template:
         network:          { get_input: openstack-network-name } 
         security_groups:  { get_input: security-groups } 
         flavor:           { get_input: flavor-name }
-        identity_file:    { get_input: identity_file }
+        ssh_config:       { get_input: ssh_config }
+
+#        ssh_config:
+#          IdentityFile:   { get_input: identity_file }    # doesn't work due to https://github.com/xlab-si/xopera-opera/issues/102
         username: centos
       requirements:  
         - protected_by: security-rules-sodalite 
@@ -143,7 +149,7 @@ topology_template:
         organization_name:   { get_input: docker-registry-cert-organization-name }
         email_address:       { get_input: docker-registry-cert-email-address }
         cert_path:          { get_input: docker-registry-cert-path }
-        cert_files_prefix:  { get_input: docker-registry-cert-filex-prefix }
+        cert_files_prefix:  { get_input: docker-registry-cert-files-prefix }
       requirements:
         - host: sodalite-vm 
         - dependency: docker-host        
@@ -161,6 +167,17 @@ topology_template:
         name: xopera-openapi
       requirements:
         - host: sodalite-vm
+
+    proxy-tls-config:
+      type: sodalite.nodes.Configuration.NginxConfig
+      properties:
+        cert_files_prefix: { get_property: [ SELF, dependency, cert_files_prefix ] }
+        dir: /home/nginx
+        filename: certificates.toml
+        template_name: certificates.toml.tmpl
+      requirements:
+        - host: sodalite-vm
+        - dependency: docker-registry-certificate
 
     postgres:
       type: sodalite.nodes.DockerizedComponent
@@ -272,8 +289,8 @@ topology_template:
         ports:  ['5001:5001', '5000:5000', '8080:8080', '5432:5432']
         volumes:
           - /var/run/docker.sock:/var/run/docker.sock:ro
-          - ./nginx.conf:/etc/nginx/nginx.conf:ro
-          - ./certificates.toml:/configuration/certificates.toml:ro
+#          - /home/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+          - /home/nginx/certificates.toml:/configuration/certificates.toml:ro
           - /home/xopera/certs:/etc/nginx/certs
         labels:
           traefik.enable: "true"
@@ -293,3 +310,4 @@ topology_template:
         - dependency: api
         - dependency: ui
         - dependency: postgres
+        - dependency: proxy-tls-config
