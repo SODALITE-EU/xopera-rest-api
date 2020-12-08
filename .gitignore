@@ -7,9 +7,11 @@ src/opera/api/storage/
 src/opera/api/deployment_data/
 xOpera-rest-blueprint/modules
 xOpera-rest-blueprint/.opera
+xOpera-rest-blueprint/tests/input-xlab.yaml
 nginx.conf
 certificates.toml
 docker-compose-editor.yml
+docker-compose-production.yml
 *.jar
 
 ### Python ###

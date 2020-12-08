@@ -185,7 +185,6 @@ topology_template:
         image_name: library/postgres:13
         volumes:
           - "/home/postgres:/var/lib/postgresql/data"
-#        ports: ['5432:5432']
         alias: xopera-postgres
         env: { get_input: postgres_env }
         docker_network_name:  { get_property: [ SELF, network, name ] }
@@ -222,7 +221,6 @@ topology_template:
           traefik.http.routers.api-https.rule: "PathPrefix(`/`)"
           traefik.http.routers.api-https.entrypoints: "websecure"
           traefik.http.routers.api-https.tls: "true"
-        # exposed_ports:  ['5000']
         env: { get_input: xopera_env }
       requirements:
         - host: docker-host
