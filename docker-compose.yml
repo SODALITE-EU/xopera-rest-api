@@ -1,7 +1,7 @@
 version: "3.7"
 services:
   api:
-    image: xopera-api
+    image: xopera-rest-api
     build: .
     environment:
       DEBUG: "true"
@@ -17,7 +17,6 @@ services:
     - "/var/run/docker.sock:/var/run/docker.sock"
     - "/root/.ssh/:/root/.ssh/"
     - "/home/xopera/certs:/home/xopera/certs"
-    - "openapi-volume:/app/opera/api/openapi/openapi/"
     labels:
       - "traefik.enable=true"
       - "traefik.http.services.api.loadbalancer.server.port=8080"
@@ -26,9 +25,9 @@ services:
   ui:
     image: swaggerapi/swagger-ui:v3.37.0
     volumes:
-      - openapi-volume:/openapi:ro
+      - ./openapi-spec.yml:/openapi.yml:ro
     environment:
-      SWAGGER_JSON: /openapi/openapi.yaml
+      SWAGGER_JSON: /openapi.yml
     labels:
       - "traefik.enable=true"
       - "traefik.http.services.ui.loadbalancer.server.port=8080"

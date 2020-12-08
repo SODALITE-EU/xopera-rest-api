@@ -165,6 +165,7 @@ topology_template:
       type: sodalite.nodes.DockerVolume
       properties:
         name: xopera-openapi
+        recreate: always
       requirements:
         - host: sodalite-vm
 
