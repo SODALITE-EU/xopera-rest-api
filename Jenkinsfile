@@ -212,7 +212,7 @@ pipeline {
                 withCredentials([sshUserPrivateKey(credentialsId: 'xOpera_ssh_key', keyFileVariable: 'xOpera_ssh_key_file', usernameVariable: 'xOpera_ssh_username')]) {
                     sh """#!/bin/bash
                         # create input.yaml file from template
-                        envsubst < xOpera-rest-blueprint/tests/input.yaml.tmpl > xOpera-rest-blueprint/input.yaml
+                        envsubst < xOpera-rest-blueprint/inputs/input.yaml.tmpl > xOpera-rest-blueprint/input.yaml
                         . venv-deploy/bin/activate
                         cd xOpera-rest-blueprint
                         rm -r -f .opera
@@ -237,7 +237,7 @@ pipeline {
             steps {
                 withCredentials([sshUserPrivateKey(credentialsId: 'xOpera_ssh_key', keyFileVariable: 'xOpera_ssh_key_file', usernameVariable: 'xOpera_ssh_username')]) {
                     sh """#!/bin/bash
-                        envsubst < xOpera-rest-blueprint/tests/input.yaml.tmpl > xOpera-rest-blueprint/input.yaml
+                        envsubst < xOpera-rest-blueprint/inputs/input.yaml.tmpl > xOpera-rest-blueprint/input.yaml
                         . venv-deploy/bin/activate
                         cd xOpera-rest-blueprint
                         rm -r -f .opera
