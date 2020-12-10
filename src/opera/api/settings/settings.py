@@ -61,21 +61,6 @@ class Settings:
         Settings.deployment_log_table = os.getenv("XOPERA_DATABASE_DEPLOYMENT_LOG_TABLE", 'deployment_log')
         Settings.git_log_table = os.getenv("XOPERA_DATABASE_GIR_LOG_TABLE", 'git_log')
 
-        # Settings.verbose = os.getenv('XOPERA_VERBOSE_MODE', 'warning').casefold()
-        """
-        _nameToLevel = {
-            'critical': log.CRITICAL,
-            'fatal': log.FATAL,
-            'error': log.ERROR,
-            'warn': log.WARNING,
-            'warning': log.WARNING,
-            'info': log.INFO,
-            'debug': log.DEBUG,
-            'notset': log.NOTSET,
-        }
-
-        log.basicConfig(format="%(levelname)s: %(message)s", level=_nameToLevel.get(Settings.verbose, log.WARNING))
-        """
         # prepare git_config for printing
         __debug_git_config = copy.deepcopy(Settings.git_config)
         __debug_git_config['auth_token'] = '****' if __debug_git_config['auth_token'] != "" else None

@@ -190,7 +190,9 @@ pipeline {
                     rm -r -f xOpera-rest-blueprint/modules/
                     git clone https://github.com/SODALITE-EU/iac-modules.git xOpera-rest-blueprint/modules/
                     cp ${ca_crt_file} xOpera-rest-blueprint/modules/docker/ca.crt
+                    cp ${ca_crt_file} xOpera-rest-blueprint/modules/misc/tls/ca.crt
                     cp ${ca_key_file} xOpera-rest-blueprint/modules/docker/ca.key
+                    cp ${ca_key_file} xOpera-rest-blueprint/modules/misc/tls/ca.key
                    """
             }
         }

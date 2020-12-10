@@ -1,7 +1,7 @@
 # example settings for xOpera REST API
 
-# verbose - https://docs.python.org/3/library/logging.html#logging-levels
-export XOPERA_VERBOSE_MODE=warning
+export DEBUG=false
+export LOG_LEVEL=debug
 
 # gitCsarDB
 export XOPERA_GIT_TYPE=mock

@@ -34,19 +34,6 @@ def deploy(deployment_location: Path, inputs_file: FileStorage = None):
     _list = [f'{Settings.implementation_dir}/service/deploy_scripts/deploy.sh', '{}'.format(str(deployment_location)),
              Settings.logfile_name, timestamp_start, inputs_filename, Settings.interpreter, entry_definitions]
 
-    """
-    import os
-    logger.info(os.path.isfile(f'{Settings.implementation_dir}/service/deploy_scripts/deploy.sh'))
-    # command = ['cd', f'{Settings.implementation_dir}/service/deploy_scripts', '&$', 'ls', '-la']
-    bashCommand = f'/bin/sh cd /{Settings.implementation_dir}/service/deploy_scripts && ls -la'
-    # popen = subprocess.Popen(command, stdout=subprocess.PIPE, universal_newlines=True)
-    # logger.info(" ".join(iter(popen.stdout.readline, "")))
-    # popen.stdout.close()
-    process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
-    output, error = process.communicate()
-    logger.info(output)
-    """
-
     subprocess.Popen(_list)
 
 

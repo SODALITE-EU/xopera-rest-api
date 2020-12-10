@@ -9,6 +9,7 @@ imports:
   - modules/docker/docker_certificate.yaml
   - modules/docker/docker_volume.yaml
   - modules/misc/ssh/types.yaml
+  - modules/misc/tls/types.yaml
   - library/config/types.yaml
 
 node_types:
@@ -80,19 +81,6 @@ topology_template:
         - host: sodalite-vm
         - dependency: docker-host
 
-    docker-registry-certificate:
-      type: sodalite.nodes.RegistryCertificate
-      properties:  
-        registry_ip:         localhost
-        country_name:        { get_input: docker-registry-cert-country-name }
-        organization_name:   { get_input: docker-registry-cert-organization-name }
-        email_address:       { get_input: docker-registry-cert-email-address }
-        cert_path:           { get_input: docker-registry-cert-path }
-        cert_files_prefix:   { get_input: docker-registry-cert-files-prefix }
-      requirements:
-        - host: sodalite-vm 
-        - dependency: docker-host        
-
     # xopera-rest-api
     # https://github.com/SODALITE-EU/xopera-rest-api        
     openstack-keys:
@@ -108,16 +96,28 @@ topology_template:
       requirements:
         - host: sodalite-vm
 
+    tls-certs:
+      type: sodalite.nodes.TLS.Certificate
+      properties:
+        country_name:       { get_input: docker-registry-cert-country-name }
+        organization_name:  { get_input: docker-registry-cert-organization-name }
+        email_address:      { get_input: docker-registry-cert-email-address }
+        cert_path: /home/nginx/certs
+       # domain_name:        { get_property: [ SELF, host, public_address ] }
+      requirements:
+        - host: sodalite-vm
+        - dependency: docker-host
+
     proxy-tls-config:
       type: sodalite.nodes.Configuration.NginxConfig
       properties:
-        cert_files_prefix: { get_property: [ SELF, dependency, cert_files_prefix ] }
+        cert_files_prefix: { get_attribute: [ SELF, dependency, cert_files_prefix ] }
         dir: /home/nginx
         filename: certificates.toml
         template_name: certificates.toml.tmpl
       requirements:
         - host: sodalite-vm
-        - dependency: docker-registry-certificate
+        - dependency: tls-certs
 
     postgres:
       type: sodalite.nodes.DockerizedComponent
@@ -149,7 +149,6 @@ topology_template:
         volumes:
           - /var/run/docker.sock:/var/run/docker.sock
           - /root/.ssh/:/root/.ssh/
-          - /home/xopera/certs:/home/xopera/certs
           - xopera-openapi:/app/opera/api/openapi/openapi/
         labels:
           traefik.enable: "true"
@@ -165,7 +164,7 @@ topology_template:
       requirements:
         - host: docker-host
         - registry: docker-public-registry
-        - network: docker-network 
+        - network: docker-network
         - dependency: openstack-keys
         - dependency: postgres
         - dependency: openapi-volume
@@ -228,7 +227,7 @@ topology_template:
         volumes:
           - /var/run/docker.sock:/var/run/docker.sock:ro
           - /home/nginx/certificates.toml:/configuration/certificates.toml:ro
-          - /home/xopera/certs:/etc/nginx/certs
+          - /home/nginx/certs:/etc/nginx/certs
         labels:
           traefik.enable: "true"
           traefik.http.routers.traefik.rule: "(PathPrefix(`/traefik`) || PathPrefix(`/api`))"

@@ -48,7 +48,7 @@ Beside obligatory settings following settings can be configured:
  - XOPERA_GIT_COMMIT_MAIL (default: `no-email@domain.com`) - user.mail to author git commit
  - XOPERA_GIT_GUEST_PERMISSIONS (default: `reporter`) - role, assigned to user, added to repository. See [access to blueprints](#ACCESS-TO-REPOSITORY-WITH-BLUEPRINTS).
 
-See [example config](REST_API/Implementation/settings/example_settings.sh) for example on how to export variables.
+See [example config](src/opera/api/settings/example_settings.sh) for example on how to export variables.
 ### PostgreSQL (optional, recommended)
 Rest API is using PostgreSQL database for saving bluepints and deployment logs.
 If PostgreSQL database is not available, it uses computer's filesystem.
@@ -62,7 +62,7 @@ To connect REST API, config must be exported as series of environmental variable
 - XOPERA_DATABASE_TIMEOUT=[database_timeout], optional
 - XOPERA_DATABASE_LOG_TABLE=[table_name_for_logs], optional
 
-See [example config](REST_API/Implementation/settings/example_settings.sh).
+See [example config](src/opera/api/settings/example_settings.sh).
 
 PostgreSQL can be also run as [docker container](#PostgreSQL-docker)
 
@@ -73,16 +73,6 @@ See [docker docs](https://docs.docker.com/engine/security/certificates/) for mor
 Certificates 
 
 ## Installation
-
-## System packages
-System packages can be installed using:
-    
-    sudo ./system-packages.sh
-
-### xOpera certs
-xOpera REST API needs root CA pair and client key cert pair. Required certs and keys can be installed with:
-
-    sudo ./Installation/xopera-certs.sh
     
 ### SSH keys
 xOpera needs SSH key pair with `xOpera` substring in name in `/root/.ssh` dir. It can be generated using
@@ -94,13 +84,13 @@ where common name is desired name for SSH key (usually computer's IP).
 ## Quick start
 
 ### Local run
-To run locally, use [docker compose](REST_API/docker-compose.yml)
+To run locally, use [docker compose](docker-compose.yml) or [local TOSCA template](xOpera-rest-blueprint/service-local.yaml) with compliant orchestrator.
 
 ### Remote deploy
-REST API can be deployed remotely using [TOSCA template](xOpera-rest-blueprint) with compliant orchestrator, for instance [xOpera](https://github.com/xlab-si/xopera-opera).
+REST API can be deployed remotely using [TOSCA template](xOpera-rest-blueprint/service.yaml) with compliant orchestrator, for instance [xOpera](https://github.com/xlab-si/xopera-opera).
 
 ## API
-Check [swagger docs](REST_API/Documentation/swagger.json).
+Check [openapi spec](openapi-spec.yml).
 
 ## How to use API
 Standard scenarios of using REST api:
@@ -123,7 +113,7 @@ Standard scenarios of using REST api:
 - After completion, check logs with GET to /info/log
 
 ### UNDEPLOY
-- undeploy blueprint with DELETE to /deploy/{blueprint_token}
+- undeploy blueprint with POST to /undeploy/{blueprint_token}
     - optionally, inputs file to be used with template must also be uploaded within same API call
     - optionally also in combination with version_tag
     - save session_token
@@ -151,38 +141,15 @@ xOpera REST API uses CSAR format as input format for uploading blueprints to RES
 
 ### Converting blueprint to CSAR
 
-Blueprint can be transformed to CSAR format with [blueprint2CSAR script](REST_API/Implementation/blueprint_converters/blueprint2CSAR.py).
+Blueprint can be transformed to CSAR format with [blueprint2CSAR script](src/opera/api/blueprint_converters/blueprint2CSAR.py).
 Check help:
 
     python3 scripts/blueprint2CSAR.py --help
 
-[blueprint2CSAR](REST_API/Implementation/blueprint_converters/blueprint2CSAR.py) can also be used as python library to be included to your python application.
+[blueprint2CSAR](src/opera/api/blueprint_converters/blueprint2CSAR.py) can also be used as python library to be included to your python application.
 
 ### Structure of CSAR format  
 For details about CSAR format structure, visit [TOSCA Simple Profile in YAML Version 1.3](https://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.3/os/TOSCA-Simple-Profile-YAML-v1.3-os.html#_Toc26969474)
-
-## xOpera caveats
-
-### Using xopera-key-name in templates
-
-If template requires installing VM, xopera's key name must be set in template in order for xOpera to be able to connect to VM over SSH and configure VM.
-
-The easiest way is to provide it with  `get_input` command:
-
-    vm:
-      type: my.nodes.VM.OpenStack
-      properties:
-        name: website-nginx-test
-        image: centos7
-        flavor: m1.medium
-        network: orchestrator-net
-        security_groups: default,sodalite-xopera-rest,sodalite-remote-access
-        key_name: { get_input: xopera-key-name}
-
-If get_input field name is set to `xopera-key-name`, rest api will automatically add it's own key name to inputs.
-It can also be configured to custom get_input field name, but in this case, user must provide his own file with inputs.
-
-    curl -X "POST" -F "inputs_file=@path/to/file.yaml" localhost:5000/deploy/567858fc-a1e8-43b4-91f5-cb04ec8be90b
 
 ## Setting up OpenStack
 ### Setting the default user
@@ -201,7 +168,7 @@ To run docker image registry locally, run the following command:
 #### Installation with script (Ubuntu only)   
 If you are using ubuntu, just run the following script:
 
-    sudo ./docker_certs.sh [computer_IP] [registry_IP] [path_to_CA_dir]
+    sudo ./Installation/docker_certs.sh [computer_IP] [registry_IP] [path_to_CA_dir]
    
 #### Manual installation (Ubuntu or CentOS) 
 If you choose to preform steps manually, follow the steps below:

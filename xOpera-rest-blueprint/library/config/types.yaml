@@ -30,3 +30,9 @@ node_types:
               primary: ../../modules/misc/conf/playbooks/create_conf.yml
               dependencies:
                 - artifacts/certificates.toml.tmpl
+          delete:
+            inputs:
+              dir:                { type: string, default: { get_property: [ SELF, dir ] } }
+              filename:           { type: string, default: { get_property: [ SELF, filename ] } }
+            implementation:
+              primary: ../../modules/misc/conf/playbooks/remove_conf.yml
