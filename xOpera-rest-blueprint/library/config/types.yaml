@@ -1,0 +1,38 @@
+tosca_definitions_version: tosca_simple_yaml_1_3
+imports:
+  - ../../modules/misc/conf/types.yaml
+
+node_types:
+  sodalite.nodes.Configuration.NginxConfig:
+    derived_from: sodalite.nodes.Configuration
+    properties:
+      template_name:
+        description: Filename of configuration template
+        required: True
+        type: string
+        default: "certificates.toml.tmpl"
+      cert_files_prefix:
+        description: Certificate filename prefix.
+        required: True
+        type: string
+    interfaces:
+      Standard:
+        type: tosca.interfaces.node.lifecycle.Standard
+        operations:
+          create:
+            inputs:
+              dir:                { type: string, default: { get_property: [ SELF, dir ] } }
+              filename:           { type: string, default: { get_property: [ SELF, filename ] } }
+              template_name:      { type: string, default: { get_property: [ SELF, template_name ] } }
+              cert_files_prefix:  { type: string, default: { get_property: [ SELF, cert_files_prefix ] } }
+              permissions:        { type: string, default: { get_property: [ SELF, permissions ] } }
+            implementation:
+              primary: ../../modules/misc/conf/playbooks/create_conf.yml
+              dependencies:
+                - artifacts/certificates.toml.tmpl
+          delete:
+            inputs:
+              dir:                { type: string, default: { get_property: [ SELF, dir ] } }
+              filename:           { type: string, default: { get_property: [ SELF, filename ] } }
+            implementation:
+              primary: ../../modules/misc/conf/playbooks/remove_conf.yml

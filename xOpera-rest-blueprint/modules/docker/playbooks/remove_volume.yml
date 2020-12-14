@@ -1,8 +1,0 @@
-- hosts: all
-  become: yes
-  tasks:  
-
-  - name: "remove docker volume"
-    docker_volume:
-      name: "{{ volume_name }}"
-      state: absent

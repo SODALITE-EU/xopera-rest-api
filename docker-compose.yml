@@ -1,0 +1,80 @@
+version: "3.7"
+services:
+  api:
+    image: xopera-rest-api
+    build: .
+    environment:
+      DEBUG: "true"
+      LOG_LEVEL: debug
+      XOPERA_GIT_TYPE: gitlab
+      XOPERA_GIT_URL: https://gitlab.com
+      XOPERA_GIT_AUTH_TOKEN: [your access token here]
+      XOPERA_DATABASE_IP: postgres
+      XOPERA_DATABASE_NAME: postgres
+      XOPERA_DATABASE_USER: postgres
+      XOPERA_DATABASE_PASSWORD: password
+    volumes:
+    - "/var/run/docker.sock:/var/run/docker.sock"
+    - "/root/.ssh/:/root/.ssh/"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.api.loadbalancer.server.port=8080"
+      - "traefik.http.routers.api.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.api.entrypoints=web"
+  ui:
+    image: swaggerapi/swagger-ui:v3.37.0
+    volumes:
+      - ./openapi-spec.yml:/openapi.yml:ro
+    environment:
+      SWAGGER_JSON: /openapi.yml
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.ui.loadbalancer.server.port=8080"
+      - "traefik.http.routers.ui.rule=PathPrefix(`/ui`)"
+      - "traefik.http.routers.ui.middlewares=stripprefix-ui"
+      - "traefik.http.middlewares.stripprefix-ui.stripprefix.prefixes=/ui"
+      - "traefik.http.routers.ui.entrypoints=web"
+  proxy:
+    image: library/traefik:v2.3.4
+    command:
+      - "--accesslog=true"
+      - "--log.level=info"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.postgres.address=:5432"
+
+      # don't use the following in production scenarios!
+      - "--api.insecure=true"
+      - "--api.dashboard=true"
+      - "--entrypoints.traefik.address=:8081"
+    depends_on:
+      - api
+      - ui
+      - postgres
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "8080:80"
+      - "5432:5432"
+      # don't use this in production scenarios!
+      - "127.0.0.1:8081:8081"
+
+  postgres:
+    image: postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=postgres
+      - POSTGRES_PORT=5432
+    volumes:
+      - $HOME/docker/volumes/postgres:/var/lib/postgresql/data
+    labels:
+      - "traefik.enable=true"
+      - "traefik.tcp.services.postgres.loadbalancer.server.port=5432"
+      - "traefik.tcp.routers.postgres.rule=HostSNI(`*`)"
+      - "traefik.tcp.routers.postgres.entrypoints=postgres"
+
+volumes:
+  openapi-volume:

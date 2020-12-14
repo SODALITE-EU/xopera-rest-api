@@ -1,7 +1,0 @@
-- hosts: all
-  gather_facts: no
-  tasks:  
-  - name: "wait for {{ component_name }} to come up"
-    wait_for:
-      port: "{{ test_port }}"
-      delay: "{{ test_delay }}"

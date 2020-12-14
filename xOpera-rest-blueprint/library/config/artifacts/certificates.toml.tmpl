@@ -1,0 +1,7 @@
+# in files/certificates.toml
+
+[tls.stores]
+  [tls.stores.default]
+    [tls.stores.default.defaultCertificate] #first certificate
+      certFile = "/etc/nginx/certs/{{ cert_files_prefix }}.crt"
+      keyFile = "/etc/nginx/certs/{{ cert_files_prefix }}.key"

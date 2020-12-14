@@ -1,8 +1,0 @@
-firstdeploy/
-storage/
-.pytest_cache
-**/*__pycache__
-Builds/
-venv/
-.venv/
-tmp/

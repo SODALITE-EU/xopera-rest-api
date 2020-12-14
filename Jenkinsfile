@@ -16,13 +16,18 @@ pipeline {
        docker_registry_cert_organization_name = "XLAB"
        docker_public_registry_url = "registry.hub.docker.com"
        docker_registry_cert_email_address = "dragan.radolovic@xlab.si"
+       cert_path = "/home/xopera/certs"
+       cert_files_prefix = "image.docker.local"
+
        // POSTGRES SETTINGS
        postgres_address = "xopera-postgres"
        postgres_user = credentials('postgres-user')
        postgres_password = credentials('postgres-password')
        postgres_db = "postgres"
+       postgres_port = "5432"
        // XOPERA SETTINGS
-       verbose_mode = "debug"
+       xopera_debug = "false"
+       xopera_log_level = "debug"
        // GIT SETTINGS
        git_type = "gitlab"
        git_server_url = "https://gitlab.com"
@@ -93,13 +98,13 @@ pipeline {
                 sh  """ #!/bin/bash
                         python3 -m venv venv-test
                         . venv-test/bin/activate
-                        cd REST_API/
                         pip3 install -r requirements.txt
-                        cd Implementation/
+                        ./generate.sh
+                        cd src/
                         touch *.xml
-                        python3 -m pytest --pyargs -s tests --junitxml="results.xml" --cov=./ --cov=./gitCsarDB --cov=./blueprint_converters --cov=./settings  --cov=./service --cov=./util --cov-report xml tests/
+                        python3 -m pytest --junitxml=results.xml --cov=./opera/api/ --cov=./opera/api/gitCsarDB --cov=./opera/api/blueprint_converters --cov=./opera/api/settings --cov=./opera/api/service --cov=./opera/api/util --cov=./opera/api/controllers --cov-report xml
                     """
-                junit 'REST_API/Implementation/results.xml'
+                junit 'src/results.xml'
             }
         }
         stage('SonarQube analysis'){
@@ -109,13 +114,12 @@ pipeline {
             steps {
                 withSonarQubeEnv('SonarCloud') {
                     sh  """ #!/bin/bash
-                            cd REST_API/Implementation/
                             ${scannerHome}/bin/sonar-scanner
                         """
                 }
             }
         }
-        stage('Build xopera-flask') {
+        stage('Build xopera-rest-api') {
             when {
                 allOf {
                     // Triggered on every tag, that is considered for staging or production
@@ -127,28 +131,11 @@ pipeline {
              }
             steps {
                 sh """#!/bin/bash
-                    cd REST_API
-                    ../make_docker.sh build xopera-flask Dockerfile-flask
+                    ./make_docker.sh build xopera-rest-api
                     """
             }
         }
-        stage('Build xopera-nginx') {
-            when {
-                allOf {
-                    expression{tag "*"}
-                    expression{
-                        TAG_STAGING == 'true' || TAG_PRODUCTION == 'true'
-                    }
-                }
-            }
-            steps {
-                sh """#!/bin/bash
-                    cd REST_API
-                    ../make_docker.sh build xopera-nginx Dockerfile-nginx
-                    """
-            }
-        }
-        stage('Push xopera-flask to sodalite-private-registry') {
+        stage('Push xopera-rest-api to sodalite-private-registry') {
             // Push during staging and production
             when {
                 allOf {
@@ -161,30 +148,12 @@ pipeline {
             steps {
                 withDockerRegistry(credentialsId: 'jenkins-sodalite.docker_token', url: '') {
                     sh  """#!/bin/bash
-                            ./make_docker.sh push xopera-flask staging
+                        ./make_docker.sh push xopera-rest-api staging
                         """
                 }
             }
         }
-        stage('Push xopera-nginx to sodalite-private-registry') {
-            // Push during staging and production
-            when {
-                allOf {
-                    expression{tag "*"}
-                    expression{
-                        TAG_STAGING == 'true' || TAG_PRODUCTION == 'true'
-                    }
-                }
-            }
-            steps {
-                withDockerRegistry(credentialsId: 'jenkins-sodalite.docker_token', url: '') {
-                    sh  """#!/bin/bash
-                            ./make_docker.sh push xopera-nginx staging
-                        """
-                }
-            }
-        }
-        stage('Push xopera-flask to DockerHub') {
+        stage('Push xopera-rest-api to DockerHub') {
             // Only on production tags
             when {
                 allOf {
@@ -197,25 +166,7 @@ pipeline {
             steps {
                 withDockerRegistry(credentialsId: 'jenkins-sodalite.docker_token', url: '') {
                     sh  """#!/bin/bash
-                            ./make_docker.sh push xopera-flask production
-                        """
-                }
-            }
-        }
-        stage('Push xopera-nginx to DockerHub') {
-            // Only on production tags
-            when {
-                allOf {
-                    expression{tag "*"}
-                    expression{
-                        TAG_PRODUCTION == 'true'
-                    }
-                }
-            }
-            steps {
-                withDockerRegistry(credentialsId: 'jenkins-sodalite.docker_token', url: '') {
-                    sh  """#!/bin/bash
-                            ./make_docker.sh push xopera-nginx production
+                            ./make_docker.sh push xopera-rest-api production
                         """
                 }
             }
@@ -234,8 +185,14 @@ pipeline {
                     python3 -m venv venv-deploy
                     . venv-deploy/bin/activate
                     python3 -m pip install --upgrade pip
-                    python3 -m pip install 'opera[openstack]==0.5.7' docker
-                    ansible-galaxy install -r REST_API/requirements.yml
+                    python3 -m pip install opera[openstack] docker
+                    ansible-galaxy install -r requirements.yml --force
+                    rm -r -f xOpera-rest-blueprint/modules/
+                    git clone https://github.com/SODALITE-EU/iac-modules.git xOpera-rest-blueprint/modules/
+                    cp ${ca_crt_file} xOpera-rest-blueprint/modules/docker/ca.crt
+                    cp ${ca_crt_file} xOpera-rest-blueprint/modules/misc/tls/ca.crt
+                    cp ${ca_key_file} xOpera-rest-blueprint/modules/docker/ca.key
+                    cp ${ca_key_file} xOpera-rest-blueprint/modules/misc/tls/ca.key
                    """
             }
         }
@@ -257,7 +214,7 @@ pipeline {
                 withCredentials([sshUserPrivateKey(credentialsId: 'xOpera_ssh_key', keyFileVariable: 'xOpera_ssh_key_file', usernameVariable: 'xOpera_ssh_username')]) {
                     sh """#!/bin/bash
                         # create input.yaml file from template
-                        envsubst < xOpera-rest-blueprint/tests/input.yaml.tmpl > xOpera-rest-blueprint/input.yaml
+                        envsubst < xOpera-rest-blueprint/inputs/input.yaml.tmpl > xOpera-rest-blueprint/input.yaml
                         . venv-deploy/bin/activate
                         cd xOpera-rest-blueprint
                         rm -r -f .opera
@@ -282,7 +239,7 @@ pipeline {
             steps {
                 withCredentials([sshUserPrivateKey(credentialsId: 'xOpera_ssh_key', keyFileVariable: 'xOpera_ssh_key_file', usernameVariable: 'xOpera_ssh_username')]) {
                     sh """#!/bin/bash
-                        envsubst < xOpera-rest-blueprint/tests/input.yaml.tmpl > xOpera-rest-blueprint/input.yaml
+                        envsubst < xOpera-rest-blueprint/inputs/input.yaml.tmpl > xOpera-rest-blueprint/input.yaml
                         . venv-deploy/bin/activate
                         cd xOpera-rest-blueprint
                         rm -r -f .opera

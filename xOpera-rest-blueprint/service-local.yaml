@@ -12,33 +12,22 @@ imports:
   - modules/misc/tls/types.yaml
   - library/config/types.yaml
 
+node_types:
+
+  sodalite.nodes.SodaliteVM:
+    derived_from: tosca.nodes.Compute
+    properties:
+      username:
+        type: string
+
 topology_template:
 
   inputs:
-    ssh-key-name:  
+    username:
       type: string
-    vm-name:
-      type: string
-    image-name:  
-      type: string 
-    openstack-network-name:  
-      type: string 
-    security-groups:  
-      type: string    
-    flavor-name:  
-      type: string                   
     docker-network: 
       type: string
-    dockerhub-user:
-      type: string
-      default: ""      
-    dockerhub-pass: 
-      type: string
-      default: "" 
-    docker-public-registry-url: 
-      type: string
-      default: ""
-    docker-private-registry-url: 
+    docker-public-registry-url:
       type: string
       default: ""
     docker-registry-cert-country-name:
@@ -60,56 +49,16 @@ topology_template:
       type: map
     xopera_env:
       type: map
-    ssh_config:
-      type: map
-#    identity_file:
-#      type: string
 
-  node_templates: 
+  node_templates:
 
-    security-rules-sodalite:  
-      type: sodalite.nodes.OpenStack.SecurityRules 
-      properties:  
-        ports:  
-          component_ports:  
-            port_range_max: 8085 
-            remote_ip_prefix: 0.0.0.0/0 
-            port_range_min: 8080 
-            protocol: tcp 
-          http_port:  
-            port_range_min: 80 
-            port_range_max: 80 
-            protocol: tcp 
-            remote_ip_prefix: 0.0.0.0/0 
-          5000_ports:  
-            port_range_min: 5000
-            port_range_max: 5005
-            protocol: tcp 
-            remote_ip_prefix: 0.0.0.0/0
-          https_port:
-            port_range_min: 443
-            port_range_max: 444
-            protocol: tcp
-            remote_ip_prefix: 0.0.0.0/0            
-        group_name:  sodalite-uc 
-        group_description:  Sodalite UC security group
-
-    sodalite-vm:  
-      type: sodalite.nodes.OpenStack.VM 
-      properties:  
-        name:             { get_input: vm-name }
-        key_name:         { get_input: ssh-key-name } 
-        image:            { get_input: image-name }
-        network:          { get_input: openstack-network-name } 
-        security_groups:  { get_input: security-groups } 
-        flavor:           { get_input: flavor-name }
-        ssh_config:       { get_input: ssh_config }
-
-#        ssh_config:
-#          IdentityFile:   { get_input: identity_file }    # doesn't work due to https://github.com/xlab-si/xopera-opera/issues/102
-        username: centos
-      requirements:  
-        - protected_by: security-rules-sodalite 
+    sodalite-vm:
+      type: sodalite.nodes.SodaliteVM
+      properties:
+        username: { get_input: username }
+      attributes:
+        private_address: localhost
+        public_address: localhost
 
     docker-host:
       type: sodalite.nodes.DockerHost
@@ -131,25 +80,6 @@ topology_template:
       requirements:
         - host: sodalite-vm
         - dependency: docker-host
-
-    docker-private-registry:
-      type: sodalite.nodes.DockerRegistry
-      properties:
-        docker_registry_url: { get_input: docker-private-registry-url }
-      requirements:
-        - host: sodalite-vm
-        - dependency: docker-host
-
-    docker-registry-certificate:
-      type: sodalite.nodes.RegistryCertificate
-      properties:  
-        registry_ip:         { get_input: docker-private-registry-url }
-        country_name:        { get_input: docker-registry-cert-country-name }
-        organization_name:   { get_input: docker-registry-cert-organization-name }
-        email_address:       { get_input: docker-registry-cert-email-address }
-      requirements:
-        - host: sodalite-vm 
-        - dependency: docker-host        
 
     # xopera-rest-api
     # https://github.com/SODALITE-EU/xopera-rest-api        
@@ -214,7 +144,7 @@ topology_template:
       properties:
         alias: xopera-rest-api
         docker_network_name:  { get_property: [ SELF, network, name ] }
-        image_name: xopera-rest-api
+        image_name: sodaliteh2020/xopera-rest-api
         restart_policy: always
         volumes:
           - /var/run/docker.sock:/var/run/docker.sock
@@ -233,9 +163,8 @@ topology_template:
         env: { get_input: xopera_env }
       requirements:
         - host: docker-host
-        - registry: docker-private-registry
+        - registry: docker-public-registry
         - network: docker-network
-        - dependency: docker-registry-certificate
         - dependency: openstack-keys
         - dependency: postgres
         - dependency: openapi-volume
@@ -297,7 +226,6 @@ topology_template:
         ports:  ['5001:5001', '5000:5000', '8080:8080', '5432:5432']
         volumes:
           - /var/run/docker.sock:/var/run/docker.sock:ro
-#          - /home/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
           - /home/nginx/certificates.toml:/configuration/certificates.toml:ro
           - /home/nginx/certs:/etc/nginx/certs
         labels:
