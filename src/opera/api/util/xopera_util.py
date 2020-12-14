@@ -78,7 +78,7 @@ def configure_ssh_keys():
 
 def clean_deployment_data():
     if Path(Settings.deployment_data).exists():
-        shutil.rmtree(Settings.deployment_data)
+        shutil.rmtree(Settings.deployment_data, ignore_errors=True)
     os.mkdir(Settings.deployment_data)
     Path(Path(Settings.deployment_data) / Path(".gitignore")).write_text("*")
 
