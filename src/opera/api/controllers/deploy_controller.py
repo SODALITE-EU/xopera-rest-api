@@ -15,9 +15,8 @@ SQL_database = sqldb_service.connect(Settings.sql_config)
 
 
 def post_deploy(blueprint_token, version_tag=None):
-    """post_deploy
-
-     # noqa: E501
+    """
+    Deploy blueprint
 
     :param blueprint_token: token of blueprint
     :type blueprint_token: str

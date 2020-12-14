@@ -8,7 +8,7 @@ from werkzeug.datastructures import FileStorage
 
 from opera.api.blueprint_converters import blueprint2CSAR
 from opera.api.settings import Settings
-from opera.api.util import xopera_util, timestamp_util
+from opera.api.util import timestamp_util
 from opera.api.log import get_logger
 
 logger = get_logger(__name__)

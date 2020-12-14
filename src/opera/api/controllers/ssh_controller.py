@@ -6,6 +6,11 @@ from opera.api.settings import Settings
 
 
 def get_public_key():
+    """
+    Obtain ssh public key
+
+    :rtype: JustMessage
+    """
     key_name = Settings.key_pair
     try:
         with (Settings.ssh_keys_location / Path(f"{key_name}.pubk")).open('r') as file:

@@ -1,6 +1,5 @@
 import connexion
 
-from opera.api.openapi.models.blueprint_metadata import BlueprintMetadata
 from opera.api.openapi.models.git_revision_metadata import GitRevisionMetadata
 from opera.api.openapi.models.collaborators_list import CollaboratorsList
 from opera.api.openapi.models.delete_metadata import DeleteMetadata
@@ -18,7 +17,8 @@ SQL_database = sqldb_service.connect(Settings.sql_config)
 
 
 def delete_manage_csar(blueprint_token, version_tag=None, force=None):
-    """delete_manage_csar
+    """
+    Delete one or more versions of blueprint
 
     :param blueprint_token: token of blueprint
     :type blueprint_token: str
@@ -67,12 +67,13 @@ def delete_manage_csar(blueprint_token, version_tag=None, force=None):
 
 
 def get_git_user_manage(blueprint_token):
-    """get_git_user_manage
+    """
+    Obtain list of git users with access to repository
 
     :param blueprint_token: token of blueprint
     :type blueprint_token: str
 
-    :rtype: JustMessage
+    :rtype: CollaboratorsList
     """
     if not CSAR_db.check_token_exists(blueprint_token=blueprint_token):
         return JustMessage(f"Blueprint with token {blueprint_token} does not exist"), 404
@@ -94,7 +95,8 @@ def get_git_user_manage(blueprint_token):
 
 
 def post_git_user_manage(blueprint_token, username):
-    """post_git_user_manage
+    """
+    Add ne user to repository
 
     :param blueprint_token: token of blueprint
     :type blueprint_token: str
@@ -116,16 +118,15 @@ def post_git_user_manage(blueprint_token, username):
 
 
 def post_manage_csar(blueprint_token, revision_msg=None):
-    """post_manage_csar
-
-     # noqa: E501
+    """
+    Add new blueprint version to existing blueprint
 
     :param blueprint_token: token of blueprint
     :type blueprint_token: str
     :param revision_msg: Optional comment on submission
     :type revision_msg: str
 
-    :rtype: BlueprintMetadata
+    :rtype: GitRevisionMetadata
     """
     if not CSAR_db.check_token_exists(blueprint_token):
         return JustMessage("Blueprint token does not exist, 'manage' route instead"), 404
@@ -147,16 +148,15 @@ def post_manage_csar(blueprint_token, revision_msg=None):
 
 
 def post_new_blueprint_csar(revision_msg=None):
-    """post_new_blueprint_csar
-
-     # noqa: E501
+    """
+    Add new blueprint
 
     :param csar: TOSCA Cloud Service Archive
     :type csar: str
     :param revision_msg: Optional comment on submission
     :type revision_msg: str
 
-    :rtype: BlueprintMetadata
+    :rtype: GitRevisionMetadata
     """
     file = connexion.request.files['CSAR']
     result, response = CSAR_db.add_revision(CSAR=file, revision_msg=revision_msg)
