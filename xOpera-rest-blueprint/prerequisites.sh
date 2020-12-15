@@ -39,7 +39,9 @@ fi
 
 echo
 echo "Installing required Ansible roles"
-ansible-galaxy install -r ../requirements.yml --force
+ansible-galaxy install geerlingguy.docker --force
+ansible-galaxy install geerlingguy.pip --force
+ansible-galaxy install geerlingguy.repo-epel --force
 
 echo
 echo "Cloning modules"
