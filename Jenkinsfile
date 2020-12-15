@@ -45,12 +45,12 @@ pipeline {
        OS_REGION_NAME = "RegionOne"
        OS_AUTH_PLUGIN = "password"
 
-       // DOCKER CERTIFICATES
+       // ROOT X.509 CERTIFICATES
        ca_crt_file = credentials('xopera-ca-crt')
        ca_key_file = credentials('xopera-ca-key')
 
        // CI-CD vars
-       // When triggered from git tag, $BRANCH_NAME is actually tag_name
+       // When triggered from git tag, $BRANCH_NAME is actually GIT's tag_name
        TAG_SEM_VER_COMPLIANT = """${sh(
                 returnStdout: true,
                 script: './validate_tag.sh SemVar $BRANCH_NAME'
@@ -89,11 +89,7 @@ pipeline {
             }
 
         }
-
         stage('Test xOpera') {
-            environment {
-            XOPERA_TESTING = "True"
-            }
             steps {
                 sh  """ #!/bin/bash
                         python3 -m venv venv-test
@@ -185,14 +181,16 @@ pipeline {
                     python3 -m venv venv-deploy
                     . venv-deploy/bin/activate
                     python3 -m pip install --upgrade pip
-                    python3 -m pip install opera[openstack] docker
-                    ansible-galaxy install -r requirements.yml --force
+                    python3 -m pip install opera[openstack]==0.6.2 docker
+                    ansible-galaxy install geerlingguy.pip,2.0.0 --force
+                    ansible-galaxy install geerlingguy.docker,2.9.0 --force
+                    ansible-galaxy install geerlingguy.repo-epel,3.0.0 --force
                     rm -r -f xOpera-rest-blueprint/modules/
-                    git clone https://github.com/SODALITE-EU/iac-modules.git xOpera-rest-blueprint/modules/
-                    cp ${ca_crt_file} xOpera-rest-blueprint/modules/docker/ca.crt
-                    cp ${ca_crt_file} xOpera-rest-blueprint/modules/misc/tls/ca.crt
-                    cp ${ca_key_file} xOpera-rest-blueprint/modules/docker/ca.key
-                    cp ${ca_key_file} xOpera-rest-blueprint/modules/misc/tls/ca.key
+                    git clone -b 3.0.0 https://github.com/SODALITE-EU/iac-modules.git xOpera-rest-blueprint/modules/
+                    cp ${ca_crt_file} xOpera-rest-blueprint/modules/docker/artifacts/ca.crt
+                    cp ${ca_crt_file} xOpera-rest-blueprint/modules/misc/tls/artifacts/ca.crt
+                    cp ${ca_key_file} xOpera-rest-blueprint/modules/docker/artifacts/ca.key
+                    cp ${ca_key_file} xOpera-rest-blueprint/modules/misc/tls/artifacts/ca.key
                    """
             }
         }

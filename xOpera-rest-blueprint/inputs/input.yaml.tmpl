@@ -21,13 +21,13 @@ docker-registry-cert-path: ${cert_path}
 docker-registry-cert-files-prefix: ${cert_files_prefix}
 # POSTGRES SETTINGS
 postgres_env:
-  postgres_user: ${postgres_user}
-  postgres_password: ${postgres_password}
-  postgres_db: ${postgres_db}
-  postgres_port: ${postgres_port}
+  POSTGRES_USER: ${postgres_user}
+  POSTGRES_PASSWORD: ${postgres_password}
+  POSTGRES_DB: ${postgres_db}
+  POSTGRES_PORT: "${postgres_port}"
 # XOPERA SETTINGS
 xopera_env:
-  DEBUG: ${xopera_debug}
+  DEBUG: "${xopera_debug}"
   LOG_LEVEL: ${xopera_log_level}
   # XOPERA GIT SETTINGS
   XOPERA_GIT_TYPE: ${git_type}
@@ -47,6 +47,6 @@ xopera_env:
   OS_PASSWORD: ${OS_PASSWORD}
   OS_AUTH_URL: ${OS_AUTH_URL}
   OS_INTERFACE: ${OS_INTERFACE}
-  OS_IDENTITY_API_VERSION: \\"${OS_IDENTITY_API_VERSION}\\"
+  OS_IDENTITY_API_VERSION: "${OS_IDENTITY_API_VERSION}"
   OS_REGION_NAME: ${OS_REGION_NAME}
-  OS_AUTH_PLUGIN: ${OS_AUTH_PLUGIN}"
+  OS_AUTH_PLUGIN: ${OS_AUTH_PLUGIN}
