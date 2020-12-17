@@ -15,10 +15,16 @@ from opera.api.util import xopera_util
 @pytest.fixture
 def client():
     """An application for the tests."""
-    xopera_util.clean_deployment_data()
+    try:
+        xopera_util.clean_deployment_data()
+    except FileExistsError:
+        pass
     with test().app.test_client() as client:
         yield client
-    xopera_util.clean_deployment_data()
+    try:
+        xopera_util.clean_deployment_data()
+    except FileExistsError:
+        pass
 
 
 @pytest.fixture
