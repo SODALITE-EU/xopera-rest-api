@@ -242,3 +242,20 @@ class TestDeploy:
         # try_to_undeploy
         resp = client.post(f"/undeploy/{blueprint_token}")
         assert_that(resp.status_code).is_equal_to(403)
+
+    def test_deploy_clean(self, client, csar_clean_state):
+        resp = client.post("/manage", data=csar_clean_state)
+        blueprint_token = resp.json['blueprint_token']
+
+        # deploy and check deploy message
+        resp_deploy = client.post(f"/deploy/{blueprint_token}")
+        assert_that(resp_deploy.status_code).is_equal_to(202)
+        session_token = resp_deploy.json['session_token']
+
+        done, resp_status = TestDeploy.monitor(client, session_token, timeout=100)
+        assert_that(done).is_true()
+        assert_that(resp_status.json['state']).is_equal_to('done')
+        assert_that(resp_status.status_code).is_equal_to(201)
+        resp_log = client.get(f"/info/log/deployment?session_token={session_token}")
+        log_message = resp_log.json[0]['log']
+        assert_that(log_message).contains('deployment of my-workstation_0 complete')

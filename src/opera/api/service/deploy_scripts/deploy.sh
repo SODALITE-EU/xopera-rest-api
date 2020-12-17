@@ -14,6 +14,8 @@ cd "$path" || exit
 {
 echo "Launching xOpera"
 
+rm -rf .opera
+
 if [ -z "$inputs_file" ]
 then
     opera deploy "$entry_definitions"
