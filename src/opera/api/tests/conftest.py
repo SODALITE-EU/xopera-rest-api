@@ -66,6 +66,11 @@ def csar_no_meta():
     return file_data('CSAR-no-meta.zip')
 
 
+@pytest.fixture
+def csar_clean_state():
+    return file_data('CSAR-clean-state.zip')
+
+
 def file_data(file_name, file_type='CSAR'):
     path_to_csar = Path(__file__).parent / 'CSAR' / file_name
     data = {file_type: (open(path_to_csar, 'rb'), file_name)}
