@@ -236,11 +236,11 @@ class MockConnector(Connector):
                 return [tagref.tag.message for tagref in tags if str(tagref) == tag][0]
 
             except IndexError:
-                return ''
+                return None
         try:
             return tags[-1].tag.message
         except IndexError:
-            return ''
+            return None
 
 
 class GitlabConnector(Connector):
@@ -377,7 +377,7 @@ class GitlabConnector(Connector):
                 return [tag_item.message for tag_item in tags if tag_item.name == tag][0]
 
             except IndexError:
-                return ''
+                return None
         return tags[0].message
 
 
@@ -490,5 +490,5 @@ class GithubConnector(Connector):
                 return [release.body for release in releases if release.title == tag][0]
 
             except IndexError:
-                return ''
+                return None
         return releases[0].body

@@ -17,6 +17,7 @@ class Settings:
 
     # deployment config
     deployment_data = implementation_dir / Path('deployment_data')
+    inprogress = implementation_dir / Path('in_progress')
     interpreter = 'python3'
     logfile_name = "logs.log"
 

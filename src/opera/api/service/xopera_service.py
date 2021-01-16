@@ -13,6 +13,7 @@ from opera.api.log import get_logger
 
 logger = get_logger(__name__)
 
+
 def deploy(deployment_location: Path, inputs_file: FileStorage = None):
     logger.info("Orchestrating with xOpera...")
 

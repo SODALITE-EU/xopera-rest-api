@@ -6,12 +6,37 @@ import re
 import shutil
 import uuid
 from pathlib import Path
+from contextlib import contextmanager
 
 from opera.api.settings import Settings
 
 
 def deployment_location(session_token: uuid, blueprint_token: uuid):
     return Path(Settings.deployment_data) / Path(str(blueprint_token) / Path(str(session_token)))
+
+
+def stdout_file(session_token: uuid):
+    stdstream_dir(session_token).mkdir(parents=True, exist_ok=True)
+    return Settings.inprogress / session_token / 'stdout.txt'
+
+
+def stderr_file(session_token: uuid):
+    stdstream_dir(session_token).mkdir(parents=True, exist_ok=True)
+    return Settings.inprogress / session_token / 'stderr.txt'
+
+
+def stdstream_dir(session_token: uuid):
+    return Settings.inprogress / session_token
+
+
+@contextmanager
+def cwd(path):
+    oldpwd = os.getcwd()
+    os.chdir(path)
+    try:
+        yield
+    finally:
+        os.chdir(oldpwd)
 
 
 def parse_path(path: Path):

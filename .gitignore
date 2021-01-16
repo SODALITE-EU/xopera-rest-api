@@ -5,6 +5,8 @@ gen/
 src/opera/api/openapi/
 src/opera/api/storage/
 src/opera/api/deployment_data/
+src/.opera-api/
+src/opera/api/in_progress/
 xOpera-rest-blueprint/modules
 xOpera-rest-blueprint/.opera
 xOpera-rest-blueprint/inputs/private

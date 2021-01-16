@@ -2,9 +2,13 @@ import json
 import time
 
 from opera.api.settings import Settings
+from opera.api.controllers.background_invocation import InvocationService
+from opera.api.openapi.models import Invocation, InvocationState, OperationType
 
 
-def check_status(session_token: str, format: str = 'short'):
+invocation_service = InvocationService()
+
+def check_status1(session_token: str, format: str = 'short'):
     json_dict = {'state': "running", 'nodes': {}}
     deploy_dir = next(Settings.deployment_data.glob(f'*/{session_token}'), None)
     if deploy_dir is None:
@@ -32,3 +36,16 @@ def check_status(session_token: str, format: str = 'short'):
     else:
         status_code = 202
     return json_dict, status_code
+
+
+def check_status(session_token: str, format: str = 'short'):
+    inv = invocation_service.load_invocation(session_token)
+    if inv is None:
+        return {'message': f'Could not find session with session_token {session_token}'}, 404
+    code = {
+        InvocationState.PENDING: 202,
+        InvocationState.IN_PROGRESS: 202,
+        InvocationState.SUCCESS: 201,
+        InvocationState.FAILED: 500
+    }
+    return inv.to_dict(), code[inv.state]
