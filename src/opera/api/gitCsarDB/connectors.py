@@ -52,6 +52,18 @@ class Connector:
         """
         pass
 
+    def tag_exists(self, repo_name: str, tag_name) -> bool:
+        """
+        checks if repo {repo_name} exists and has tag {tag_name}
+        Args:
+            repo_name: name of repository
+            tag_name: name of tag
+
+        Returns: tag_exists: bool
+
+        """
+        pass
+
     def add_collaborator(self, repo_name: str, username: str, permissions: str = 'developer'):
         """
         Adds user as collaborator to repository.
@@ -242,6 +254,14 @@ class MockConnector(Connector):
         except IndexError:
             return None
 
+    def tag_exists(self, repo_name: str, tag_name):
+        if not self.repo_exist(repo_name):
+            return False
+
+        repo = git.Repo(self.get_repo_url(repo_name))
+        tags = repo.tags
+        return any(str(tag) == tag_name for tag in tags)
+
 
 class GitlabConnector(Connector):
     def __init__(self, url, auth_token):
@@ -380,6 +400,17 @@ class GitlabConnector(Connector):
                 return None
         return tags[0].message
 
+    def tag_exists(self, repo_name: str, tag_name):
+        if not self.repo_exist(repo_name):
+            return False
+
+        gl = Gitlab(url=self.url, private_token=self.auth_token)
+        project_id = self.__project_id(project_name=repo_name)
+        project = gl.projects.get(project_id)
+        tags = project.tags.list()
+
+        return any(tag.name == tag_name for tag in tags)
+
 
 class GithubConnector(Connector):
     def __init__(self, auth_token):
@@ -492,3 +523,12 @@ class GithubConnector(Connector):
             except IndexError:
                 return None
         return releases[0].body
+
+    def tag_exists(self, repo_name: str, tag_name):
+        if not self.repo_exist(repo_name):
+            return False
+
+        repo = self.__get_repo(repo_name)
+        releases = repo.get_releases()
+
+        return any(release.title == tag_name for release in releases)

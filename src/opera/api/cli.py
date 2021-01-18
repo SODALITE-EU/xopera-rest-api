@@ -39,6 +39,7 @@ def test():
     ))
     app.app.json_encoder = encoder.JSONEncoder
     app.add_api("openapi.yaml")
+    app.testing = True
     return app
 
 

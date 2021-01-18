@@ -5,6 +5,7 @@ import git
 import pytest
 import os
 import shutil
+import psutil
 
 from opera.api.cli import test
 from opera.api.gitCsarDB import GitCsarDB
@@ -12,7 +13,7 @@ from opera.api.gitCsarDB.connectors import MockConnector
 from opera.api.util import xopera_util
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def client():
     """An application for the tests."""
     try:
@@ -21,10 +22,24 @@ def client():
         pass
     with test().app.test_client() as client:
         yield client
+    kill_tree(os.getpid(), including_parent=False)
+
     try:
         xopera_util.clean_deployment_data()
     except FileExistsError:
         pass
+
+
+def kill_tree(pid, including_parent=True):
+    parent = psutil.Process(pid)
+    for child in parent.children(recursive=True):
+        try:
+            child.kill()
+        except psutil.NoSuchProcess:
+            pass
+
+    if including_parent:
+        parent.kill()
 
 
 @pytest.fixture

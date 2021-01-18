@@ -21,12 +21,10 @@ class GitDB:
         """
         return self.connection.CSAR_exists(blueprint_token)
 
-    def check_version_exists(self, blueprint_token: str, version_tag: str) -> bool:
-        if not self.check_token_exists(blueprint_token):
-            return False
-        if version_tag is None:
-            return True
-        return self.get_tag_msg(blueprint_token, version_tag) is not None
+    def version_exists(self, blueprint_token: str, version_tag=None) -> bool:
+        if not version_tag:
+            return self.connection.CSAR_exists(blueprint_token)
+        return self.connection.tag_exists(blueprint_token, version_tag)
 
     def add_tag(self, blueprint_token: uuid, commit_sha: str, tag: str, tag_msg: str):
         """

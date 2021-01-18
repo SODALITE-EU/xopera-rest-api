@@ -6,7 +6,6 @@ import traceback
 import typing
 import uuid
 import shutil
-from contextlib import contextmanager
 from pathlib import Path
 from typing import List, Optional
 
@@ -61,7 +60,7 @@ class InvocationWorkerProcess(multiprocessing.Process):
                 if inv.operation == OperationType.DEPLOY:
                     InvocationWorkerProcess._deploy(location, inv.inputs, num_workers=1)
                 elif inv.operation == OperationType.UNDEPLOY:
-                    InvocationWorkerProcess._undeploy(location, num_workers=1)
+                    InvocationWorkerProcess._undeploy(location, inv.inputs, num_workers=1)
                 else:
                     raise RuntimeError("Unknown operation type:" + str(inv.operation))
 
@@ -82,10 +81,10 @@ class InvocationWorkerProcess(multiprocessing.Process):
             inv.stdout = stdout
             inv.stderr = stderr
 
-            # create logfile
-            InvocationService.write_invocation(inv)
+            # remove inputs
+            InvocationService.remove_inputs(location)
 
-            # save logfile to
+            # save logfile to SQL database
             InvocationService.save_to_database(inv)
 
             # save to git
@@ -94,6 +93,9 @@ class InvocationWorkerProcess(multiprocessing.Process):
             # clean
             shutil.rmtree(location)
             shutil.rmtree(xopera_util.stdstream_dir(inv.session_token))
+
+            # create logfile
+            InvocationService.write_invocation(inv)
 
     @staticmethod
     def _deploy(location: Path, inputs: typing.Optional[dict], num_workers: int):
@@ -104,9 +106,11 @@ class InvocationWorkerProcess(multiprocessing.Process):
                          verbose_mode=True, num_workers=num_workers, delete_existing_state=True)
 
     @staticmethod
-    def _undeploy(location: Path, num_workers: int):
+    def _undeploy(location: Path, inputs: typing.Optional[dict], num_workers: int):
         with xopera_util.cwd(location):
             opera_storage = Storage.create(".opera")
+            if inputs:
+                opera_storage.write_json(inputs, "inputs")
             opera_undeploy(opera_storage, verbose_mode=True, num_workers=num_workers)
 
     @staticmethod
@@ -143,41 +147,6 @@ class InvocationService:
 
         self.work_queue.put(inv)
         return inv
-    """
-    @classmethod
-    def invocation_history(cls) -> List[Invocation]:
-        logger.info("Loading invocation history.")
-
-        invocations = []
-        for file_path in Path(".opera-api").glob('*.json'):
-            logger.debug(file_path)
-            invocation = Invocation.from_dict(json.load(open(file_path, 'r')))
-
-            if invocation.state == InvocationState.IN_PROGRESS:
-                invocation.stdout = InvocationWorkerProcess.read_file(InvocationWorkerProcess.IN_PROGRESS_STDOUT_FILE)
-                invocation.stderr = InvocationWorkerProcess.read_file(InvocationWorkerProcess.IN_PROGRESS_STDERR_FILE)
-
-            invocations.append(invocation)
-
-        if invocations:
-            invocations.sort(
-                key=lambda x: datetime.datetime.strptime(
-                    x.timestamp,
-                    '%Y-%m-%dT%H:%M:%S.%f+00:00'
-                ),
-                reverse=True
-            )
-
-        return invocations
-
-    @classmethod
-    def latest_invocation(cls) -> Optional[Invocation]:
-        all_invocations = cls.invocation_history()
-        try:
-            return next(all_invocations)
-        except StopIteration:
-            return None
-    """
 
     @classmethod
     def load_invocation(cls, session_token: str) -> Optional[Invocation]:
@@ -188,8 +157,9 @@ class InvocationService:
             if inv.state == InvocationState.IN_PROGRESS:
                 inv.stdout = InvocationWorkerProcess.read_file(xopera_util.stdout_file(inv.session_token))
                 inv.stderr = InvocationWorkerProcess.read_file(xopera_util.stderr_file(inv.session_token))
-                location = xopera_util.deployment_location(inv.session_token, inv.blueprint_token)
-                inv.instance_state = InvocationService.get_instance_state(location)
+                # takes way too much time
+                # location = xopera_util.deployment_location(inv.session_token, inv.blueprint_token)
+                # inv.instance_state = InvocationService.get_instance_state(location)
 
             return inv
 
@@ -221,6 +191,12 @@ class InvocationService:
         SQL_database.update_deployment_log(inv.blueprint_token, logfile, inv.session_token, inv.timestamp)
 
     @classmethod
+    def remove_inputs(cls, location):
+        with xopera_util.cwd(location):
+            opera_storage = Storage.create(".opera")
+            opera_storage.write('{}', "inputs")
+
+    @classmethod
     # TODO get rid of saving to git after job
     def save_to_git(cls, inv: Invocation, location):
         # save deployment data to database
@@ -243,7 +219,7 @@ class InvocationService:
     @classmethod
     def get_instance_state(cls, location):
         json_dict = {}
-        for file_path in Path(location / '.opera' / 'instances' ).glob("*"):
+        for file_path in Path(location / '.opera' / 'instances').glob("*"):
             parsed = json.load(open(file_path, 'r'))
             component_name = parsed['tosca_name']['data']
             json_dict[component_name] = parsed['state']['data']
