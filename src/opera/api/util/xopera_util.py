@@ -4,29 +4,10 @@ import os
 import pwd
 import re
 import shutil
-import uuid
 from pathlib import Path
 from contextlib import contextmanager
 
 from opera.api.settings import Settings
-
-
-def deployment_location(session_token: uuid, blueprint_token: uuid):
-    return Path(Settings.deployment_data) / Path(str(blueprint_token) / Path(str(session_token)))
-
-
-def stdout_file(session_token: uuid):
-    stdstream_dir(session_token).mkdir(parents=True, exist_ok=True)
-    return Settings.inprogress / session_token / 'stdout.txt'
-
-
-def stderr_file(session_token: uuid):
-    stdstream_dir(session_token).mkdir(parents=True, exist_ok=True)
-    return Settings.inprogress / session_token / 'stderr.txt'
-
-
-def stdstream_dir(session_token: uuid):
-    return Settings.inprogress / session_token
 
 
 @contextmanager
@@ -37,21 +18,6 @@ def cwd(path):
         yield
     finally:
         os.chdir(oldpwd)
-
-
-def parse_path(path: Path):
-    session_token = path.name
-    blueprint_token = path.parent.name
-
-    # test everything is ok
-    try:
-        uuid.UUID(session_token)
-        uuid.UUID(blueprint_token)
-    except ValueError:
-        return None, None
-    if not path.parent.parent == Path(Settings.deployment_data):
-        return None, None
-    return blueprint_token, session_token
 
 
 def configure_ssh_keys():
@@ -101,34 +67,26 @@ def configure_ssh_keys():
     log.info("key '{}' added".format(Settings.key_pair))
 
 
-def clean_deployment_data():
-    if Path(Settings.deployment_data).exists():
-        shutil.rmtree(Settings.deployment_data)
-    os.mkdir(Settings.deployment_data)
-    Path(Path(Settings.deployment_data) / Path(".gitignore")).write_text("*")
+def init_dir(dir_path: str, clean=False):
+    path = Path(dir_path)
+    if clean and path.exists():
+        shutil.rmtree(path)
+    path.mkdir(parents=True, exist_ok=True)
 
 
-def parse_log(deploy_location: Path):
-    with (deploy_location / Settings.logfile_name).open('r') as file:
-        logfile = file.readlines()
-        log_str = "".join(logfile[:-1]).casefold()
-    try:
-        status_code = int(logfile[-1])
-        state = "done" if status_code == 0 else "failed"
-    except ValueError:
-        log.warning('Could not read xopera exit code, obtaining status from stacktrace...')
-        failed_keywords = ["fail", "traceback", "error"]
-        state = "failed" if len([i for i in failed_keywords if i in log_str]) != 0 else "done"
-
-    return state, log_str
+def init_data():
+    init_dir(Settings.STDFILE_DIR, clean=True)
+    init_dir(Settings.INVOCATION_DIR)
+    init_dir(Settings.DEPLOYMENT_DIR, clean=True)
 
 
-def save_version_tag(deploy_location: Path, version_tag: str):
-    with (deploy_location / "version_tag").open('w') as file:
-        file.write(str(version_tag))
+def clear_invocation_data():
+    if Path(Settings.INVOCATION_DIR).exists():
+        shutil.rmtree(Settings.INVOCATION_DIR)
 
 
-def read_version_tag(deploy_location: Path):
-    version_tag = (deploy_location / "version_tag").open('r').read()
-    (deploy_location / "version_tag").unlink()
-    return version_tag
+def clear_data():
+    shutil.rmtree(Settings.STDFILE_DIR)
+    shutil.rmtree(Settings.INVOCATION_DIR)
+    shutil.rmtree(Settings.DEPLOYMENT_DIR)
+

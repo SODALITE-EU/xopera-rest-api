@@ -13,7 +13,7 @@ Settings.load_settings()
 
 
 def main():
-    xopera_util.clean_deployment_data()
+    xopera_util.init_data()
     xopera_util.configure_ssh_keys()
 
     if DEBUG:

@@ -7,7 +7,7 @@ import typing
 import uuid
 import shutil
 from pathlib import Path
-from typing import List, Optional
+from typing import Optional
 
 from opera.commands.deploy import deploy as opera_deploy
 from opera.commands.undeploy import undeploy as opera_undeploy
@@ -40,11 +40,11 @@ class InvocationWorkerProcess(multiprocessing.Process):
 
         while True:
             inv: Invocation = work_queue.get(block=True)
-            location = xopera_util.deployment_location(inv.session_token, inv.blueprint_token)
+            location = InvocationService.deployment_location(inv.session_token, inv.blueprint_token)
 
             # stdout&err
-            file_stdout = open(xopera_util.stdout_file(inv.session_token), "w")
-            file_stderr = open(xopera_util.stderr_file(inv.session_token), "w")
+            file_stdout = open(InvocationService.stdout_file(inv.session_token), "w")
+            file_stderr = open(InvocationService.stderr_file(inv.session_token), "w")
 
             os.dup2(file_stdout.fileno(), 1)
             os.dup2(file_stderr.fileno(), 2)
@@ -72,8 +72,8 @@ class InvocationWorkerProcess(multiprocessing.Process):
                 inv.exception = "{}: {}\n\n{}".format(e.__class__.__name__, str(e), traceback.format_exc())
 
             instance_state = InvocationService.get_instance_state(location)
-            stdout = InvocationWorkerProcess.read_file(xopera_util.stdout_file(inv.session_token))
-            stderr = InvocationWorkerProcess.read_file(xopera_util.stderr_file(inv.session_token))
+            stdout = InvocationWorkerProcess.read_file(InvocationService.stdout_file(inv.session_token))
+            stderr = InvocationWorkerProcess.read_file(InvocationService.stderr_file(inv.session_token))
             file_stdout.truncate()
             file_stderr.truncate()
 
@@ -92,7 +92,7 @@ class InvocationWorkerProcess(multiprocessing.Process):
 
             # clean
             shutil.rmtree(location)
-            shutil.rmtree(xopera_util.stdstream_dir(inv.session_token))
+            shutil.rmtree(InvocationService.stdstream_dir(inv.session_token))
 
             # create logfile
             InvocationService.write_invocation(inv)
@@ -102,6 +102,8 @@ class InvocationWorkerProcess(multiprocessing.Process):
         with xopera_util.cwd(location):
             opera_storage = Storage.create(".opera")
             service_template = str(entry_definitions(location))
+            print(service_template)
+            print(location)
             opera_deploy(service_template, inputs, opera_storage,
                          verbose_mode=True, num_workers=num_workers, delete_existing_state=True)
 
@@ -120,6 +122,10 @@ class InvocationWorkerProcess(multiprocessing.Process):
 
 
 class InvocationService:
+    # STDFILE_DIR = ".opera-api/in_progress"
+    # INVOCATION_DIR = ".opera-api/invocations"
+    # DEPLOYMENT_DIR = ".opera-api/deployment_dir"
+
     def __init__(self):
         self.work_queue: multiprocessing.Queue = multiprocessing.Queue()
         self.worker = InvocationWorkerProcess(self.work_queue)
@@ -143,20 +149,39 @@ class InvocationService:
         inv.exception = None
         inv.stdout = None
         inv.stderr = None
+        self.stdstream_dir(inv.session_token).mkdir(parents=True, exist_ok=True)
         self.write_invocation(inv)
 
         self.work_queue.put(inv)
         return inv
 
     @classmethod
+    def stdstream_dir(cls, session_token: uuid) -> Path:
+        # _dir = Path(cls.STDFILE_DIR) / session_token
+        # _dir.mkdir(parents=True, exist_ok=True)
+        return Path(Settings.STDFILE_DIR) / session_token
+
+    @classmethod
+    def stdout_file(cls, session_token: str) -> Path:
+        return cls.stdstream_dir(session_token) / 'stdout.txt'
+
+    @classmethod
+    def stderr_file(cls, session_token: str) -> Path:
+        return cls.stdstream_dir(session_token) / 'stderr.txt'
+
+    @classmethod
+    def deployment_location(cls, session_token: uuid, blueprint_token: uuid) -> Path:
+        return (Path(Settings.DEPLOYMENT_DIR) / blueprint_token / session_token).absolute()
+
+    @classmethod
     def load_invocation(cls, session_token: str) -> Optional[Invocation]:
-        storage = Storage.create(".opera-api")
+        storage = Storage.create(Settings.INVOCATION_DIR)
         file_path = f"invocation-{session_token}.json"
         try:
             inv = Invocation.from_dict(storage.read_json(file_path))
             if inv.state == InvocationState.IN_PROGRESS:
-                inv.stdout = InvocationWorkerProcess.read_file(xopera_util.stdout_file(inv.session_token))
-                inv.stderr = InvocationWorkerProcess.read_file(xopera_util.stderr_file(inv.session_token))
+                inv.stdout = InvocationWorkerProcess.read_file(cls.stdout_file(inv.session_token))
+                inv.stderr = InvocationWorkerProcess.read_file(cls.stderr_file(inv.session_token))
                 # takes way too much time
                 # location = xopera_util.deployment_location(inv.session_token, inv.blueprint_token)
                 # inv.instance_state = InvocationService.get_instance_state(location)
@@ -168,7 +193,7 @@ class InvocationService:
 
     @classmethod
     def write_invocation(cls, inv: Invocation):
-        storage = Storage.create(".opera-api")
+        storage = Storage.create(Settings.INVOCATION_DIR)
         filename = "invocation-{}.json".format(inv.session_token)
         dump = json.dumps(inv.to_dict())
         storage.write(dump, filename)
@@ -186,7 +211,7 @@ class InvocationService:
             "log": inv.stdout
         }
 
-        logfile = json.dumps(json_log, indent=2, sort_keys=False)
+        logfile = json.dumps(inv.to_dict(), indent=2, sort_keys=False)
 
         SQL_database.update_deployment_log(inv.blueprint_token, logfile, inv.session_token, inv.timestamp)
 

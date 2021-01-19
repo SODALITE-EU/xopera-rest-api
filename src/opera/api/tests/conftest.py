@@ -17,7 +17,8 @@ from opera.api.util import xopera_util
 def client():
     """An application for the tests."""
     try:
-        xopera_util.clean_deployment_data()
+        xopera_util.clear_invocation_data()
+        xopera_util.init_data()
     except FileExistsError:
         pass
     with test().app.test_client() as client:
@@ -25,7 +26,7 @@ def client():
     kill_tree(os.getpid(), including_parent=False)
 
     try:
-        xopera_util.clean_deployment_data()
+        xopera_util.clear_data()
     except FileExistsError:
         pass
 

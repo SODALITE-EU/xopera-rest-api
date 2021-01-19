@@ -16,10 +16,10 @@ class Settings:
     key_pair = ""
 
     # deployment config
-    deployment_data = implementation_dir / Path('deployment_data')
-    inprogress = implementation_dir / Path('in_progress')
-    interpreter = 'python3'
-    logfile_name = "logs.log"
+    API_WORKDIR = ".opera-api"
+    STDFILE_DIR = f"{API_WORKDIR}/in_progress"
+    INVOCATION_DIR = f"{API_WORKDIR}/invocations"
+    DEPLOYMENT_DIR = f"{API_WORKDIR}/deployment_dir"
 
     # sql_database config
     sql_config = None
@@ -27,7 +27,7 @@ class Settings:
     git_log_table = None
 
     # OfflineStorage database (alternative to sql_database) config
-    offline_storage = implementation_dir / Path('storage')
+    offline_storage = Path(API_WORKDIR) / Path('storage')
     offline_deployment_log = offline_storage / Path('deployment_log')
     offline_git_log = offline_storage / Path('git_log')
 

@@ -4,7 +4,7 @@ import time
 from assertpy import assert_that, fail
 
 from opera.api.util import timestamp_util
-from opera.api.openapi.models import InvocationState
+from opera.api.openapi.models import InvocationState, OperationType
 
 
 class TestDeploy:
@@ -12,13 +12,14 @@ class TestDeploy:
     @staticmethod
     def monitor(client, session_token, timeout=10):
         time_start = time.time()
-        while time.time() - time_start < timeout:
+        while time.time() - time_start < 20:
             resp = client.get(f"/info/status?token={session_token}")
+            print(resp.json)
             if resp.json['state'] not in [InvocationState.PENDING, InvocationState.IN_PROGRESS]:
                 return True, resp
 
             time.sleep(1)
-        resp = client.get(f"/info/log/deployment?session_token={session_token}")        
+        resp = client.get(f"/info/log/deployment?session_token={session_token}")
         return False, resp
 
     def test_deploy_json_keys_error(self, client):
@@ -100,10 +101,9 @@ class TestDeploy:
                                                     'timestamp', 'state', 'operation',
                                                     'instance_state', 'stderr', 'stdout',
                                                     'exception', 'inputs', 'version_tag')
-        
+
         # print status
         print(resp_status.json)
-
 
         # check logs
 
@@ -112,16 +112,17 @@ class TestDeploy:
 
         log = resp_log.json[0]
         print(log)
-        assert_that(log).contains_only('session_token', 'blueprint_token', 'job', 'state',
-                                       'timestamp_start', 'timestamp_end', 'log')
+        assert_that(log).contains_only('session_token', 'blueprint_token',
+                                       'timestamp', 'state', 'operation',
+                                       'instance_state', 'stderr', 'stdout',
+                                       'exception', 'inputs', 'version_tag')
         try:
-            timestamp_util.str_to_datetime(log['timestamp_start'])
-            timestamp_util.str_to_datetime(log['timestamp_end'])
+            timestamp_util.str_to_datetime(log['timestamp'])
         except ValueError:
             fail('Incorrect timestamp format, should be "%Y-%m-%dT%H:%M:%S.%f%z"')
         assert_that(log['session_token']).is_equal_to(session_token)
         assert_that(log['blueprint_token']).is_equal_to(blueprint_token)
-        assert_that(log['job']).is_equal_to('deploy')
+        assert_that(log['operation']).is_equal_to(OperationType.DEPLOY)
         assert_that(log['state']).is_equal_to(InvocationState.SUCCESS)
 
     def test_deploy_fail(self, client, csar_corrupt):
