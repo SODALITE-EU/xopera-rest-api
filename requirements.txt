@@ -1,5 +1,5 @@
 # xopera-opera
-opera==0.6.2
+opera==0.6.4
 
 # openstack
 openstacksdk==0.52.0

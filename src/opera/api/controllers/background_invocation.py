@@ -9,7 +9,7 @@ import shutil
 from pathlib import Path
 from typing import Optional
 
-from opera.commands.deploy import deploy as opera_deploy
+from opera.commands.deploy import deploy_service_template as opera_deploy
 from opera.commands.undeploy import undeploy as opera_undeploy
 from opera.storage import Storage
 
