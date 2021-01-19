@@ -15,11 +15,16 @@ class GitDB:
     def __init__(self, **kwargs):
         self.connection = gitCsarDB.connect(**kwargs)
 
-    def check_token_exists(self, blueprint_token: str):
+    def check_token_exists(self, blueprint_token: str) -> bool:
         """
         check if blueprint_token exists in database
         """
         return self.connection.CSAR_exists(blueprint_token)
+
+    def version_exists(self, blueprint_token: str, version_tag=None) -> bool:
+        if not version_tag:
+            return self.connection.CSAR_exists(blueprint_token)
+        return self.connection.tag_exists(blueprint_token, version_tag)
 
     def add_tag(self, blueprint_token: uuid, commit_sha: str, tag: str, tag_msg: str):
         """

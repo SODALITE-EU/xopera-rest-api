@@ -147,6 +147,10 @@ class GitCsarDB:
         repo_name = self.repo_name(csar_token)
         return self.git_connector.get_tag_msg(repo_name=repo_name, tag=tag_name)
 
+    def tag_exists(self, csar_token, tag_name):
+        repo_name = self.repo_name(csar_token)
+        return self.git_connector.tag_exists(repo_name=repo_name, tag_name=tag_name)
+
     def get_tags_list(self, csar_token):
         repo_path = self.generate_repo_path(csar_token)
         shutil.rmtree(path=repo_path, ignore_errors=True)

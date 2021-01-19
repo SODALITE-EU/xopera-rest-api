@@ -13,7 +13,7 @@ Settings.load_settings()
 
 
 def main():
-    xopera_util.clean_deployment_data()
+    xopera_util.init_data()
     xopera_util.configure_ssh_keys()
 
     if DEBUG:
@@ -39,6 +39,7 @@ def test():
     ))
     app.app.json_encoder = encoder.JSONEncoder
     app.add_api("openapi.yaml")
+    app.testing = True
     return app
 
 

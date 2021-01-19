@@ -668,10 +668,57 @@ components:
         force:
           type: boolean
           description: did we do it with force or not
-  responses:
-    MaskError:
-      description: When any error occurs on mask
-      content: {}
-    ParseError:
-      description: When a mask can't be parsed
-      content: {}
+    Invocation:
+      description: An invocation of the deployment.
+      type: object
+      required:
+        - blueprint_token
+        - session_token
+        - state
+        - operation
+        - timestamp
+      properties:
+        blueprint_token:
+          type: string
+        version_tag:
+          type: string
+        session_token:
+          type: string
+        state:
+          $ref: "#/components/schemas/InvocationState"
+        operation:
+          $ref: "#/components/schemas/OperationType"
+        timestamp:
+          description: An ISO8601 timestamp of the invocation.
+          type: string
+        inputs:
+          description: Inputs provided for invocation.
+          type: object
+          additionalProperties:
+            type: string
+        instance_state:
+          description: State of the instances defined in service template.
+          type: object
+          additionalProperties:
+            type: string
+        exception:
+          description: An internal xOpera error that occurred during the operation.
+          type: string
+        stdout:
+          description: xOpera console output for operation.
+          type: string
+        stderr:
+          description: xOpera error output for operation.
+          type: string
+    InvocationState:
+      type: string
+      enum:
+        - pending
+        - in_progress
+        - success
+        - failed
+    OperationType:
+      type: string
+      enum:
+        - deploy
+        - undeploy

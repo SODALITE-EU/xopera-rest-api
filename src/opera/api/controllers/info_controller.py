@@ -3,14 +3,18 @@ import json
 from opera.api.openapi.models.just_message import JustMessage
 # from opera.api.openapi.models.deployment_log import DeploymentLog
 from opera.api.openapi.models.git_log import GitLog
-from opera.api.service import info_service, csardb_service, sqldb_service
+from opera.api.service import csardb_service, sqldb_service
 from opera.api.log import get_logger
 from opera.api.settings import Settings
+from opera.api.openapi.models import Invocation, InvocationState, OperationType
+from opera.api.controllers.background_invocation import InvocationService
+
 
 logger = get_logger(__name__)
 
 CSAR_db = csardb_service.GitDB(**Settings.git_config)
 SQL_database = sqldb_service.connect(Settings.sql_config)
+invocation_service = InvocationService()
 
 
 def get_deploy_log(blueprint_token=None, session_token=None):
@@ -60,8 +64,14 @@ def get_status(format=None, token=None):
 
     :rtype: None
     """
-    logger.debug(f"session_token: '{token}'")
-
-    json_output, status_code = info_service.check_status(session_token=token, format=format)
-    logger.debug(json.dumps(json_output, indent=2, sort_keys=True))
-    return json_output, status_code
+    inv = invocation_service.load_invocation(token)
+    if inv is None:
+        return {'message': f'Could not find session with session_token {token}'}, 404
+    code = {
+        InvocationState.PENDING: 202,
+        InvocationState.IN_PROGRESS: 202,
+        InvocationState.SUCCESS: 201,
+        InvocationState.FAILED: 500
+    }
+    logger.debug(json.dumps(inv.to_dict(), indent=2, sort_keys=True))
+    return inv.to_dict(), code[inv.state]
