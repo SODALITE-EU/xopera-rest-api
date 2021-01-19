@@ -122,17 +122,14 @@ class InvocationWorkerProcess(multiprocessing.Process):
 
 
 class InvocationService:
-    # STDFILE_DIR = ".opera-api/in_progress"
-    # INVOCATION_DIR = ".opera-api/invocations"
-    # DEPLOYMENT_DIR = ".opera-api/deployment_dir"
 
     def __init__(self):
         self.work_queue: multiprocessing.Queue = multiprocessing.Queue()
         self.worker = InvocationWorkerProcess(self.work_queue)
         self.worker.start()
 
-    def invoke(self, operation_type: OperationType, blueprint_token: str, version_tag: Optional[str], inputs: Optional[dict]) \
-            -> Invocation:
+    def invoke(self, operation_type: OperationType, blueprint_token: str, version_tag: Optional[str], workers: int,
+               resume: bool, inputs: Optional[dict]) -> Invocation:
         invocation_uuid = str(uuid.uuid4())
         now = datetime.datetime.now(tz=datetime.timezone.utc)
         logger.info("Invoking %s with ID %s at %s", operation_type, invocation_uuid, now.isoformat())
@@ -149,6 +146,8 @@ class InvocationService:
         inv.exception = None
         inv.stdout = None
         inv.stderr = None
+        inv.workers = workers
+        inv.resume = resume
         self.stdstream_dir(inv.session_token).mkdir(parents=True, exist_ok=True)
         self.write_invocation(inv)
 
