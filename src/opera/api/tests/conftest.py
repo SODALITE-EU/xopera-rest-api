@@ -21,12 +21,14 @@ def client():
         xopera_util.init_data()
     except FileExistsError:
         pass
+    os.environ['LOG_LEVEL'] = 'debug'
     with test().app.test_client() as client:
         yield client
     kill_tree(os.getpid(), including_parent=False)
 
     try:
         xopera_util.clear_data()
+        xopera_util.clear_offline_storage()
     except FileExistsError:
         pass
 

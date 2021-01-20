@@ -90,3 +90,7 @@ def clear_data():
     shutil.rmtree(Settings.INVOCATION_DIR)
     shutil.rmtree(Settings.DEPLOYMENT_DIR)
 
+
+def clear_offline_storage():
+    shutil.rmtree(Settings.offline_storage)
+

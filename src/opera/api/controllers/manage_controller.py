@@ -151,8 +151,6 @@ def post_new_blueprint_csar(revision_msg=None):
     """
     Add new blueprint
 
-    :param csar: TOSCA Cloud Service Archive
-    :type csar: str
     :param revision_msg: Optional comment on submission
     :type revision_msg: str
 

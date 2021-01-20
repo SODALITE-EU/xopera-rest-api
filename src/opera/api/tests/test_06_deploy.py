@@ -20,7 +20,7 @@ class TestDeploy:
     @staticmethod
     def monitor(client, session_token, timeout=10):
         time_start = time.time()
-        while time.time() - time_start < timeout:
+        while time.time() - time_start < 20:
             resp = client.get(f"/info/status?token={session_token}")
             if resp.json['state'] not in [InvocationState.PENDING, InvocationState.IN_PROGRESS]:
                 return True, resp

@@ -6,7 +6,7 @@ from pathlib import Path
 from werkzeug.datastructures import FileStorage
 
 from opera.api import gitCsarDB
-from opera.api.blueprint_converters import csar_to_blueprint #, blueprint_to_csar_simple
+from opera.api.blueprint_converters import csar_to_blueprint
 from opera.api.blueprint_converters.blueprint2CSAR import validate_csar
 from opera.api.util.timestamp_util import datetime_now_to_string
 
@@ -44,7 +44,8 @@ class GitDB:
         saves blueprint into database. One of (CSAR, blueprint_path) must not be None. If blueprint_token is None,
         it is generated and returned together with version_id
 
-        if minor_to_increment not None, minor version of tag will be incremented, else, major version (of all tags) will be incremented
+        if minor_to_increment not None, minor version of tag will be incremented, else, major version (of all tags)
+        will be incremented
         """
         token = uuid.uuid4() if not blueprint_token else blueprint_token
         path = Path(f'/tmp/{uuid.uuid4()}') if not blueprint_path else blueprint_path

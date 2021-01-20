@@ -236,11 +236,6 @@ paths:
       - info
       operationId: get_status
       parameters:
-      - name: format
-        in: query
-        description: long or short
-        schema:
-          type: string
       - name: token
         in: query
         description: session_token
