@@ -1,12 +1,11 @@
 import json
 
 from opera.api.openapi.models.just_message import JustMessage
-# from opera.api.openapi.models.deployment_log import DeploymentLog
 from opera.api.openapi.models.git_log import GitLog
 from opera.api.service import csardb_service, sqldb_service
 from opera.api.log import get_logger
 from opera.api.settings import Settings
-from opera.api.openapi.models import Invocation, InvocationState, OperationType
+from opera.api.openapi.models import InvocationState
 from opera.api.controllers.background_invocation import InvocationService
 
 
@@ -48,17 +47,15 @@ def get_git_log(blueprint_token, version_tag=None, fetch_all=False):
     :rtype: None
     """
 
-    data = SQL_database.get_git_transaction_data(blueprint_token=blueprint_token, version_tag=version_tag, all=fetch_all)
+    data = SQL_database.get_git_transaction_data(blueprint_token, version_tag, fetch_all)
     if not data:
         return JustMessage("Log file not found"), 400
     return [GitLog.from_dict(item) for item in data], 200
 
 
-def get_status(format=None, token=None):
+def get_status(token=None):
     """Obtain job status
 
-    :param format: long or short
-    :type format: str
     :param token: session_token
     :type token: str
 

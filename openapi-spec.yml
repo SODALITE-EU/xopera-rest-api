@@ -79,6 +79,19 @@ paths:
         description: version_tag to deploy
         schema:
           type: string
+      - name: workers
+        in: query
+        description: Number of workers
+        schema:
+          type: integer
+          default: 1
+      - name: resume
+        in: query
+        description: Resume deploy
+        schema:
+          type: boolean
+          default: False
+
       requestBody:
         content:
           multipart/form-data:
@@ -119,6 +132,12 @@ paths:
         description: version_tag to deploy
         schema:
           type: string
+      - name: workers
+        in: query
+        description: Number of workers
+        schema:
+          type: integer
+          default: 1
       requestBody:
         content:
           multipart/form-data:
@@ -217,11 +236,6 @@ paths:
       - info
       operationId: get_status
       parameters:
-      - name: format
-        in: query
-        description: long or short
-        schema:
-          type: string
       - name: token
         in: query
         description: session_token
@@ -710,6 +724,12 @@ components:
         stderr:
           description: xOpera error output for operation.
           type: string
+        workers:
+          description: Number of workers for paralell execution
+          type: integer
+        resume:
+          description: Resume deployment (instead of starting clean)
+          type: boolean
     InvocationState:
       type: string
       enum:

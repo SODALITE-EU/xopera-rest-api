@@ -8,13 +8,20 @@ from opera.api.openapi.models import InvocationState, OperationType
 
 
 class TestDeploy:
+    inv_keys = ['session_token', 'blueprint_token',
+                'timestamp', 'state', 'operation',
+                'instance_state', 'stderr', 'stdout',
+                'exception', 'inputs', 'version_tag',
+                'workers', 'resume']
+    inv_keys_small = ['session_token', 'blueprint_token',
+                      'timestamp', 'state', 'operation',
+                      'workers', 'resume']
 
     @staticmethod
     def monitor(client, session_token, timeout=10):
         time_start = time.time()
         while time.time() - time_start < 20:
             resp = client.get(f"/info/status?token={session_token}")
-            print(resp.json)
             if resp.json['state'] not in [InvocationState.PENDING, InvocationState.IN_PROGRESS]:
                 return True, resp
 
@@ -39,8 +46,7 @@ class TestDeploy:
 
         # deploy and check deploy message
         resp = client.post(f"/deploy/{blueprint_token}")
-        assert_that(resp.json).contains_only('session_token', 'blueprint_token',
-                                             'timestamp', 'state', 'operation')
+        assert_that(resp.json).contains_only(*self.inv_keys_small)
         assert_that(resp.json['blueprint_token']).is_equal_to(blueprint_token)
         assert_that(resp.status_code).is_equal_to(202)
 
@@ -97,13 +103,7 @@ class TestDeploy:
         assert_that(resp_status.json['state']).is_equal_to(InvocationState.SUCCESS)
         assert_that(resp_status.status_code).is_equal_to(201)
 
-        assert_that(resp_status.json).contains_only('session_token', 'blueprint_token',
-                                                    'timestamp', 'state', 'operation',
-                                                    'instance_state', 'stderr', 'stdout',
-                                                    'exception', 'inputs', 'version_tag')
-
-        # print status
-        print(resp_status.json)
+        assert_that(resp_status.json).contains_only(*self.inv_keys)
 
         # check logs
 
@@ -111,11 +111,7 @@ class TestDeploy:
         assert_that(len(resp_log.json)).is_equal_to(1)
 
         log = resp_log.json[0]
-        print(log)
-        assert_that(log).contains_only('session_token', 'blueprint_token',
-                                       'timestamp', 'state', 'operation',
-                                       'instance_state', 'stderr', 'stdout',
-                                       'exception', 'inputs', 'version_tag')
+        assert_that(log).contains_only(*self.inv_keys)
         try:
             timestamp_util.str_to_datetime(log['timestamp'])
         except ValueError:

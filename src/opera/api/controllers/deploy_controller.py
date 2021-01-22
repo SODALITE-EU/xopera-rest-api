@@ -17,7 +17,7 @@ SQL_database = sqldb_service.connect(Settings.sql_config)
 invocation_service = InvocationService()
 
 
-def post_deploy(blueprint_token, version_tag=None):
+def post_deploy(blueprint_token, version_tag=None, workers=1, resume=False):
     """
     Deploy blueprint
 
@@ -25,6 +25,10 @@ def post_deploy(blueprint_token, version_tag=None):
     :type blueprint_token: str
     :param version_tag: version_tag to deploy
     :type version_tag: str
+    :param workers: Number of workers
+    :type workers: int
+    :param resume: Resume deploy
+    :type resume: bool
 
     :rtype: BlueprintMetadata
     """
@@ -38,6 +42,6 @@ def post_deploy(blueprint_token, version_tag=None):
         return JustMessage(
             f"Did not find blueprint with token: {blueprint_token} and version_id: {version_tag or 'any'}"), 404
 
-    result = invocation_service.invoke(OperationType.DEPLOY, blueprint_token, version_tag, inputs)
+    result = invocation_service.invoke(OperationType.DEPLOY, blueprint_token, version_tag, workers, resume, inputs)
     logger.info(f"Deploying '{blueprint_token}', version_tag: {version_tag}")
     return result, 202

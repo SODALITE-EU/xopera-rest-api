@@ -17,7 +17,7 @@ SQL_database = sqldb_service.connect(Settings.sql_config)
 invocation_service = InvocationService()
 
 
-def delete_deploy(blueprint_token, version_tag=None):
+def delete_deploy(blueprint_token, version_tag=None, workers=1):
     """
     Undeploy blueprint
 
@@ -25,6 +25,8 @@ def delete_deploy(blueprint_token, version_tag=None):
     :type blueprint_token: str
     :param version_tag: version_tag to deploy
     :type version_tag: str
+    :param workers: Number of workers
+    :type workers: int
 
     :rtype: BlueprintMetadata
     """
@@ -43,7 +45,7 @@ def delete_deploy(blueprint_token, version_tag=None):
         if git_util.after_job_commit_msg(token=blueprint_token, mode='deploy') not in last_message:
             return JustMessage(f"Blueprint with token: {blueprint_token}, and version_tag: {version_tag or 'any'} "
                                f"has not been deployed yet, cannot undeploy"), 403
-
-    result = invocation_service.invoke(OperationType.UNDEPLOY, blueprint_token, version_tag, inputs)
+    resume = False
+    result = invocation_service.invoke(OperationType.UNDEPLOY, blueprint_token, version_tag, workers, resume, inputs)
     logger.info(f"Deploying '{blueprint_token}', version_tag: {version_tag}")
     return result, 202

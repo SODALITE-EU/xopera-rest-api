@@ -58,9 +58,9 @@ class InvocationWorkerProcess(multiprocessing.Process):
 
             try:
                 if inv.operation == OperationType.DEPLOY:
-                    InvocationWorkerProcess._deploy(location, inv.inputs, num_workers=1)
+                    InvocationWorkerProcess._deploy(location, inv.inputs, num_workers=inv.workers, resume=inv.resume)
                 elif inv.operation == OperationType.UNDEPLOY:
-                    InvocationWorkerProcess._undeploy(location, inv.inputs, num_workers=1)
+                    InvocationWorkerProcess._undeploy(location, inv.inputs, num_workers=inv.workers)
                 else:
                     raise RuntimeError("Unknown operation type:" + str(inv.operation))
 
@@ -98,14 +98,12 @@ class InvocationWorkerProcess(multiprocessing.Process):
             InvocationService.write_invocation(inv)
 
     @staticmethod
-    def _deploy(location: Path, inputs: typing.Optional[dict], num_workers: int):
+    def _deploy(location: Path, inputs: typing.Optional[dict], num_workers: int, resume: bool):
         with xopera_util.cwd(location):
             opera_storage = Storage.create(".opera")
             service_template = str(entry_definitions(location))
-            print(service_template)
-            print(location)
             opera_deploy(service_template, inputs, opera_storage,
-                         verbose_mode=True, num_workers=num_workers, delete_existing_state=True)
+                         verbose_mode=True, num_workers=num_workers, delete_existing_state=(not resume))
 
     @staticmethod
     def _undeploy(location: Path, inputs: typing.Optional[dict], num_workers: int):
@@ -122,17 +120,14 @@ class InvocationWorkerProcess(multiprocessing.Process):
 
 
 class InvocationService:
-    # STDFILE_DIR = ".opera-api/in_progress"
-    # INVOCATION_DIR = ".opera-api/invocations"
-    # DEPLOYMENT_DIR = ".opera-api/deployment_dir"
 
     def __init__(self):
         self.work_queue: multiprocessing.Queue = multiprocessing.Queue()
         self.worker = InvocationWorkerProcess(self.work_queue)
         self.worker.start()
 
-    def invoke(self, operation_type: OperationType, blueprint_token: str, version_tag: Optional[str], inputs: Optional[dict]) \
-            -> Invocation:
+    def invoke(self, operation_type: OperationType, blueprint_token: str, version_tag: Optional[str], workers: int,
+               resume: bool, inputs: Optional[dict]) -> Invocation:
         invocation_uuid = str(uuid.uuid4())
         now = datetime.datetime.now(tz=datetime.timezone.utc)
         logger.info("Invoking %s with ID %s at %s", operation_type, invocation_uuid, now.isoformat())
@@ -149,6 +144,8 @@ class InvocationService:
         inv.exception = None
         inv.stdout = None
         inv.stderr = None
+        inv.workers = workers
+        inv.resume = resume
         self.stdstream_dir(inv.session_token).mkdir(parents=True, exist_ok=True)
         self.write_invocation(inv)
 
@@ -157,8 +154,6 @@ class InvocationService:
 
     @classmethod
     def stdstream_dir(cls, session_token: uuid) -> Path:
-        # _dir = Path(cls.STDFILE_DIR) / session_token
-        # _dir.mkdir(parents=True, exist_ok=True)
         return Path(Settings.STDFILE_DIR) / session_token
 
     @classmethod
@@ -200,19 +195,7 @@ class InvocationService:
 
     @classmethod
     def save_to_database(cls, inv: Invocation):
-        now = datetime.datetime.now(tz=datetime.timezone.utc)
-        json_log = {
-            "session_token": inv.session_token,
-            "blueprint_token": inv.blueprint_token,
-            "job": inv.operation,
-            "state": inv.state,
-            "timestamp_start": inv.timestamp,
-            "timestamp_end": now.isoformat(),
-            "log": inv.stdout
-        }
-
         logfile = json.dumps(inv.to_dict(), indent=2, sort_keys=False)
-
         SQL_database.update_deployment_log(inv.blueprint_token, logfile, inv.session_token, inv.timestamp)
 
     @classmethod
