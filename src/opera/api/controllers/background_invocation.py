@@ -14,7 +14,7 @@ from opera.commands.undeploy import undeploy as opera_undeploy
 from opera.storage import Storage
 
 
-from opera.api.util import xopera_util, git_util
+from opera.api.util import xopera_util, git_util, file_util
 from opera.api.blueprint_converters.blueprint2CSAR import entry_definitions
 from opera.api.service import csardb_service, sqldb_service
 from opera.api.log import get_logger
@@ -82,12 +82,13 @@ class InvocationWorkerProcess(multiprocessing.Process):
             inv.stderr = stderr
 
             # remove inputs
+            # TODO remove
             InvocationService.remove_inputs(location)
 
             # save logfile to SQL database
             InvocationService.save_to_database(inv)
 
-            # save to git
+            # TODO remove
             InvocationService.save_to_git(inv, location)
 
             # clean
@@ -112,6 +113,10 @@ class InvocationWorkerProcess(multiprocessing.Process):
             if inputs:
                 opera_storage.write_json(inputs, "inputs")
             opera_undeploy(opera_storage, verbose_mode=True, num_workers=num_workers)
+
+    @staticmethod
+    def _redeploy():
+        pass
 
     @staticmethod
     def read_file(filename):
@@ -194,9 +199,21 @@ class InvocationService:
         storage.write(dump, filename)
 
     @classmethod
-    def save_to_database(cls, inv: Invocation):
+    def save_to_database(cls, inv: Invocation) -> None:
         logfile = json.dumps(inv.to_dict(), indent=2, sort_keys=False)
         SQL_database.update_deployment_log(inv.blueprint_token, logfile, inv.session_token, inv.timestamp)
+
+    @classmethod
+    def save_dot_opera_to_db(cls, inv: Invocation, location: Path) -> None:
+        data = file_util.dir_to_json((location / '.opera'))
+        SQL_database.save_session_data(inv.session_token, inv.blueprint_token, inv.version_tag, data)
+
+    @classmethod
+    def read_dot_opera_from_db(cls, session_token_old: str, session_token_new: str) -> Path:
+        blueprint_token, version_tag, tree = SQL_database.get_session_data(session_token_old)
+        location = cls.deployment_location(session_token_new, blueprint_token)
+        file_util.json_to_dir(tree, (location / '.opera'))
+        return location
 
     @classmethod
     def remove_inputs(cls, location):
