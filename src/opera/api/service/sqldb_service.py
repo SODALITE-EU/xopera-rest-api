@@ -13,6 +13,8 @@ from opera.api.util import timestamp_util
 
 
 def connect(sql_config):
+    if Settings.USE_OFFLINE_STORAGE:
+        return OfflineStorage()
     try:
         database = PostgreSQL(sql_config)
         log.info('SQL_database: PostgreSQL')

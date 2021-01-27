@@ -1,7 +1,5 @@
-import time
 import uuid
 
-import requests
 import validators
 from assertpy import assert_that, fail
 
@@ -26,17 +24,11 @@ class TestPostNew:
         assert_that(resp.status_code).is_equal_to(200)
         assert_that(resp.json).is_not_none().contains_only("message", 'blueprint_token', 'url',
                                                            'version_tag', 'users', 'commit_sha', 'timestamp')
-        try:
-            uuid.UUID(resp.get_json()['blueprint_token'])
-        except ValueError:
-            fail('"blueprint_token" from response is not uuid')
+        uuid.UUID(resp.get_json()['blueprint_token'])
 
         assert_that(resp.get_json()['version_tag']).is_equal_to('v1.0')
 
-        try:
-            validators.url(resp.get_json()['url'])
-        except validators.ValidationFailure:
-            fail('Incorrect timestamp format, should be "%Y-%m-%dT%H:%M:%S.%f"')
+        validators.url(resp.get_json()['url'])
 
 
 class TestPostMultipleVersions:

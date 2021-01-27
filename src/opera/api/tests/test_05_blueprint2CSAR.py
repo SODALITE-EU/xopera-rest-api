@@ -5,6 +5,67 @@ import shutil
 import yaml
 
 
+class TestParser:
+
+    def test_name_and_blueprint_dir(self):
+        name = 'template_name'
+        blueprint_dir = 'some_blueprint_dir'
+
+        parser = blueprint2CSAR.parse_args([name, blueprint_dir])
+
+        assert parser.name == name
+        assert parser.blueprint_dir == blueprint_dir
+
+    def test_no_meta(self):
+        parser1 = blueprint2CSAR.parse_args(['name', 'blueprint_dir'])
+        parser2 = blueprint2CSAR.parse_args(['name', 'blueprint_dir', '--no-meta'])
+        assert not parser1.no_meta
+        assert parser2.no_meta
+
+    def test_entry_definitions(self):
+        entry_definitions = 'service.yaml'
+        parser1 = blueprint2CSAR.parse_args(['name', 'blueprint_dir'])
+        parser2 = blueprint2CSAR.parse_args(['name', 'blueprint_dir', '--entry-definitions', entry_definitions])
+        assert parser1.entry_definitions is None
+        assert parser2.entry_definitions == entry_definitions
+
+    def test_other_definitions(self):
+        other_definitions = ['service1.yaml', 'service2.yaml', 'service3.yaml']
+        parser1 = blueprint2CSAR.parse_args(['name', 'blueprint_dir'])
+        parser2 = blueprint2CSAR.parse_args(['name', 'blueprint_dir', '--other-definitions', *other_definitions])
+        assert parser1.other_definitions is None
+        assert parser2.other_definitions == other_definitions
+
+    def test_author(self):
+        author = 'Giacomo Puccini'
+        parser1 = blueprint2CSAR.parse_args(['name', 'blueprint_dir'])
+        parser2 = blueprint2CSAR.parse_args(['name', 'blueprint_dir', '--author', author])
+        assert parser1.author == 'SODALITE blueprint2CSAR tool'
+        assert parser2.author == author
+
+    def test_output(self):
+        output_path = '/tmp/xopera'
+        parser1 = blueprint2CSAR.parse_args(['name', 'blueprint_dir'])
+        parser2 = blueprint2CSAR.parse_args(['name', 'blueprint_dir', '--output', output_path])
+        assert parser1.output is None
+        assert parser2.output == output_path
+
+
+class TestMain:
+
+    def test_main(self, get_workdir_path, CSAR_unpacked):
+
+        blueprint_path = CSAR_unpacked / 'CSAR-ok'
+        outputh_path = f"{get_workdir_path}/csar"
+        outputh_path_with_zip = f"{outputh_path}.zip"
+        parser = blueprint2CSAR.parse_args(['name', str(blueprint_path),
+                                            '--entry-definitions', 'service.yaml',
+                                            '--output', outputh_path])
+        blueprint2CSAR.main(parser)
+
+        assert Path(outputh_path_with_zip).exists()
+
+
 class TestValidate:
 
     def test_not_meta_multiple_yaml(self, CSAR_unpacked):
@@ -138,6 +199,33 @@ class TestToCsar:
                                workdir=workdir,
                                output=output)
 
+    def test_metafile_no_meta(self, get_workdir_path, CSAR_unpacked):
+        blueprint_path = CSAR_unpacked / 'CSAR-no-meta-ok'
+        workdir = get_workdir_path
+        name = 'some_blueprint'
+        output = workdir / f'CSAR-{name}'
+        output_with_zip = Path(f'{output}.zip')
+
+        blueprint2CSAR.to_CSAR(blueprint_name=name,
+                               blueprint_dir=blueprint_path,
+                               entry_definitions=Path('service.yaml'),
+                               workdir=workdir,
+                               output=output)
+
+        assert output_with_zip.exists()
+
+    def test_no_meta_no_meta_success(self, get_workdir_path, CSAR_unpacked):
+        blueprint_path = CSAR_unpacked / 'CSAR-no-meta'
+        workdir = get_workdir_path
+        name = 'some_blueprint'
+        output = workdir / f'CSAR-{name}'
+
+        blueprint2CSAR.to_CSAR(blueprint_name=name,
+                               blueprint_dir=blueprint_path,
+                               no_meta=True,
+                               workdir=workdir,
+                               output=output)
+
     def test_meta_no_entry_definitions(self, get_workdir_path, CSAR_unpacked):
         blueprint_path = CSAR_unpacked / 'CSAR-no-entry-def'
         with pytest.raises(FileNotFoundError):
@@ -154,7 +242,7 @@ class TestToCsar:
                                    entry_definitions=Path('service.yaml'),
                                    workdir=get_workdir_path)
 
-    def test_no_other_definition(self, get_workdir_path, CSAR_unpacked):
+    def test_wrong_other_definition(self, get_workdir_path, CSAR_unpacked):
         blueprint_path = CSAR_unpacked / 'CSAR-wrong-other-def'
         with pytest.raises(TypeError):
             blueprint2CSAR.to_CSAR(blueprint_name='some_blueprint',
@@ -162,6 +250,23 @@ class TestToCsar:
                                    entry_definitions=Path('service.yaml'),
                                    other_definitions=[Path('other_def.yaml')],
                                    workdir=get_workdir_path)
+
+    def test_no_other_definition(self, get_workdir_path, CSAR_unpacked):
+        blueprint_path = CSAR_unpacked / 'CSAR-no-other-def-2'
+        with pytest.raises(FileNotFoundError):
+            blueprint2CSAR.to_CSAR(blueprint_name='some_blueprint',
+                                   blueprint_dir=blueprint_path,
+                                   entry_definitions=Path('service.yaml'),
+                                   other_definitions=[Path('other_def.yaml')],
+                                   workdir=get_workdir_path)
+
+    def test_other_definitions_success(self, get_workdir_path, CSAR_unpacked):
+        blueprint_path = CSAR_unpacked / 'CSAR-multiple-other-def'
+        blueprint2CSAR.to_CSAR(blueprint_name='some_blueprint',
+                               blueprint_dir=blueprint_path,
+                               entry_definitions=Path('service.yaml'),
+                               other_definitions=[Path('service1.yaml'), Path('service2.yaml')],
+                               workdir=get_workdir_path)
 
     def test_success(self, get_workdir_path: Path, CSAR_unpacked):
         workdir = get_workdir_path

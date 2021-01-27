@@ -15,41 +15,51 @@ from opera.api.service import sqldb_service
 from opera.api.settings import Settings
 
 
-# def pytest_sessionstart(session):
-#     """
-#     Called after the Session object has been created and
-#     before performing collection and entering the run test loop.
-#     """
-#     Settings.change_API_WORKDIR('.opera-api-pytest')
-#     shutil.rmtree(Settings.API_WORKDIR, ignore_errors=True)
-#
-#
-# def pytest_sessionfinish(session, exitstatus):
-#     """
-#     Called after whole test run finished, right before
-#     returning the exit status to the system.
-#     """
-#     # shutil.rmtree(Settings.API_WORKDIR, ignore_errors=True)
+def pytest_sessionstart(session):
+    """
+    Called after the Session object has been created and
+    before performing collection and entering the run test loop.
+    """
+    change_API_WORKDIR('.opera-api-pytest')
+
+    shutil.rmtree(Settings.API_WORKDIR, ignore_errors=True)
+
+
+def pytest_sessionfinish(session, exitstatus):
+    """
+    Called after whole test run finished, right before
+    returning the exit status to the system.
+    """
+    shutil.rmtree(Settings.API_WORKDIR, ignore_errors=True)
+
+
+def change_API_WORKDIR(new_workdir: str):
+    # deployment config
+    Settings.API_WORKDIR = new_workdir
+    Settings.STDFILE_DIR = f"{Settings.API_WORKDIR}/in_progress"
+    Settings.INVOCATION_DIR = f"{Settings.API_WORKDIR}/invocations"
+    Settings.DEPLOYMENT_DIR = f"{Settings.API_WORKDIR}/deployment_dir"
+    Settings.offline_storage = Path(Settings.API_WORKDIR) / 'storage'
+    Settings.workdir = Path(Settings.API_WORKDIR) / "git_db/mockConnector"
+
+
+@pytest.fixture()
+def change_api_workdir():
+    old_workdir = Settings.API_WORKDIR
+    path = workdir_path()
+    change_API_WORKDIR(path)
+    yield
+    change_API_WORKDIR(old_workdir)
 
 
 @pytest.fixture(scope="session")
 def client():
     """An application for the tests."""
-    #try:
-    #    xopera_util.clear_invocation_data()
-    #    xopera_util.init_data()
-    #except FileExistsError:
-    #    pass
     os.environ['LOG_LEVEL'] = 'debug'
+    Settings.USE_OFFLINE_STORAGE = True
     with test().app.test_client() as client:
         yield client
     kill_tree(os.getpid(), including_parent=False)
-
-    #try:
-    #    xopera_util.clear_data()
-    #    xopera_util.clear_offline_storage()
-    #except FileExistsError:
-    #    pass
 
 
 def kill_tree(pid, including_parent=True):

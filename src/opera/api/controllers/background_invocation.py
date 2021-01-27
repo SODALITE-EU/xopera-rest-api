@@ -60,6 +60,8 @@ class InvocationWorkerProcess(multiprocessing.Process):
                 if inv.operation == OperationType.DEPLOY:
                     InvocationWorkerProcess._deploy(location, inv.inputs, num_workers=inv.workers, resume=inv.resume)
                 elif inv.operation == OperationType.UNDEPLOY:
+                    data = SQL_database.get_last_session_data(inv.blueprint_token)
+                    file_util.json_to_dir(data['tree'], (location / '.opera'))
                     InvocationWorkerProcess._undeploy(location, inv.inputs, num_workers=inv.workers)
                 else:
                     raise RuntimeError("Unknown operation type:" + str(inv.operation))
@@ -83,13 +85,16 @@ class InvocationWorkerProcess(multiprocessing.Process):
 
             # remove inputs
             # TODO remove
-            InvocationService.remove_inputs(location)
+            # InvocationService.remove_inputs(location)
 
             # save logfile to SQL database
             InvocationService.save_to_database(inv)
 
+            # save .opera dir
+            InvocationService.save_dot_opera_to_db(inv, location)
+
             # TODO remove
-            InvocationService.save_to_git(inv, location)
+            # InvocationService.save_to_git(inv, location)
 
             # clean
             shutil.rmtree(location)

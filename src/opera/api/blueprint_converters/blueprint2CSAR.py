@@ -5,6 +5,7 @@ import shutil
 import uuid
 from datetime import datetime
 from pathlib import Path
+import sys
 
 import yaml
 
@@ -262,7 +263,7 @@ def main(args):
             author=args.author, output=args.output)
 
 
-if __name__ == '__main__':
+def parse_args(args):
     parser = argparse.ArgumentParser(
         description='Packs TOSCA Simple Profile definitions along with all accompanying artifacts (e.g. scripts, '
                     'binaries, configuration files) in TOSCA Cloud Service Archive (CSAR) format.\n')
@@ -285,6 +286,8 @@ if __name__ == '__main__':
                         help="Path to output file. If omitted, script will output CSAR to workdir as CSAR-{name}.zip",
                         type=str)
 
-    parsed_args = parser.parse_args()
+    return parser.parse_args(args)
 
-    main(parsed_args)
+
+if __name__ == '__main__':
+    main(parse_args(sys.argv[1:]))

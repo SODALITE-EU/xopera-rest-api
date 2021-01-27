@@ -78,19 +78,3 @@ def init_data():
     init_dir(Settings.STDFILE_DIR, clean=True)
     init_dir(Settings.INVOCATION_DIR)
     init_dir(Settings.DEPLOYMENT_DIR, clean=True)
-
-
-def clear_invocation_data():
-    if Path(Settings.INVOCATION_DIR).exists():
-        shutil.rmtree(Settings.INVOCATION_DIR)
-
-
-def clear_data():
-    shutil.rmtree(Settings.STDFILE_DIR)
-    shutil.rmtree(Settings.INVOCATION_DIR)
-    shutil.rmtree(Settings.DEPLOYMENT_DIR)
-
-
-def clear_offline_storage():
-    shutil.rmtree(Settings.offline_storage)
-

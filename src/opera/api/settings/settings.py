@@ -28,24 +28,12 @@ class Settings:
     dot_opera_data_table = 'session_data'
 
     # OfflineStorage database (alternative to sql_database) config
+    USE_OFFLINE_STORAGE = False
     offline_storage = Path(API_WORKDIR) / 'storage'
-    # offline_deployment_log = offline_storage / Path('deployment_log')
-    # offline_git_log = offline_storage / Path('git_log')
-    # offline_session_data = offline_storage / Path('session_data')
 
     # gitCsarDB config
     git_config = None
     workdir = Path(API_WORKDIR) / "git_db/mockConnector"
-
-    @staticmethod
-    def change_API_WORKDIR(new_workdir: str):
-        # deployment config
-        Settings.API_WORKDIR = new_workdir
-        Settings.STDFILE_DIR = f"{Settings.API_WORKDIR}/in_progress"
-        Settings.INVOCATION_DIR = f"{Settings.API_WORKDIR}/invocations"
-        Settings.DEPLOYMENT_DIR = f"{Settings.API_WORKDIR}/deployment_dir"
-        Settings.offline_storage = Path(Settings.API_WORKDIR) / 'storage'
-        Settings.workdir = Path(Settings.API_WORKDIR) / "git_db/mockConnector"
 
     @staticmethod
     def load_settings():

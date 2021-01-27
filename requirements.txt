@@ -2,14 +2,14 @@
 opera==0.6.4
 
 # openstack
-openstacksdk==0.52.0
+openstacksdk==0.53.0
 
 # k8s
 openshift==0.11.2
 
 # Amazon AWS
 boto==2.49.0
-boto3==1.16.54
+boto3==1.16.59
 
 # openapi
 connexion >= 2.7.0
