@@ -2,8 +2,8 @@ import copy
 import json
 import os
 from pathlib import Path
-from opera.api.log import get_logger
 
+from opera.api.log import get_logger
 
 logger = get_logger(__name__)
 

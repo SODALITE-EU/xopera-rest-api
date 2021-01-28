@@ -1,5 +1,5 @@
-from pathlib import Path
 import json
+from pathlib import Path
 
 import git
 
@@ -102,6 +102,7 @@ def test_clone_non_existing(mock: MockConnector):
     repo = mock.clone(repo_name, repo_dst=desired_path)
     assert repo is None, "Repo exists"
 
+
 def test_tag_exists(mock: MockConnector):
     repo_name = 'test_repo'
     mock.init_repo(repo_name)
@@ -131,6 +132,7 @@ def test_tag_exists(mock: MockConnector):
     assert mock.get_tag_msg(repo_name) == 'another tag msg'
     assert mock.tag_exists(repo_name, 'v1.1')
     assert mock.tag_exists(repo_name, 'v1.0')
+
 
 def test_get_tag_msg(mock: MockConnector):
     repo_name = 'test_repo'
@@ -181,5 +183,3 @@ def test_get_commits_list(mock: MockConnector):
     assert len(commit_list) == 1
     assert commit_list[0][0] == commit_sha
     assert commit_list[0][1] == commit_msg
-
-

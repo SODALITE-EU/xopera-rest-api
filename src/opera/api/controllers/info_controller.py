@@ -1,13 +1,12 @@
 import json
 
-from opera.api.openapi.models.just_message import JustMessage
-from opera.api.openapi.models.git_log import GitLog
-from opera.api.service import csardb_service, sqldb_service
-from opera.api.log import get_logger
-from opera.api.settings import Settings
-from opera.api.openapi.models import InvocationState
 from opera.api.controllers.background_invocation import InvocationService
-
+from opera.api.log import get_logger
+from opera.api.openapi.models import InvocationState
+from opera.api.openapi.models.git_log import GitLog
+from opera.api.openapi.models.just_message import JustMessage
+from opera.api.service import csardb_service, sqldb_service
+from opera.api.settings import Settings
 
 logger = get_logger(__name__)
 

@@ -1,10 +1,9 @@
-import copy
 import time
 
 from assertpy import assert_that, fail
 
-from opera.api.util import timestamp_util
 from opera.api.openapi.models import InvocationState, OperationType
+from opera.api.util import timestamp_util
 
 
 class TestDeploy:

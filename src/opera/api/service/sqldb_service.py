@@ -4,7 +4,6 @@ import logging as log
 import os
 import shutil
 import uuid
-import pathlib
 
 import psycopg2
 
@@ -94,18 +93,9 @@ class OfflineStorage(Database):
         self.git_log_path = self.db_path / Settings.git_log_table
         self.dot_opera_data_path = self.db_path / Settings.dot_opera_data_table
 
-        # if not pathlib.Path(Settings.API_WORKDIR).exists():
-        #     pathlib.Path(Settings.API_WORKDIR).mkdir()
-        # if not self.db_path.exists():
         os.makedirs(self.deployment_log_path, exist_ok=True)
         os.makedirs(self.git_log_path, exist_ok=True)
         os.makedirs(self.dot_opera_data_path, exist_ok=True)
-        # if not Settings.offline_deployment_log.exists():
-        #     Settings.offline_deployment_log.mkdir()
-        # if not Settings.offline_git_log.exists():
-        #     Settings.offline_git_log.mkdir()
-        # if not Settings.offline_session_data.exists():
-        #     Settings.offline_session_data.mkdir()
 
     @staticmethod
     def file_write(path, content, name=None):
@@ -321,7 +311,7 @@ class PostgreSQL(Database):
 
         response = self.execute(
             "insert into {} (blueprint_token, timestamp, session_token, _log) values (%s, %s, %s, %s)"
-            .format(Settings.deployment_log_table),
+                .format(Settings.deployment_log_table),
             (str(blueprint_token), str(timestamp), str(session_token), str(_log)))
         if response:
             log.info('Updated deployment log in PostgreSQL database')

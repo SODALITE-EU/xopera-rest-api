@@ -1,14 +1,13 @@
 import connexion
 import yaml
 
+from opera.api.controllers.background_invocation import InvocationService
+from opera.api.log import get_logger
+from opera.api.openapi.models import OperationType
 from opera.api.openapi.models.blueprint_metadata import BlueprintMetadata
 from opera.api.openapi.models.just_message import JustMessage
 from opera.api.service import csardb_service, sqldb_service
-from opera.api.log import get_logger
 from opera.api.settings import Settings
-from opera.api.controllers.background_invocation import InvocationService
-from opera.api.openapi.models import OperationType
-
 
 logger = get_logger(__name__)
 

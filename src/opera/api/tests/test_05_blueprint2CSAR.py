@@ -1,8 +1,10 @@
-from opera.api.blueprint_converters import blueprint2CSAR
-import pytest
-from pathlib import Path
 import shutil
+from pathlib import Path
+
+import pytest
 import yaml
+
+from opera.api.blueprint_converters import blueprint2CSAR
 
 
 class TestParser:
@@ -54,7 +56,6 @@ class TestParser:
 class TestMain:
 
     def test_main(self, get_workdir_path, csar_unpacked):
-
         blueprint_path = csar_unpacked / 'CSAR-ok'
         outputh_path = f"{get_workdir_path}/csar"
         outputh_path_with_zip = f"{outputh_path}.zip"
@@ -69,7 +70,6 @@ class TestMain:
 class TestValidate:
 
     def test_not_meta_multiple_yaml(self, csar_unpacked):
-
         csar_path = csar_unpacked / 'CSAR-no-meta-multiple-yaml'
         assert not blueprint2CSAR.validate_csar(csar_path)
 

@@ -1,9 +1,9 @@
-from assertpy import assert_that
-from opera.api.openapi.models.invocation import Invocation, InvocationState, OperationType
-from opera.api.controllers.background_invocation import InvocationService
-from opera.api.util import timestamp_util
-import uuid
 from pathlib import Path
+
+from assertpy import assert_that
+
+from opera.api.controllers.background_invocation import InvocationService
+from opera.api.openapi.models.invocation import Invocation, InvocationState
 from opera.api.settings import Settings
 
 

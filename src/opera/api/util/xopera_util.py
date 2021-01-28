@@ -4,8 +4,8 @@ import os
 import pwd
 import re
 import shutil
-from pathlib import Path
 from contextlib import contextmanager
+from pathlib import Path
 
 from opera.api.settings import Settings
 

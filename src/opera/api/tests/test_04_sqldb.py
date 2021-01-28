@@ -1,9 +1,11 @@
+import json
+import uuid
+from pathlib import Path
+
+from assertpy import assert_that
+
 from opera.api.service.sqldb_service import OfflineStorage
 from opera.api.util import file_util
-import uuid
-import json
-from assertpy import assert_that
-from pathlib import Path
 
 
 class TestSessionData:
@@ -41,6 +43,3 @@ class TestSessionData:
         for blueprint_token in tokens.keys():
             # blueprint_token_new, _, _ = sql_db.get_last_session_data(blueprint_token)
             assert sql_db.get_last_session_data(blueprint_token)['blueprint_token'] == blueprint_token
-
-
-

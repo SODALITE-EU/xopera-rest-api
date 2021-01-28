@@ -107,4 +107,3 @@ def test_get_tag_msg(db: GitCsarDB, generic_dir: Path):
 
     assert db.get_tag_msg(csar_token=csar_token, tag_name='v1.0') == 'gitCsarDB: v1.0'
     assert db.get_tag_msg(csar_token=csar_token, tag_name='v2.0') == 'gitCsarDB: custom_message'
-

@@ -1,19 +1,19 @@
-from pathlib import Path
-import uuid
-
-import git
-import pytest
 import os
 import shutil
+import uuid
+from pathlib import Path
+
+import git
 import psutil
+import pytest
 
 from opera.api.cli import test
 from opera.api.gitCsarDB import GitCsarDB
 from opera.api.gitCsarDB.connectors import MockConnector
-from opera.api.util import xopera_util, timestamp_util
+from opera.api.openapi.models.invocation import Invocation, InvocationState, OperationType
 from opera.api.service import sqldb_service
 from opera.api.settings import Settings
-from opera.api.openapi.models.invocation import Invocation, InvocationState, OperationType
+from opera.api.util import timestamp_util
 
 
 def pytest_sessionstart(session):

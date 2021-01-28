@@ -2,10 +2,10 @@ import datetime
 import json
 import multiprocessing
 import os
+import shutil
 import traceback
 import typing
 import uuid
-import shutil
 from pathlib import Path
 from typing import Optional
 
@@ -13,13 +13,12 @@ from opera.commands.deploy import deploy_service_template as opera_deploy
 from opera.commands.undeploy import undeploy as opera_undeploy
 from opera.storage import Storage
 
-
-from opera.api.util import xopera_util, git_util, file_util
 from opera.api.blueprint_converters.blueprint2CSAR import entry_definitions
-from opera.api.service import csardb_service, sqldb_service
 from opera.api.log import get_logger
-from opera.api.settings import Settings
 from opera.api.openapi.models import Invocation, InvocationState, OperationType
+from opera.api.service import csardb_service, sqldb_service
+from opera.api.settings import Settings
+from opera.api.util import xopera_util, git_util, file_util
 
 logger = get_logger(__name__)
 CSAR_db = csardb_service.GitDB(**Settings.git_config)

@@ -1,9 +1,10 @@
 from pathlib import Path
-from opera.api.util import file_util, xopera_util
-from opera.api.settings import Settings
+
 from assertpy import assert_that
-import yaml
 from pytest_mock import mocker as Mock
+
+from opera.api.settings import Settings
+from opera.api.util import file_util, xopera_util
 
 
 class TestFileUtil:

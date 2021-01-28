@@ -1,7 +1,7 @@
 import uuid
 
 import validators
-from assertpy import assert_that, fail
+from assertpy import assert_that
 
 from opera.api.util import git_util
 
@@ -9,7 +9,6 @@ from opera.api.util import git_util
 class TestPostNew:
 
     def test_empty(self, client, csar_empty):
-
         resp = client.post("/manage", data=csar_empty, content_type='multipart/form-data')
         assert_that(resp.status_code).is_equal_to(406)
         assert_that(resp.json).is_not_none().contains_only("message")
