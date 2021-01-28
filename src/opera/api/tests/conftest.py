@@ -10,9 +10,10 @@ import psutil
 from opera.api.cli import test
 from opera.api.gitCsarDB import GitCsarDB
 from opera.api.gitCsarDB.connectors import MockConnector
-from opera.api.util import xopera_util
+from opera.api.util import xopera_util, timestamp_util
 from opera.api.service import sqldb_service
 from opera.api.settings import Settings
+from opera.api.openapi.models.invocation import Invocation, InvocationState, OperationType
 
 
 def pytest_sessionstart(session):
@@ -34,7 +35,6 @@ def pytest_sessionfinish(session, exitstatus):
 
 
 def change_API_WORKDIR(new_workdir: str):
-    # deployment config
     Settings.API_WORKDIR = new_workdir
     Settings.STDFILE_DIR = f"{Settings.API_WORKDIR}/in_progress"
     Settings.INVOCATION_DIR = f"{Settings.API_WORKDIR}/invocations"
@@ -44,12 +44,33 @@ def change_API_WORKDIR(new_workdir: str):
 
 
 @pytest.fixture()
-def change_api_workdir():
+def generic_invocation():
+    inv = Invocation()
+    inv.state = InvocationState.PENDING
+    inv.session_token = str(uuid.uuid4())
+    inv.blueprint_token = str(uuid.uuid4())
+    inv.operation = OperationType.DEPLOY
+    inv.timestamp = timestamp_util.datetime_now_to_string()
+    return inv
+
+
+@pytest.fixture()
+def mock_api_workdir():
     old_workdir = Settings.API_WORKDIR
     path = workdir_path()
     change_API_WORKDIR(path)
-    yield
+    yield path
     change_API_WORKDIR(old_workdir)
+
+
+@pytest.fixture()
+def mock_ssh_keys_loc():
+    old_ssh_workdir = Settings.ssh_keys_location
+    temp_path = workdir_path()
+    Settings.ssh_keys_location = temp_path
+    yield temp_path
+    Settings.ssh_keys_location = old_ssh_workdir
+    Settings.key_pair = ""
 
 
 @pytest.fixture(scope="session")
@@ -131,8 +152,8 @@ def file_data(file_name, file_type='CSAR'):
 
 
 @pytest.fixture
-def CSAR_unpacked():
-    return Path(__file__).parent / 'CSAR_unpacked'
+def csar_unpacked():
+    return Path(__file__).parent / 'csar_unpacked'
 
 
 @pytest.fixture

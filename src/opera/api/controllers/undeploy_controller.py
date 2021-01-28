@@ -40,11 +40,11 @@ def delete_deploy(blueprint_token, version_tag=None, workers=1):
         return JustMessage(
             f"Did not find blueprint with token: {blueprint_token} and version_id: {version_tag or 'any'}"), 404
 
-    last_message, _ = CSAR_db.get_tag_msg(blueprint_token, tag_name=version_tag)
-    if last_message is not None:
-        if git_util.after_job_commit_msg(token=blueprint_token, mode='deploy') not in last_message:
-            return JustMessage(f"Blueprint with token: {blueprint_token}, and version_tag: {version_tag or 'any'} "
-                               f"has not been deployed yet, cannot undeploy"), 403
+    # last_message, _ = CSAR_db.get_tag_msg(blueprint_token, tag_name=version_tag)
+    # if last_message is not None:
+    #     if git_util.after_job_commit_msg(token=blueprint_token, mode='deploy') not in last_message:
+    #         return JustMessage(f"Blueprint with token: {blueprint_token}, and version_tag: {version_tag or 'any'} "
+    #                            f"has not been deployed yet, cannot undeploy"), 403
     resume = False
     result = invocation_service.invoke(OperationType.UNDEPLOY, blueprint_token, version_tag, workers, resume, inputs)
     logger.info(f"Deploying '{blueprint_token}', version_tag: {version_tag}")
