@@ -129,21 +129,23 @@ class OfflineStorage(Database):
         self.file_write(str(self.dot_opera_data_path), name=session_token, content=json.dumps(data))
 
     def get_session_data(self, session_token):
-        data = json.loads(self.file_read(str(self.dot_opera_data_path), session_token))
-        return data
-
-    def get_last_session_data(self, blueprint_token):
-        my_list = []
-        for session_file in self.dot_opera_data_path.glob('*'):
-            if session_file.is_file():
-                session_data = json.loads(session_file.read_text())
-                if session_data['blueprint_token'] == blueprint_token:
-                    my_list.append((session_data['timestamp'], session_file.name))
         try:
-            last_session_token = sorted(my_list, key=lambda x: x[0], reverse=True)[0][1]
-            return self.get_session_data(last_session_token)
-        except IndexError:
+            return json.loads(self.file_read(str(self.dot_opera_data_path), session_token))
+        except FileNotFoundError:
             return None
+
+    # def get_last_session_data(self, blueprint_token):
+    #     my_list = []
+    #     for session_file in self.dot_opera_data_path.glob('*'):
+    #         if session_file.is_file():
+    #             session_data = json.loads(session_file.read_text())
+    #             if session_data['blueprint_token'] == blueprint_token:
+    #                 my_list.append((session_data['timestamp'], session_file.name))
+    #     try:
+    #         last_session_token = sorted(my_list, key=lambda x: x[0], reverse=True)[0][1]
+    #         return self.get_session_data(last_session_token)
+    #     except IndexError:
+    #         return None
 
     def update_deployment_log(self, blueprint_token: str, _log: str, session_token: str, timestamp: str):
         """
@@ -276,6 +278,16 @@ class PostgreSQL(Database):
                         primary key (timestamp)
                         );""".format(Settings.git_log_table))
 
+        self.execute("""
+                        create table if not exists {} (
+                        blueprint_token varchar (36),
+                        version_tag varchar(36),
+                        session_token varchar(36),
+                        timestamp timestamp default current_timestamp, 
+                        tree text,
+                        primary key (session_token)
+                        );""".format(Settings.dot_opera_data_table))
+
     def disconnect(self):
         log.info('disconnecting PostgreSQL database')
         self.connection.close()
@@ -299,13 +311,37 @@ class PostgreSQL(Database):
         """
         Saves .opera file tree to database
         """
-        pass
+        tree_str = json.dumps(tree)
+        timestamp = timestamp_util.datetime_now_to_string()
+        response = self.execute(
+            "insert into {} (blueprint_token, version_tag, timestamp, session_token, tree) values (%s, %s, %s, %s, %s)"
+            .format(Settings.dot_opera_data_table),
+            (str(blueprint_token), str(version_tag), timestamp, str(session_token), tree_str))
+        if response:
+            log.info('Updated dot_opera_data in PostgreSQL database')
+        else:
+            log.error('Failed to update dot_opera_data in PostgreSQL database')
+        return response
 
     def get_session_data(self, session_token):
         """
         Returns [blueprint_token, version_tag, tree], where tree is content of .opera dir
         """
-        pass
+        dbcur = self.connection.cursor()
+        query = "select blueprint_token, version_tag, session_token, timestamp, tree" \
+                " from {} where session_token = '{}';"\
+            .format(Settings.dot_opera_data_table, str(session_token))
+        dbcur.execute(query)
+        line = dbcur.fetchone()
+        session_data = {
+                'blueprint_token': line[0],
+                'version_tag': line[1],
+                'session_token': line[2],
+                'timestamp': timestamp_util.datetime_to_str(line[3]),
+                'tree': json.loads(line[4])
+            }
+        dbcur.close()
+        return session_data
 
     def update_deployment_log(self, blueprint_token: str, _log: str, session_token: str, timestamp: str):
 

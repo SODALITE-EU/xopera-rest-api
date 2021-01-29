@@ -23,6 +23,10 @@ class TestSessionData:
         assert data['blueprint_token'] == blueprint_token
         assert data['session_token'] == session_token
 
+    def test_get_session_data_missing(self, sql_db: OfflineStorage):
+        data = sql_db.get_session_data('foo')
+        assert_that(data).is_none()
+
     def test_get_session_data(self, sql_db: OfflineStorage, generic_dir: Path):
         blueprint_token = str(uuid.uuid4())
         session_token = str(uuid.uuid4())
@@ -35,11 +39,10 @@ class TestSessionData:
         assert session_token == data['session_token']
         assert_that(data['tree']).contains_only("0-new.txt", "1-new.txt", "2-new.txt", "3-new.txt")
 
-    def test_get_last_session_data(self, sql_db: OfflineStorage, generic_dir: Path):
-        tokens = {str(uuid.uuid4()): [str(uuid.uuid4()) for _ in range(5)] for _ in range(3)}
-        for blueprint_token, session_tokens in tokens.items():
-            for session_token in session_tokens:
-                sql_db.save_session_data(session_token, blueprint_token, 'tag', file_util.dir_to_json(generic_dir))
-        for blueprint_token in tokens.keys():
-            # blueprint_token_new, _, _ = sql_db.get_last_session_data(blueprint_token)
-            assert sql_db.get_last_session_data(blueprint_token)['blueprint_token'] == blueprint_token
+    # def test_get_last_session_data(self, sql_db: OfflineStorage, generic_dir: Path):
+    #     tokens = {str(uuid.uuid4()): [str(uuid.uuid4()) for _ in range(5)] for _ in range(3)}
+    #     for blueprint_token, session_tokens in tokens.items():
+    #         for session_token in session_tokens:
+    #             sql_db.save_session_data(session_token, blueprint_token, 'tag', file_util.dir_to_json(generic_dir))
+    #     for blueprint_token in tokens.keys():
+    #         assert sql_db.get_last_session_data(blueprint_token)['blueprint_token'] == blueprint_token

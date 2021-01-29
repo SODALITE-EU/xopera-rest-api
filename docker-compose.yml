@@ -8,7 +8,7 @@ services:
       LOG_LEVEL: debug
       XOPERA_GIT_TYPE: gitlab
       XOPERA_GIT_URL: https://gitlab.com
-      XOPERA_GIT_AUTH_TOKEN: [your access token here]
+      XOPERA_GIT_AUTH_TOKEN: DYzWkJFW3vypsw4ULCsg
       XOPERA_DATABASE_IP: postgres
       XOPERA_DATABASE_NAME: postgres
       XOPERA_DATABASE_USER: postgres

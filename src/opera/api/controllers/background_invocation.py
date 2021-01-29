@@ -4,7 +4,6 @@ import multiprocessing
 import os
 import shutil
 import traceback
-import typing
 import uuid
 from pathlib import Path
 from typing import Optional
@@ -18,7 +17,7 @@ from opera.api.log import get_logger
 from opera.api.openapi.models import Invocation, InvocationState, OperationType
 from opera.api.service import csardb_service, sqldb_service
 from opera.api.settings import Settings
-from opera.api.util import xopera_util, git_util, file_util
+from opera.api.util import xopera_util, file_util
 
 logger = get_logger(__name__)
 CSAR_db = csardb_service.GitDB(**Settings.git_config)
@@ -48,20 +47,19 @@ class InvocationWorkerProcess(multiprocessing.Process):
             os.dup2(file_stdout.fileno(), 1)
             os.dup2(file_stderr.fileno(), 2)
 
-            # pull from GIT
-            CSAR_db.get_revision(inv.blueprint_token, location, inv.version_tag)
-            # TODO catch error
-
             inv.state = InvocationState.IN_PROGRESS
             InvocationService.write_invocation(inv)
 
             try:
-                if inv.operation == OperationType.DEPLOY:
-                    InvocationWorkerProcess._deploy(location, inv.inputs, num_workers=inv.workers, resume=inv.resume)
+                if inv.operation == OperationType.DEPLOY_FRESH:
+                    InvocationWorkerProcess._deploy_fresh(location, inv)
+                elif inv.operation == OperationType.DEPLOY_CONTINUE:
+                    InvocationWorkerProcess._deploy_continue(location, inv)
                 elif inv.operation == OperationType.UNDEPLOY:
-                    data = SQL_database.get_last_session_data(inv.blueprint_token)
-                    file_util.json_to_dir(data['tree'], (location / '.opera'))
-                    InvocationWorkerProcess._undeploy(location, inv.inputs, num_workers=inv.workers)
+                    InvocationWorkerProcess._undeploy(location, inv)
+                elif inv.operation == OperationType.UPDATE:
+                    # TODO
+                    InvocationWorkerProcess._redeploy()
                 else:
                     raise RuntimeError("Unknown operation type:" + str(inv.operation))
 
@@ -82,41 +80,51 @@ class InvocationWorkerProcess(multiprocessing.Process):
             inv.stdout = stdout
             inv.stderr = stderr
 
-            # remove inputs
-            # TODO remove
-            # InvocationService.remove_inputs(location)
-
-            # save logfile to SQL database
             InvocationService.save_to_database(inv)
-
-            # save .opera dir
             InvocationService.save_dot_opera_to_db(inv, location)
-
-            # TODO remove
-            # InvocationService.save_to_git(inv, location)
+            InvocationService.write_invocation(inv)
 
             # clean
             shutil.rmtree(location)
             shutil.rmtree(InvocationService.stdstream_dir(inv.session_token))
 
-            # create logfile
-            InvocationService.write_invocation(inv)
-
     @staticmethod
-    def _deploy(location: Path, inputs: typing.Optional[dict], num_workers: int, resume: bool):
+    def _deploy_fresh(location: Path, inv: Invocation):
+        CSAR_db.get_revision(inv.blueprint_token, location, inv.version_tag)
+
         with xopera_util.cwd(location):
             opera_storage = Storage.create(".opera")
             service_template = str(entry_definitions(location))
-            opera_deploy(service_template, inputs, opera_storage,
-                         verbose_mode=True, num_workers=num_workers, delete_existing_state=(not resume))
+            opera_deploy(service_template, inv.inputs, opera_storage,
+                         verbose_mode=True, num_workers=inv.workers, delete_existing_state=True)
 
     @staticmethod
-    def _undeploy(location: Path, inputs: typing.Optional[dict], num_workers: int):
+    def _deploy_continue(location: Path, inv: Invocation):
+
+        # get blueprint
+        CSAR_db.get_revision(inv.blueprint_token, location, inv.version_tag)
+        # get session data (.opera)
+        InvocationService.get_dot_opera_from_db(inv.session_token_old, location)
+
         with xopera_util.cwd(location):
             opera_storage = Storage.create(".opera")
-            if inputs:
-                opera_storage.write_json(inputs, "inputs")
-            opera_undeploy(opera_storage, verbose_mode=True, num_workers=num_workers)
+            service_template = str(entry_definitions(location))
+            opera_deploy(service_template, inv.inputs, opera_storage,
+                         verbose_mode=True, num_workers=inv.workers, delete_existing_state=(not inv.resume))
+
+    @staticmethod
+    def _undeploy(location: Path, inv: Invocation):
+
+        # get blueprint
+        CSAR_db.get_revision(inv.blueprint_token, location, inv.version_tag)
+        # get session data (.opera)
+        InvocationService.get_dot_opera_from_db(inv.session_token_old, location)
+
+        with xopera_util.cwd(location):
+            opera_storage = Storage.create(".opera")
+            if inv.inputs:
+                opera_storage.write_json(inv.inputs, "inputs")
+            opera_undeploy(opera_storage, verbose_mode=True, num_workers=inv.workers)
 
     @staticmethod
     def _redeploy():
@@ -135,8 +143,8 @@ class InvocationService:
         self.worker = InvocationWorkerProcess(self.work_queue)
         self.worker.start()
 
-    def invoke(self, operation_type: OperationType, blueprint_token: str, version_tag: Optional[str], workers: int,
-               resume: bool, inputs: Optional[dict]) -> Invocation:
+    def invoke(self, operation_type: OperationType, blueprint_token: str, version_tag: Optional[str],
+               session_token_old: Optional[str], workers: int, inputs: Optional[dict], resume: bool = None) -> Invocation:
         invocation_uuid = str(uuid.uuid4())
         now = datetime.datetime.now(tz=datetime.timezone.utc)
         logger.info("Invoking %s with ID %s at %s", operation_type, invocation_uuid, now.isoformat())
@@ -144,6 +152,7 @@ class InvocationService:
         inv = Invocation()
         inv.blueprint_token = blueprint_token
         inv.session_token = invocation_uuid
+        inv.session_token_old = session_token_old
         inv.version_tag = version_tag
         inv.state = InvocationState.PENDING
         inv.operation = operation_type
@@ -213,37 +222,15 @@ class InvocationService:
         SQL_database.save_session_data(inv.session_token, inv.blueprint_token, inv.version_tag, data)
 
     @classmethod
-    def read_dot_opera_from_db(cls, session_token_old: str, session_token_new: str) -> Path:
-        blueprint_token, version_tag, tree = SQL_database.get_session_data(session_token_old)
-        location = cls.deployment_location(session_token_new, blueprint_token)
-        file_util.json_to_dir(tree, (location / '.opera'))
-        return location
+    def get_dot_opera_from_db(cls, session_token, location: Path) -> None:
+        dot_opera_tree = SQL_database.get_session_data(session_token)['tree']
+        file_util.json_to_dir(dot_opera_tree, (location / '.opera'))
 
     @classmethod
     def remove_inputs(cls, location):
         with xopera_util.cwd(location):
             opera_storage = Storage.create(".opera")
             opera_storage.write('{}', "inputs")
-
-    @classmethod
-    # TODO get rid of saving to git after job
-    def save_to_git(cls, inv: Invocation, location):
-        # save deployment data to database
-        revision_msg = git_util.after_job_commit_msg(inv.blueprint_token, inv.operation)
-        version_tag = inv.version_tag
-        if version_tag is None:
-            version_tag = CSAR_db.get_tags(inv.blueprint_token)[-1]
-        result, _ = CSAR_db.add_revision(blueprint_token=inv.blueprint_token, blueprint_path=location,
-                                         revision_msg=revision_msg, minor_to_increment=version_tag)
-
-        # register adding revision
-        SQL_database.save_git_transaction_data(blueprint_token=result['blueprint_token'],
-                                               version_tag=result['version_tag'],
-                                               revision_msg=revision_msg,
-                                               job='update',
-                                               git_backend=str(CSAR_db.connection.git_connector),
-                                               repo_url=result['url'],
-                                               commit_sha=result['commit_sha'])
 
     @classmethod
     def get_instance_state(cls, location):

@@ -1,6 +1,6 @@
 openapi: 3.0.1
 info:
-  version: 1.0.0
+  version: 2.0.0
   title: xOpera REST API
   contact:
     email: mihael.trajbaric@xlab.si
@@ -8,7 +8,7 @@ info:
     name: Apache 2.0
     url: http://www.apache.org/licenses/LICENSE-2.0.html
   description: |+
-    xOpera REST API with xOpera==0.6.2
+    xOpera REST API with xOpera==0.6.4
 
     Standard scenarios of using REST api:
 
@@ -54,19 +54,23 @@ tags:
 - name: ssh
   description: SSH key management
 - name: manage
-  description: save or delete blueprint
+  description: Save or delete blueprint to git storage
 - name: deploy
-  description: deploy blueprint
+  description: Submit deployment job of the application described with blueprint
 - name: undeploy
-  description: undeploy blueprint
+  description: Undeploy application, remove all application instances and components.
+#- name: diff
+#  description: Compare TOSCA blueprint to the one already deployed
+#- name: update
+#  description: Update the deployed TOSCA service template and redeploy it according to the discovered template diff
 - name: info
-  description: information about deployment
+  description: Information about deployment
 paths:
-  /deploy/{blueprint_token}:
+  /deploy/fresh/{blueprint_token}:
     post:
       tags:
       - deploy
-      operationId: post_deploy
+      operationId: post_deploy_fresh
       parameters:
       - name: blueprint_token
         in: path
@@ -85,12 +89,6 @@ paths:
         schema:
           type: integer
           default: 1
-      - name: resume
-        in: query
-        description: Resume deploy
-        schema:
-          type: boolean
-          default: False
 
       requestBody:
         content:
@@ -108,28 +106,71 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/blueprint_metadata'
+                $ref: '#/components/schemas/Invocation'
         404:
           description: Did not find blueprint
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/just_message'
-  /undeploy/{blueprint_token}:
+  /deploy/{session_token}:
     post:
       tags:
-      - undeploy
-      operationId: delete_deploy
+      - deploy
+      operationId: post_deploy_continue
       parameters:
-      - name: blueprint_token
+      - name: session_token
         in: path
-        description: token of blueprint
+        description: token of session
         required: true
         schema:
           type: string
-      - name: version_tag
+      - name: workers
         in: query
-        description: version_tag to deploy
+        description: Number of workers
+        schema:
+          type: integer
+          default: 1
+      - name: resume
+        in: query
+        description: Resume deploy
+        schema:
+          type: boolean
+          default: True
+
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                inputs_file:
+                  type: string
+                  description: File with inputs for TOSCA template
+                  format: binary
+      responses:
+        202:
+          description: Deploy job accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invocation'
+        404:
+          description: Did not find blueprint
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/just_message'
+  /undeploy/{session_token}:
+    post:
+      tags:
+      - undeploy
+      operationId: post_undeploy
+      parameters:
+      - name: session_token
+        in: path
+        description: Token of deploy session
+        required: true
         schema:
           type: string
       - name: workers
@@ -154,7 +195,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/blueprint_metadata'
+                $ref: '#/components/schemas/Invocation'
         403:
           description: Undeploy not allowed
           content:
@@ -244,13 +285,28 @@ paths:
       responses:
         201:
           description: Job done
-          content: {}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invocation'
         202:
           description: Job accepted, still running
-          content: {}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invocation'
+        404:
+          description: Job not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/just_message'
         500:
           description: Job failed
-          content: {}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invocation'
   /manage:
     post:
       tags:
@@ -509,7 +565,7 @@ components:
     deploymentLogList:
       type: array
       items:
-        $ref: '#/components/schemas/deploymentLog'
+        $ref: '#/components/schemas/Invocation'
 
     deploymentLog:
       required:
@@ -693,10 +749,16 @@ components:
         - timestamp
       properties:
         blueprint_token:
+          description: Token of blueprint
           type: string
         version_tag:
+          description: Version_tag of blueprint
           type: string
         session_token:
+          description: Session_token of this session
+          type: string
+        session_token_old:
+          description: Session_token of previous session
           type: string
         state:
           $ref: "#/components/schemas/InvocationState"
@@ -740,5 +802,7 @@ components:
     OperationType:
       type: string
       enum:
-        - deploy
+        - deploy_continue
+        - deploy_fresh
         - undeploy
+        - update

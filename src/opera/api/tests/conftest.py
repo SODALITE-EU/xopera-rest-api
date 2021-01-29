@@ -49,7 +49,7 @@ def generic_invocation():
     inv.state = InvocationState.PENDING
     inv.session_token = str(uuid.uuid4())
     inv.blueprint_token = str(uuid.uuid4())
-    inv.operation = OperationType.DEPLOY
+    inv.operation = OperationType.DEPLOY_FRESH
     inv.timestamp = timestamp_util.datetime_now_to_string()
     return inv
 
