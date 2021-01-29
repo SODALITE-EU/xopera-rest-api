@@ -59,13 +59,115 @@ tags:
   description: Submit deployment job of the application described with blueprint
 - name: undeploy
   description: Undeploy application, remove all application instances and components.
-#- name: diff
-#  description: Compare TOSCA blueprint to the one already deployed
-#- name: update
-#  description: Update the deployed TOSCA service template and redeploy it according to the discovered template diff
+- name: diff
+  description: Compare TOSCA blueprint to the one already deployed
+- name: update
+  description: Update the deployed TOSCA service template and redeploy it according to the discovered template diff
 - name: info
   description: Information about deployment
 paths:
+  /diff/{session_token}:
+    post:
+      tags:
+      - diff
+      operationId: post_diff
+      description: Calculates the diff betweeen Deployed instance model (DI1) and New blueprint version (DB2 = B2 + V2 + I2)
+      parameters:
+      - name: session_token
+        in: path
+        description: Session_token of Deployed instance model (DI1)
+        required: true
+        schema:
+          type: string
+      - name: blueprint_token
+        in: query
+        description: Token of The new blueprint (B2)
+        required: true
+        schema:
+          type: string
+      - name: version_tag
+        in: query
+        description: Version_tag to of The new blueprint (V2)
+        schema:
+          type: string
+
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                inputs_file:
+                  type: string
+                  description: File with inputs for The new blueprint (I2)
+                  format: binary
+      responses:
+        200:
+          description: Diff calculated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invocation'
+        404:
+          description: Did not find DI1 or DB2
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/just_message'
+  /update/{session_token}:
+    post:
+      tags:
+      - update
+      operationId: post_update
+      description: Deployes Instance model (DI2), where DI2 = diff(DI1, (B2,V2,I2))
+      parameters:
+      - name: session_token
+        in: path
+        description: Session_token of old Deployed instance model (DI1)
+        required: true
+        schema:
+          type: string
+      - name: blueprint_token
+        in: query
+        description: Token of the new blueprint (B2)
+        required: true
+        schema:
+          type: string
+      - name: version_tag
+        in: query
+        description: Version_tag to of the new blueprint (V2)
+        schema:
+          type: string
+      - name: workers
+        in: query
+        description: Number of workers
+        schema:
+          type: integer
+          default: 1
+
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                inputs_file:
+                  type: string
+                  description: File with inputs for the new blueprint (I2)
+                  format: binary
+      responses:
+        202:
+          description: Update job accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invocation'
+        404:
+          description: Did not find DI1 or DB2
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/just_message'
   /deploy/fresh/{blueprint_token}:
     post:
       tags:
@@ -567,42 +669,6 @@ components:
       items:
         $ref: '#/components/schemas/Invocation'
 
-    deploymentLog:
-      required:
-        - blueprint_token
-        - session_token
-        - log
-        - state
-        - job
-      type: object
-      properties:
-        blueprint_token:
-          type: string
-          description: Token of blueprint
-          format: uuid
-        session_token:
-          type: string
-          description: Token of session
-          format: uuid
-        job:
-          type: string
-          description: Type of job
-          enum: [ deploy, undeploy ]
-        log:
-          type: string
-          description: Log of session
-        state:
-          type: string
-          description: State of session
-          enum: [ done, failed ]
-        timestamp_start:
-          type: string
-          description: Start timestamp
-          format: date-time
-        timestamp_end:
-          type: string
-          description: End timestamp
-          format: date-time
     openstackKeyPair:
       required:
       - key_pair_name
@@ -658,30 +724,6 @@ components:
           items:
             type: string
             description: Collaborator
-    blueprint_metadata:
-      required:
-      - blueprint_token
-      - message
-      - timestamp
-      - version_tag
-      type: object
-      properties:
-        message:
-          type: string
-          description: return message
-        blueprint_token:
-          type: string
-          description: token of blueprint
-        session_token:
-          type: string
-          description: token of deploying session
-        version_tag:
-          type: string
-          description: version_tag blueprint
-        timestamp:
-          type: string
-          description: timestamp of database entry
-          format: date-time
     git_revision_metadata:
       required:
         - blueprint_token

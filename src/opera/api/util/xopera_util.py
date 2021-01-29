@@ -6,6 +6,8 @@ import re
 import shutil
 from contextlib import contextmanager
 from pathlib import Path
+import connexion
+import yaml
 
 from opera.api.settings import Settings
 
@@ -78,3 +80,11 @@ def init_data():
     init_dir(Settings.STDFILE_DIR, clean=True)
     init_dir(Settings.INVOCATION_DIR)
     init_dir(Settings.DEPLOYMENT_DIR, clean=True)
+
+
+def inputs_file():
+    try:
+        file = connexion.request.files['inputs_file']
+        return yaml.safe_load(file.read().decode('utf-8'))
+    except KeyError:
+        return None

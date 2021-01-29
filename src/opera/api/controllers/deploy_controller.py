@@ -6,6 +6,7 @@ from opera.api.log import get_logger
 from opera.api.openapi.models import OperationType, Invocation
 from opera.api.openapi.models.just_message import JustMessage
 from opera.api.service import csardb_service, sqldb_service
+from opera.api.util import xopera_util
 from opera.api.settings import Settings
 
 logger = get_logger(__name__)
@@ -28,11 +29,7 @@ def post_deploy_fresh(blueprint_token, version_tag=None, workers=1):
 
     :rtype: Invocation
     """
-    try:
-        inputs_file = connexion.request.files['inputs_file']
-        inputs = yaml.safe_load(inputs_file.read().decode('utf-8'))
-    except KeyError:
-        inputs = None
+    inputs = xopera_util.inputs_file()
 
     if not CSAR_db.version_exists(blueprint_token, version_tag):
         return JustMessage(
@@ -57,11 +54,7 @@ def post_deploy_continue(session_token, workers=1, resume=True):
 
     :rtype: Invocation
     """
-    try:
-        inputs_file = connexion.request.files['inputs_file']
-        inputs = yaml.safe_load(inputs_file.read().decode('utf-8'))
-    except KeyError:
-        inputs = None
+    inputs = xopera_util.inputs_file()
 
     session_data = SQL_database.get_session_data(session_token)
     if not session_data:

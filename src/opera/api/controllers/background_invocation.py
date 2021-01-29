@@ -7,10 +7,16 @@ import traceback
 import uuid
 from pathlib import Path
 from typing import Optional
+import tempfile
 
 from opera.commands.deploy import deploy_service_template as opera_deploy
 from opera.commands.undeploy import undeploy as opera_undeploy
+from opera.commands.diff import diff_instances as opera_diff_instances
+from opera.commands.update import update as opera_update
+from opera.compare.template_comparer import TemplateComparer as opera_TemplateComparer
+from opera.compare.instance_comparer import InstanceComparer as opera_InstanceComparer
 from opera.storage import Storage
+from opera.utils import get_workdir
 
 from opera.api.blueprint_converters.blueprint2CSAR import entry_definitions
 from opera.api.log import get_logger
@@ -58,8 +64,7 @@ class InvocationWorkerProcess(multiprocessing.Process):
                 elif inv.operation == OperationType.UNDEPLOY:
                     InvocationWorkerProcess._undeploy(location, inv)
                 elif inv.operation == OperationType.UPDATE:
-                    # TODO
-                    InvocationWorkerProcess._redeploy()
+                    InvocationWorkerProcess._update(location, inv)
                 else:
                     raise RuntimeError("Unknown operation type:" + str(inv.operation))
 
@@ -127,8 +132,73 @@ class InvocationWorkerProcess(multiprocessing.Process):
             opera_undeploy(opera_storage, verbose_mode=True, num_workers=inv.workers)
 
     @staticmethod
-    def _redeploy():
-        pass
+    def _update(location: Path, inv: Invocation):
+
+        storage_old, location_old, storage_new, location_new = InvocationWorkerProcess.prepare_two_workdirs(
+            inv.session_token_old, inv.blueprint_token, inv.version_tag, inv.inputs, location)
+
+        assert location_new == str(location)
+
+        with xopera_util.cwd(location_new):
+
+            instance_diff = opera_diff_instances(storage_old, location_old,
+                                                 storage_new, location_new,
+                                                 opera_TemplateComparer(), opera_InstanceComparer(),
+                                                 verbose_mode=True)
+
+            opera_update(storage_old, location_old,
+                         storage_new, location_new,
+                         opera_InstanceComparer(), instance_diff,
+                         verbose_mode=True, num_workers=inv.workers, overwrite=True)
+
+        shutil.rmtree(location_old)
+        # location_new is needed in __run_internal and deleted afterwards
+
+    @staticmethod
+    def prepare_two_workdirs(session_token_old: str, blueprint_token: str, version_tag: str,
+                             inputs: dict, location: Path = None):
+        location_old = InvocationService.deployment_location(str(uuid.uuid4()), str(uuid.uuid4()))
+        location_new = location or InvocationService.deployment_location(str(uuid.uuid4()), str(uuid.uuid4()))
+
+        # old Deployed instance
+        old_session_data = SQL_database.get_session_data(session_token_old)
+        old_blueprint_token = old_session_data['blueprint_token']
+        old_version_tag = old_session_data['version_tag']
+        CSAR_db.get_revision(old_blueprint_token, location_old, old_version_tag)
+        InvocationService.get_dot_opera_from_db(session_token_old, location_old)
+        storage_old = Storage.create(str(location_old / '.opera'))
+
+        # new blueprint
+        CSAR_db.get_revision(blueprint_token, location_new, version_tag)
+        storage_new = Storage.create(str(location_new / '.opera'))
+        storage_new.write_json(inputs or {}, "inputs")
+        storage_new.write(str(entry_definitions(location_new)), "root_file")
+
+        ##############################################################
+        # TODO remove when fixed
+        #  Due to bug in xOpera, copy old TOSCA to new workdir with random name
+        new_filename = str(uuid.uuid4())
+        shutil.copyfile(str(location_old / entry_definitions(location_old)), str(location_new / new_filename))
+        storage_old.write(str(new_filename), "root_file")
+
+        ############################################################################
+
+        return storage_old, str(location_old), storage_new, str(location_new)
+
+    @staticmethod
+    def diff(session_token_old: str, blueprint_token: str, version_tag: str, inputs: dict):
+
+        storage_old, location_old, storage_new, location_new = InvocationWorkerProcess.prepare_two_workdirs(session_token_old, blueprint_token, version_tag, inputs)
+
+        with xopera_util.cwd(location_new):
+
+            instance_diff = opera_diff_instances(storage_old, location_old,
+                                                 storage_new, location_new,
+                                                 opera_TemplateComparer(), opera_InstanceComparer(),
+                                                 verbose_mode=True)
+        shutil.rmtree(location_new)
+        shutil.rmtree(location_old)
+        return instance_diff
 
     @staticmethod
     def read_file(filename):
