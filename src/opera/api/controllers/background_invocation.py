@@ -297,12 +297,6 @@ class InvocationService:
         file_util.json_to_dir(dot_opera_tree, (location / '.opera'))
 
     @classmethod
-    def remove_inputs(cls, location):
-        with xopera_util.cwd(location):
-            opera_storage = Storage.create(".opera")
-            opera_storage.write('{}', "inputs")
-
-    @classmethod
     def get_instance_state(cls, location):
         json_dict = {}
         for file_path in Path(location / '.opera' / 'instances').glob("*"):
