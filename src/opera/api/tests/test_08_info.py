@@ -1,14 +1,14 @@
+import json
+import uuid
 from pathlib import Path
 
 from assertpy import assert_that
 
 from opera.api.controllers.background_invocation import InvocationService
-from opera.api.openapi.models.invocation import Invocation, InvocationState
 from opera.api.openapi.models.git_log import GitLog
+from opera.api.openapi.models.invocation import Invocation, InvocationState
 from opera.api.settings import Settings
 from opera.api.util import timestamp_util
-import uuid
-import json
 
 
 class TestStatus:
@@ -90,7 +90,7 @@ class TestGitLog:
         assert resp.status_code == 200
         assert_that(resp.json).is_length(1)
         assert_that(resp.json[0]).contains_only(*git_data.to_dict().keys())
-        mock_git_data.assert_called_with(git_data.blueprint_token, git_data.version_tag,fetch_all)
+        mock_git_data.assert_called_with(git_data.blueprint_token, git_data.version_tag, fetch_all)
 
 
 class TestDeployLog:
@@ -104,7 +104,6 @@ class TestDeployLog:
         assert resp.json['message'] == "Log file not found"
 
     def test_keys(self, client, mocker, generic_invocation: Invocation):
-
         inv = generic_invocation
         inv.blueprint_token = str(uuid.uuid4())
         inv.version_tag = "version_tag"
@@ -113,7 +112,8 @@ class TestDeployLog:
         mock_log_data = mocker.MagicMock(name='invoke', return_value=[('timestamp1', json.dumps(inv.to_dict()))])
         mocker.patch('opera.api.service.sqldb_service.OfflineStorage.get_deployment_log', new=mock_log_data)
 
-        resp = client.get(f"/info/log/deployment?blueprint_token={inv.blueprint_token}&session_token={inv.session_token}")
+        resp = client.get(
+            f"/info/log/deployment?blueprint_token={inv.blueprint_token}&session_token={inv.session_token}")
         assert resp.status_code == 200
         assert_that(resp.json).is_length(1)
         inv_dict = inv.to_dict()

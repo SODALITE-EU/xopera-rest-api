@@ -4,7 +4,7 @@ from assertpy import assert_that
 from pytest_mock import mocker as Mock
 
 from opera.api.settings import Settings
-from opera.api.util import file_util, xopera_util, timestamp_util
+from opera.api.util import file_util, xopera_util
 
 
 class TestFileUtil:

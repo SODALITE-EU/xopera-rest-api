@@ -315,7 +315,7 @@ class PostgreSQL(Database):
         timestamp = timestamp_util.datetime_now_to_string()
         response = self.execute(
             "insert into {} (blueprint_token, version_tag, timestamp, session_token, tree) values (%s, %s, %s, %s, %s)"
-            .format(Settings.dot_opera_data_table),
+                .format(Settings.dot_opera_data_table),
             (str(blueprint_token), str(version_tag), timestamp, str(session_token), tree_str))
         if response:
             log.info('Updated dot_opera_data in PostgreSQL database')
@@ -329,17 +329,17 @@ class PostgreSQL(Database):
         """
         dbcur = self.connection.cursor()
         query = "select blueprint_token, version_tag, session_token, timestamp, tree" \
-                " from {} where session_token = '{}';"\
+                " from {} where session_token = '{}';" \
             .format(Settings.dot_opera_data_table, str(session_token))
         dbcur.execute(query)
         line = dbcur.fetchone()
         session_data = {
-                'blueprint_token': line[0],
-                'version_tag': line[1],
-                'session_token': line[2],
-                'timestamp': timestamp_util.datetime_to_str(line[3]),
-                'tree': json.loads(line[4])
-            }
+            'blueprint_token': line[0],
+            'version_tag': line[1],
+            'session_token': line[2],
+            'timestamp': timestamp_util.datetime_to_str(line[3]),
+            'tree': json.loads(line[4])
+        }
         dbcur.close()
         return session_data
 

@@ -1,6 +1,8 @@
-from assertpy import assert_that
-from opera.api.openapi.models import OperationType, Invocation
 import uuid
+
+from assertpy import assert_that
+
+from opera.api.openapi.models import OperationType, Invocation
 
 
 class TestUpdate:
@@ -24,7 +26,8 @@ class TestUpdate:
         mocker.patch('opera.api.service.csardb_service.GitDB.version_exists', new=mock_version_exists)
 
         session_token = uuid.uuid4()
-        resp = client.post(f"/update/{session_token}?blueprint_token={TestUpdate.blueprint_token}&version_tag={TestUpdate.version_tag}")
+        resp = client.post(
+            f"/update/{session_token}?blueprint_token={TestUpdate.blueprint_token}&version_tag={TestUpdate.version_tag}")
         assert resp.status_code == 404
         mock_version_exists.assert_called_with(TestUpdate.blueprint_token, TestUpdate.version_tag)
 
@@ -51,4 +54,3 @@ class TestUpdate:
         assert_that(resp.json).contains_only(*[k for k in inv_dict.keys() if inv_dict[k] is not None])
         mock_invoke.assert_called_with(OperationType.UPDATE, str(inv.blueprint_token), inv.version_tag,
                                        inv.session_token, inv.workers, {'marker': 'blah'})
-

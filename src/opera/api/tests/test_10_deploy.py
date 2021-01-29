@@ -1,6 +1,8 @@
-from assertpy import assert_that
-from opera.api.openapi.models import OperationType, Invocation
 import uuid
+
+from assertpy import assert_that
+
+from opera.api.openapi.models import OperationType, Invocation
 
 
 class TestDeployFresh:
@@ -23,11 +25,13 @@ class TestDeployFresh:
         blueprint_token = uuid.uuid4()
         version_tag = 'version_tag'
         workers = 42
-        resp = client.post(f"/deploy/fresh/{blueprint_token}?version_tag={version_tag}&workers={workers}", data=inputs_1)
+        resp = client.post(f"/deploy/fresh/{blueprint_token}?version_tag={version_tag}&workers={workers}",
+                           data=inputs_1)
         assert resp.status_code == 202
         inv_dict = generic_invocation.to_dict()
         assert_that(resp.json).contains_only(*[k for k in inv_dict.keys() if inv_dict[k] is not None])
-        mock_invoke.assert_called_with(OperationType.DEPLOY_FRESH, str(blueprint_token), version_tag, None, workers, {'marker': 'blah'})
+        mock_invoke.assert_called_with(OperationType.DEPLOY_FRESH, str(blueprint_token), version_tag, None, workers,
+                                       {'marker': 'blah'})
 
     def test_no_inputs(self, client, mocker, generic_invocation):
         mock_invoke = mocker.MagicMock(name='invoke', return_value=generic_invocation)
@@ -96,10 +100,3 @@ class TestDeployContinue:
         assert_that(resp.json).contains_only(*[k for k in inv_dict.keys() if inv_dict[k] is not None])
         mock_invoke.assert_called_with(OperationType.DEPLOY_CONTINUE, str(inv.blueprint_token), inv.version_tag,
                                        inv.session_token, inv.workers, {'marker': 'blah'}, inv.resume)
-
-
-
-
-
-
-

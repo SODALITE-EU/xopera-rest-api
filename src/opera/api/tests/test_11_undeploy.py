@@ -1,6 +1,8 @@
-from assertpy import assert_that
-from opera.api.openapi.models import OperationType, Invocation
 import uuid
+
+from assertpy import assert_that
+
+from opera.api.openapi.models import OperationType, Invocation
 
 
 class TestUndeploy:
@@ -62,10 +64,3 @@ class TestUndeploy:
         assert_that(resp.json).contains_only(*[k for k in inv_dict.keys() if inv_dict[k] is not None])
         mock_invoke.assert_called_with(OperationType.UNDEPLOY, str(inv.blueprint_token), inv.version_tag,
                                        str(inv.session_token), inv.workers, {'marker': 'blah'})
-
-
-
-
-
-
-

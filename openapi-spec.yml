@@ -8,45 +8,7 @@ info:
     name: Apache 2.0
     url: http://www.apache.org/licenses/LICENSE-2.0.html
   description: |+
-    xOpera REST API with xOpera==0.6.4
-
-    Standard scenarios of using REST api:
-
-    FIRST RUN
-    - GET key pair via ssh/keys/public download and register it on your openstack
-
-    DEPLOY
-    1) upload blueprint with POST to /manage
-     - new version of existing one must be POSTed to /manage/{blueprint_token}
-     - save blueprint_metadata, returned by API call -> it is the only way of accessing your blueprint afterwards
-     2) deploy last version of blueprint with POST to /deploy/{blueprint_token}
-    - optionally, inputs file to be used with template must also be uploaded within same API call
-    - another version can be specified by version_tag
-    - save session_token
-    3) using status_token from with GET to /info/status check status of your job
-    4) After completion, check logs with GET to /info/log/deployment
-
-    UNDEPLOY
-    1) undeploy blueprint with POST to /undeploy/{blueprint_token}
-    - optionally, inputs file to be used with template must also be uploaded within same API call
-     - optionally also in combination with version_tag
-     - save session_token
-     2) using status_token with GET to /info/status check status of your job
-    3) After completion, check logs with GET to /info/log/deployment
-    4) Delete all versions of blueprint from database with DELETE to /manage/{blueprint_token}
-    - to delete just specific version, use version_id or timestamp
-    - if deployment from template has not been undeployed yet, blueprint cannot be deleted-> use 'force' to override
-
-    ACCESS TO REPOSITORY WITH BLUEPRINTS
-    - xOpera REST API uses git backend for storing blueprints
-    - to obtain access, POST to /manage/<blueprint_token>/user endpoint username and invitation will be sent
-    - with GET to /manage/<blueprint_token>/user user can obtain list of collaborators and repo url
-
-    GIT LOGS
-    - Last transaction details for gitCsarDB can be inspected using /info/log/git/{blueprint_token} endpoint.
-    - optionally, logs inspection can be further specified with version_tag
-    - if all=True, all logs that satisfy blueprint_token and version_tag conditions will be returned
-
+    xOpera REST API with xOpera==0.6.4 and Gitlab / Github integation
 
 servers:
 - url: /

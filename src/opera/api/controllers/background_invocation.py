@@ -7,16 +7,14 @@ import traceback
 import uuid
 from pathlib import Path
 from typing import Optional
-import tempfile
 
 from opera.commands.deploy import deploy_service_template as opera_deploy
-from opera.commands.undeploy import undeploy as opera_undeploy
 from opera.commands.diff import diff_instances as opera_diff_instances
+from opera.commands.undeploy import undeploy as opera_undeploy
 from opera.commands.update import update as opera_update
-from opera.compare.template_comparer import TemplateComparer as opera_TemplateComparer
 from opera.compare.instance_comparer import InstanceComparer as opera_InstanceComparer
+from opera.compare.template_comparer import TemplateComparer as opera_TemplateComparer
 from opera.storage import Storage
-from opera.utils import get_workdir
 
 from opera.api.blueprint_converters.blueprint2CSAR import entry_definitions
 from opera.api.log import get_logger
@@ -140,7 +138,6 @@ class InvocationWorkerProcess(multiprocessing.Process):
         assert location_new == str(location)
 
         with xopera_util.cwd(location_new):
-
             instance_diff = opera_diff_instances(storage_old, location_old,
                                                  storage_new, location_new,
                                                  opera_TemplateComparer(), opera_InstanceComparer(),
@@ -188,10 +185,10 @@ class InvocationWorkerProcess(multiprocessing.Process):
     @staticmethod
     def diff(session_token_old: str, blueprint_token: str, version_tag: str, inputs: dict):
 
-        storage_old, location_old, storage_new, location_new = InvocationWorkerProcess.prepare_two_workdirs(session_token_old, blueprint_token, version_tag, inputs)
+        storage_old, location_old, storage_new, location_new = InvocationWorkerProcess.prepare_two_workdirs(
+            session_token_old, blueprint_token, version_tag, inputs)
 
         with xopera_util.cwd(location_new):
-
             instance_diff = opera_diff_instances(storage_old, location_old,
                                                  storage_new, location_new,
                                                  opera_TemplateComparer(), opera_InstanceComparer(),
@@ -214,7 +211,8 @@ class InvocationService:
         self.worker.start()
 
     def invoke(self, operation_type: OperationType, blueprint_token: str, version_tag: Optional[str],
-               session_token_old: Optional[str], workers: int, inputs: Optional[dict], resume: bool = None) -> Invocation:
+               session_token_old: Optional[str], workers: int, inputs: Optional[dict],
+               resume: bool = None) -> Invocation:
         invocation_uuid = str(uuid.uuid4())
         now = datetime.datetime.now(tz=datetime.timezone.utc)
         logger.info("Invoking %s with ID %s at %s", operation_type, invocation_uuid, now.isoformat())

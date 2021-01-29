@@ -1,6 +1,6 @@
-from assertpy import assert_that
-from opera.api.openapi.models import OperationType, Invocation
 import uuid
+
+from opera.api.openapi.models import Invocation
 
 
 class TestDiff:
@@ -24,7 +24,8 @@ class TestDiff:
         mocker.patch('opera.api.service.csardb_service.GitDB.version_exists', new=mock_version_exists)
 
         session_token = uuid.uuid4()
-        resp = client.post(f"/diff/{session_token}?blueprint_token={TestDiff.blueprint_token}&version_tag={TestDiff.version_tag}")
+        resp = client.post(
+            f"/diff/{session_token}?blueprint_token={TestDiff.blueprint_token}&version_tag={TestDiff.version_tag}")
         assert resp.status_code == 404
         mock_version_exists.assert_called_with(TestDiff.blueprint_token, TestDiff.version_tag)
 
@@ -38,6 +39,7 @@ class TestDiff:
         class fake_diff:
             def __init__(self, *args):
                 self.out = args
+
             def outputs(self):
                 return self.out
 
@@ -47,9 +49,8 @@ class TestDiff:
         mock_invoke = mocker.MagicMock(name='invoke', side_effect=fake_diff)
         mocker.patch('opera.api.controllers.background_invocation.InvocationWorkerProcess.diff', new=mock_invoke)
 
-        resp = client.post(f"/diff/{inv.session_token}?blueprint_token={inv.blueprint_token}&version_tag={inv.version_tag}")
+        resp = client.post(
+            f"/diff/{inv.session_token}?blueprint_token={inv.blueprint_token}&version_tag={inv.version_tag}")
 
         assert resp.status_code == 200
         mock_invoke.assert_called_with(str(inv.session_token), str(inv.blueprint_token), inv.version_tag, None)
-
-

@@ -33,5 +33,3 @@ def post_diff(session_token, blueprint_token, version_tag=None):
             f"Did not find blueprint with token: {blueprint_token} and version_id: {version_tag or 'any'}"), 404
 
     return InvocationWorkerProcess.diff(session_token, blueprint_token, version_tag, inputs).outputs(), 200
-
-
