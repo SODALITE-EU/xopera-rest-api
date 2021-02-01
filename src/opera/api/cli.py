@@ -4,12 +4,15 @@ import connexion
 
 from opera.api.log import get_logger
 from opera.api.openapi import encoder
+from opera.api.service import sqldb_service, csardb_service
 from opera.api.settings import Settings
 from opera.api.util import xopera_util
 
 DEBUG = os.getenv("DEBUG", "false") == "true"
 logger = get_logger(__name__)
 Settings.load_settings()
+CSAR_db = csardb_service.GitDB(**Settings.git_config)
+SQL_database = sqldb_service.connect(Settings.sql_config)
 
 
 def main():

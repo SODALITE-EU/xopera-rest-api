@@ -1,16 +1,13 @@
 import json
 
+from opera.api.cli import SQL_database
 from opera.api.controllers.background_invocation import InvocationService
 from opera.api.log import get_logger
 from opera.api.openapi.models import InvocationState, Invocation, GitLog
 from opera.api.openapi.models.just_message import JustMessage
-from opera.api.service import csardb_service, sqldb_service
-from opera.api.settings import Settings
 
 logger = get_logger(__name__)
 
-CSAR_db = csardb_service.GitDB(**Settings.git_config)
-SQL_database = sqldb_service.connect(Settings.sql_config)
 invocation_service = InvocationService()
 
 

@@ -3,6 +3,7 @@ import json
 import multiprocessing
 import os
 import shutil
+import tempfile
 import traceback
 import uuid
 from pathlib import Path
@@ -12,20 +13,19 @@ from opera.commands.deploy import deploy_service_template as opera_deploy
 from opera.commands.diff import diff_instances as opera_diff_instances
 from opera.commands.undeploy import undeploy as opera_undeploy
 from opera.commands.update import update as opera_update
+from opera.commands.validate import validate_service_template as opera_validate
 from opera.compare.instance_comparer import InstanceComparer as opera_InstanceComparer
 from opera.compare.template_comparer import TemplateComparer as opera_TemplateComparer
 from opera.storage import Storage
 
 from opera.api.blueprint_converters.blueprint2CSAR import entry_definitions
+from opera.api.cli import CSAR_db, SQL_database
 from opera.api.log import get_logger
 from opera.api.openapi.models import Invocation, InvocationState, OperationType
-from opera.api.service import csardb_service, sqldb_service
 from opera.api.settings import Settings
 from opera.api.util import xopera_util, file_util
 
 logger = get_logger(__name__)
-CSAR_db = csardb_service.GitDB(**Settings.git_config)
-SQL_database = sqldb_service.connect(Settings.sql_config)
 
 
 class InvocationWorkerProcess(multiprocessing.Process):
@@ -196,6 +196,19 @@ class InvocationWorkerProcess(multiprocessing.Process):
         shutil.rmtree(location_new)
         shutil.rmtree(location_old)
         return instance_diff
+
+    @staticmethod
+    def validate(blueprint_token: str, version_tag: str, inputs: dict):
+        # location = InvocationService.deployment_location(str(uuid.uuid4()), blueprint_token)
+        with tempfile.TemporaryDirectory() as location:
+            CSAR_db.get_revision(blueprint_token, location, version_tag)
+            try:
+                with xopera_util.cwd(location):
+                    service_template = str(entry_definitions(location))
+                    opera_validate(service_template, inputs)
+                return None
+            except Exception as e:
+                return e.__class__.__name__, xopera_util.mask_workdir(location, str(e))
 
     @staticmethod
     def read_file(filename):

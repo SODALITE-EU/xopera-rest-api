@@ -1,12 +1,8 @@
+from opera.api.cli import CSAR_db, SQL_database
 from opera.api.controllers.background_invocation import InvocationWorkerProcess
 from opera.api.openapi.models import Invocation
 from opera.api.openapi.models.just_message import JustMessage
-from opera.api.service import csardb_service, sqldb_service
-from opera.api.settings import Settings
 from opera.api.util import xopera_util
-
-CSAR_db = csardb_service.GitDB(**Settings.git_config)
-SQL_database = sqldb_service.connect(Settings.sql_config)
 
 
 def post_diff(session_token, blueprint_token, version_tag=None):
