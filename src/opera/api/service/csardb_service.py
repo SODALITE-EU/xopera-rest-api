@@ -1,6 +1,7 @@
 import logging as log
 import shutil
 import uuid
+import tempfile
 from pathlib import Path
 
 from werkzeug.datastructures import FileStorage
@@ -38,6 +39,12 @@ class GitDB:
         """
         return self.connection.get_tags_list(csar_token=blueprint_token)
 
+    def get_last_tag(self, blueprint_token: uuid):
+        try:
+            return self.get_tags(blueprint_token)[-1]
+        except IndexError:
+            return None
+
     def add_revision(self, blueprint_token: uuid = None, CSAR: FileStorage = None,
                      blueprint_path: Path = None, revision_msg: str = None, minor_to_increment: str = None):
         """
@@ -48,12 +55,12 @@ class GitDB:
         will be incremented
         """
         token = uuid.uuid4() if not blueprint_token else blueprint_token
-        path = Path(f'/tmp/{uuid.uuid4()}') if not blueprint_path else blueprint_path
+        path = Path(tempfile.mkdtemp()) if not blueprint_path else blueprint_path
 
         if CSAR is not None:
-            workdir = Path(f'/tmp/{uuid.uuid4()}')
+            workdir = Path(tempfile.mkdtemp())
             CSAR_path = workdir / Path(CSAR.filename)
-            workdir.mkdir(parents=True)
+            workdir.mkdir(parents=True, exist_ok=True)
             CSAR.save(CSAR_path.open('wb'))
             try:
                 csar_to_blueprint(csar=CSAR_path, dst=path)

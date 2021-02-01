@@ -3,6 +3,7 @@ import time
 import uuid
 from pathlib import Path
 
+import tempfile
 import git
 
 from . import tag_util
@@ -16,7 +17,7 @@ class GitCsarDB:
     class UnsupportedConnectorType(GitCsarDBError):
         pass
 
-    def __init__(self, connector: Connector, workdir="/tmp/git_db", repo_prefix='gitDB_',
+    def __init__(self, connector: Connector, workdir=tempfile.mkdtemp(), repo_prefix='gitDB_',
                  commit_name="SODALITE-xOpera-REST-API", commit_mail="some-email@xlab.si",
                  guest_permissions="reporter", timeout=60):
         self.git_connector = connector
@@ -103,7 +104,7 @@ class GitCsarDB:
                 raise FileNotFoundError(f"Tag '{version_tag}' not found")
         repo_path = dst or git_clone_path
         if repo_path != git_clone_path:
-            shutil.copytree(git_clone_path, repo_path)
+            shutil.copytree(git_clone_path, repo_path, dirs_exist_ok=True)
             # remove .git dir
             shutil.rmtree(Path(repo_path / Path(".git")))
             shutil.rmtree(git_clone_path)

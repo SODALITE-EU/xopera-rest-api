@@ -27,7 +27,85 @@ tags:
   description: Update the deployed TOSCA service template and redeploy it according to the discovered template diff
 - name: info
   description: Information about deployment
+- name: validate
+  description: validate TOSCA service template
+- name: outputs
+  description: Obtain outputs from TOSCA deployed instance
 paths:
+  /outputs/{session_token}:
+    get:
+      tags:
+      - outputs
+      operationId: get_outputs
+      parameters:
+      - name: session_token
+        in: path
+        description: Token of TOSCA session
+        required: true
+        schema:
+          type: string
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+        404:
+          description: Did not find session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/just_message'
+  /validate/{blueprint_token}:
+    post:
+      tags:
+      - validate
+      operationId: post_validate
+      description: Validates TOSCA service template
+      parameters:
+      - name: blueprint_token
+        in: path
+        description: Token of TOSCA blueprint
+        required: true
+        schema:
+          type: string
+      - name: version_tag
+        in: query
+        description: Version_tag to of TOSCA blueprint
+        schema:
+          type: string
+
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                inputs_file:
+                  type: string
+                  description: File with inputs TOSCA blueprint
+                  format: binary
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/just_message'
+        404:
+          description: Did not find blueprint
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/just_message'
+        500:
+          description: Fail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_msg'
+
   /diff/{session_token}:
     post:
       tags:

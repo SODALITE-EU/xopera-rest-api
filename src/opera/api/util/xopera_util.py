@@ -89,3 +89,10 @@ def inputs_file():
         return yaml.safe_load(file.read().decode('utf-8'))
     except KeyError:
         return None
+
+
+def mask_workdir(location: Path, stacktrace: str, placeholder="$BLUEPRINT_DIR"):
+    """
+    replaces real workdir with placehodler
+    """
+    return stacktrace.replace(str(location), placeholder)

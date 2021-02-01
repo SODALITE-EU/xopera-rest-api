@@ -6,6 +6,7 @@ import sys
 import uuid
 from datetime import datetime
 from pathlib import Path
+import tempfile
 
 import yaml
 
@@ -57,7 +58,7 @@ def to_CSAR_simple(src: Path, dst: Path, raise_exceptions=False):
 
 def to_CSAR(blueprint_name: str, blueprint_dir: Path, no_meta: bool = False, entry_definitions: Path = None,
             other_definitions: list = None, author: str = 'SODALITE blueprint2CSAR tool', output: Path = None,
-            workdir: Path = Path('/tmp/blueprint2csar')):
+            workdir: Path = Path(tempfile.mkdtemp())):
     """
     Packs TOSCA Simple Profile definitions along with all accompanying artifacts
     (e.g. scripts, binaries, configuration files) in TOSCA Cloud Service Archive (CSAR) format.

@@ -1,4 +1,5 @@
 import uuid
+import tempfile
 from pathlib import Path
 
 import opera.api.gitCsarDB as gitCsarDB
@@ -6,14 +7,10 @@ from opera.api.gitCsarDB import GitCsarDB
 
 
 def test_connect_function():
-    db_mock = gitCsarDB.connect(type='mock', mock_workdir='/tmp/blah')
-    assert isinstance(db_mock, GitCsarDB)
-    assert isinstance(db_mock.git_connector, gitCsarDB.MockConnector)
-
-
-def test_default_params(db: GitCsarDB):
-    assert db.workdir == Path("/tmp/git_db")
-    assert db.repo_prefix == 'gitDB_'
+    with tempfile.TemporaryDirectory() as workdir:
+        db_mock = gitCsarDB.connect(type='mock', mock_workdir=workdir)
+        assert isinstance(db_mock, GitCsarDB)
+        assert isinstance(db_mock.git_connector, gitCsarDB.MockConnector)
 
 
 def test_token_to_repo_name(db: GitCsarDB):

@@ -1,19 +1,16 @@
 import connexion
 
+from opera.api.cli import CSAR_db, SQL_database
 from opera.api.log import get_logger
 from opera.api.openapi.models.collaborators_list import CollaboratorsList
 from opera.api.openapi.models.delete_metadata import DeleteMetadata
 from opera.api.openapi.models.error_msg import ErrorMsg
 from opera.api.openapi.models.git_revision_metadata import GitRevisionMetadata
 from opera.api.openapi.models.just_message import JustMessage
-from opera.api.service import csardb_service, sqldb_service
 from opera.api.settings import Settings
 from opera.api.util import git_util
 
 logger = get_logger(__name__)
-
-CSAR_db = csardb_service.GitDB(**Settings.git_config)
-SQL_database = sqldb_service.connect(Settings.sql_config)
 
 
 def delete_manage_csar(blueprint_token, version_tag=None, force=None):
