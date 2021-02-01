@@ -5,9 +5,9 @@ Implementation of the xOpera orchestrator REST API
 
 ## Prerequisites
     
-    - Ubuntu 18.04 or newer
-    - Python 3.6 with pip 20.0.2 or newer
-    - Docker engine 19.03 or newer
+    - Ubuntu 20.04 or newer
+    - Python 3.8.5 with pip 21 or newer
+    - Docker engine 20.10 or newer
 
 ### GIT backend server (optional, recommended)
 xOpera REST API uses git backend to store blueprints. It supports github.com and gitlab (both gitlab.com and private gitlab based servers).
@@ -42,7 +42,7 @@ To connect REST API to gitlab server:
 
 #### Optional git configuration settings
 Beside obligatory settings following settings can be configured:
- - XOPERA_GIT_WORKDIR (default: `/tmp/git_db`) - workdir for git on REST API server
+ - XOPERA_GIT_WORKDIR - workdir for git on REST API server
  - XOPERA_GIT_REPO_PREFIX (default: `gitDB_`) - repo prefix. Blueprint with token `963d7c94-34f9-498d-b122-472dbd9a8681` would be saved to repository `gitDB_963d7c94-34f9-498d-b122-472dbd9a8681`
  - XOPERA_GIT_COMMIT_NAME (default: `SODALITE-xOpera-REST-API`) - user.name to author git commit
  - XOPERA_GIT_COMMIT_MAIL (default: `no-email@domain.com`) - user.mail to author git commit
@@ -98,19 +98,44 @@ Standard scenarios of using REST api:
 ### FIRST RUN
 - GET key pair via ssh/keys/public download and register it on your OpenStack
 
-### DEPLOY
-Standard scenarios of using REST api:
-
+### MANAGE
 - upload blueprint with POST to /manage
     - new version of existing one must be POSTed to /manage/{blueprint_token}
     - save blueprint_metadata, returned by API call -> it is the only way of accessing your blueprint afterwards
-- deploy last version of blueprint with POST to /deploy/{blueprint_token}
-    - optionally, inputs file to be used with template must also be uploaded within same API call
-    - another version can be specified by version_tag
-    - save session_token
 
-- using status_token from with GET to /info/status check status of your job
-- After completion, check logs with GET to /info/log
+- delete entire blueprint with DELETE to /manage/{blueprint_token}
+    - if version_tag is specified, only this version will be deleted
+    - use force, if necessary
+
+#### ACCESS TO REPOSITORY WITH BLUEPRINTS
+- xOpera REST API uses git backend for storing blueprints
+- to obtain access, POST to /manage/<blueprint_token>/user endpoint username
+    - invitation for user with username will be sent to its email address (github.com)
+    - user will be added to repository (gitlab)
+- with GET to /manage/<blueprint_token>/user user_list can be obtained
+
+### VALIDATE
+- TOSCA syntax can be validated with POST to /validate/{blueprint_token}
+    - if version_tag is specified, specific version will be inspected, otherwise the last one
+    - optionally, inputs file to be used with template must also be uploaded within same API call
+
+### FIRST DEPLOY (deploy/fresh/)
+- deploy last version of blueprint with POST to /deploy/fresh/{blueprint_token}
+    - optionally, `inputs_file` to be used with template must also be uploaded within same API call
+    - another version can be specified by `version_tag` parameter
+    - Number of parallel workers can be specified with `workers` parameter
+    - save `session_token`
+
+- using `session_token` with GET to /info/status check status and logs of your job
+- After completion, check logs with GET to /info/log (deprecated, will be removed soon)
+
+### DEPLOY CONTINUE
+If job was interrupted, it can be continued (possibly with new inputs)
+- continue with interrupted deploy job with POST to /deploy/{session_token}
+    - by default, this option will resume deployment, but it can also start over `(resume=false)`
+    - Number of parallel workers can be specified with `workers` parameter
+- A new session_token will be assigned to job (old will be returned as `session_token_old`)
+- using `session_token` with GET to /info/status check status and logs of your job
 
 ### UNDEPLOY
 - undeploy blueprint with POST to /undeploy/{blueprint_token}
@@ -119,17 +144,22 @@ Standard scenarios of using REST api:
     - save session_token
 - using status_token with GET to /info/status check status of your job
 - After completion, check logs with GET to /info/log
-- Delete all versions of blueprint from database with DELETE to /manage/{blueprint_token}
-    - to delete just specific version, use version_tag
-    - if deployment from template has not been undeployed yet, blueprint cannot be deleted-> use ‘force’ to override
 
-### ACCESS TO REPOSITORY WITH BLUEPRINTS
-- xOpera REST API uses git backend for storing blueprints
-- to obtain access, POST to /manage/<blueprint_token>/user endpoint username
-    - invitation for user with username will be sent to its email address (github.com)
-    - user will be added to repository (gitlab)
-- with GET to /manage/<blueprint_token>/user user_list can be obtained
-                      
+### OUTPUTS
+If TOSCA service template specified outputs, they can be obtained with GET to /outputs/{session_token}
+
+### DIFF
+Diff calculates instance difference between Deployed instance model (accessable via `session_token`) and  
+New blueprint version (`blueprint_token` with `version_tag` and `inputs_file`)
+
+### UPDATE
+- Update deployes new instance model (DI2), which is diff between Deployed instance model, referenced by `session_token` 
+(DI1) and New blueprint (referenced by `blueprint_token` and `version_tag`) with inputs (`inputs_file`).
+    - Number of parallel workers can be specified with `workers` parameter
+    - save `session_token`
+- using status_token with GET to /info/status check status of your job
+- After completion, check logs with GET to /info/log
+                    
 ### GIT LOGS
 - Last transaction details for gitCsarDB can be inspected using /info/log/git/{blueprint_token} endpoint.
     - optionally, logs inspection can be further specified with version_tag
@@ -153,10 +183,10 @@ For details about CSAR format structure, visit [TOSCA Simple Profile in YAML Ver
 
 ## Setting up OpenStack
 ### Setting the default user
-When deploying the xOpera Rest API using the provided templates to an OpenStack server, make sure to edit the xOpera-rest-blueprint/tests/input.yaml file and setup the necessary settings marked with "[setting]".
-At the end of the file, there is a section/dict called "xopera_env" with a comment "#settings for OS fallback".
-After the comment there is a default configuration template without the values set, so either use those or, even better, download your openrc file from the OpenStack server and copy the env variables set by it into this dictionary following the same format as the example settings provided.
-
+When deploying the xOpera Rest API, intended to target Openstack, make sure to pass correct environment variables for 
+openstack orchestration (section `# XOPERA OPENSTACK DEPLOYMENT FALLBACK SETTINGS` in `xopera_env` field in 
+[inputs-local.yaml](xOpera-rest-blueprint/inputs/input-local.yaml) or [inputs-openstack.yaml](xOpera-rest-blueprint/inputs/input-openstack.yaml))
+ 
 ## Docker registry connection
 ### Local docker registry
 To run docker image registry locally, run the following command:

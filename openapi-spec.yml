@@ -8,7 +8,7 @@ info:
     name: Apache 2.0
     url: http://www.apache.org/licenses/LICENSE-2.0.html
   description: |+
-    xOpera REST API with xOpera==0.6.4 and Gitlab / Github integation
+    xOpera REST API with xOpera==0.6.4 orchestrator and Gitlab / Github integation for blueprint management
 
 servers:
 - url: /
