@@ -14,6 +14,7 @@ from opera.commands.diff import diff_instances as opera_diff_instances
 from opera.commands.undeploy import undeploy as opera_undeploy
 from opera.commands.update import update as opera_update
 from opera.commands.validate import validate_service_template as opera_validate
+from opera.commands.outputs import outputs as opera_outputs
 from opera.compare.instance_comparer import InstanceComparer as opera_InstanceComparer
 from opera.compare.template_comparer import TemplateComparer as opera_TemplateComparer
 from opera.storage import Storage
@@ -199,7 +200,6 @@ class InvocationWorkerProcess(multiprocessing.Process):
 
     @staticmethod
     def validate(blueprint_token: str, version_tag: str, inputs: dict):
-        # location = InvocationService.deployment_location(str(uuid.uuid4()), blueprint_token)
         with tempfile.TemporaryDirectory() as location:
             CSAR_db.get_revision(blueprint_token, location, version_tag)
             try:
@@ -209,6 +209,17 @@ class InvocationWorkerProcess(multiprocessing.Process):
                 return None
             except Exception as e:
                 return e.__class__.__name__, xopera_util.mask_workdir(location, str(e))
+
+    @staticmethod
+    def outputs(session_token: str):
+        with tempfile.TemporaryDirectory() as location:
+            InvocationService.prepare_location(session_token, Path(location))
+            try:
+                with xopera_util.cwd(location):
+                    opera_storage = Storage.create(".opera")
+                    return opera_outputs(opera_storage), None
+            except Exception as e:
+                return None, (e.__class__.__name__, xopera_util.mask_workdir(location, str(e)))
 
     @staticmethod
     def read_file(filename):
@@ -234,7 +245,7 @@ class InvocationService:
         inv.blueprint_token = blueprint_token
         inv.session_token = invocation_uuid
         inv.session_token_old = session_token_old
-        inv.version_tag = version_tag
+        inv.version_tag = version_tag or CSAR_db.get_last_tag(blueprint_token)
         inv.state = InvocationState.PENDING
         inv.operation = operation_type
         inv.timestamp = now.isoformat()
@@ -304,8 +315,23 @@ class InvocationService:
 
     @classmethod
     def get_dot_opera_from_db(cls, session_token, location: Path) -> None:
-        dot_opera_tree = SQL_database.get_session_data(session_token)['tree']
-        file_util.json_to_dir(dot_opera_tree, (location / '.opera'))
+        dot_opera_data = SQL_database.get_session_data(session_token)
+        if not dot_opera_data:
+            logger.error(f"sqldb_service.get_session_data failed: session_token: {session_token}")
+        file_util.json_to_dir(dot_opera_data['tree'], (location / '.opera'))
+
+    @classmethod
+    def prepare_location(cls, session_token: str, location: Path):
+        """
+        Prepare location with blueprint and session_data (.opera dir)
+        """
+        session_data = SQL_database.get_session_data(session_token)
+        blueprint_token = session_data['blueprint_token']
+        version_tag = session_data['version_tag']
+        if not CSAR_db.get_revision(blueprint_token, location, version_tag):
+            logger.error(f'csardb_service.get_revision failed: blueprint_token: {blueprint_token}, '
+                         f'location: {location}, version_tag: {version_tag}')
+        InvocationService.get_dot_opera_from_db(session_token, location)
 
     @classmethod
     def get_instance_state(cls, location):

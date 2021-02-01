@@ -130,22 +130,10 @@ class OfflineStorage(Database):
 
     def get_session_data(self, session_token):
         try:
-            return json.loads(self.file_read(str(self.dot_opera_data_path), session_token))
+            session_data = json.loads(self.file_read(str(self.dot_opera_data_path), session_token))
+            return {k: (v if v != 'None' else None) for k, v in session_data.items()}
         except FileNotFoundError:
             return None
-
-    # def get_last_session_data(self, blueprint_token):
-    #     my_list = []
-    #     for session_file in self.dot_opera_data_path.glob('*'):
-    #         if session_file.is_file():
-    #             session_data = json.loads(session_file.read_text())
-    #             if session_data['blueprint_token'] == blueprint_token:
-    #                 my_list.append((session_data['timestamp'], session_file.name))
-    #     try:
-    #         last_session_token = sorted(my_list, key=lambda x: x[0], reverse=True)[0][1]
-    #         return self.get_session_data(last_session_token)
-    #     except IndexError:
-    #         return None
 
     def update_deployment_log(self, blueprint_token: str, _log: str, session_token: str, timestamp: str):
         """

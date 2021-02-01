@@ -103,7 +103,7 @@ class GitCsarDB:
                 raise FileNotFoundError(f"Tag '{version_tag}' not found")
         repo_path = dst or git_clone_path
         if repo_path != git_clone_path:
-            shutil.copytree(git_clone_path, repo_path)
+            shutil.copytree(git_clone_path, repo_path, dirs_exist_ok=True)
             # remove .git dir
             shutil.rmtree(Path(repo_path / Path(".git")))
             shutil.rmtree(git_clone_path)

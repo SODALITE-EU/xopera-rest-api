@@ -38,6 +38,12 @@ class GitDB:
         """
         return self.connection.get_tags_list(csar_token=blueprint_token)
 
+    def get_last_tag(self, blueprint_token: uuid):
+        try:
+            return self.get_tags(blueprint_token)[-1]
+        except IndexError:
+            return None
+
     def add_revision(self, blueprint_token: uuid = None, CSAR: FileStorage = None,
                      blueprint_path: Path = None, revision_msg: str = None, minor_to_increment: str = None):
         """

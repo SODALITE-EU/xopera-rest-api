@@ -1,8 +1,8 @@
 from opera.api.cli import CSAR_db
 from opera.api.controllers.background_invocation import InvocationWorkerProcess
 from opera.api.log import get_logger
-from opera.api.openapi.models.error_msg import ErrorMsg  # noqa: E501
-from opera.api.openapi.models.just_message import JustMessage  # noqa: E501
+from opera.api.openapi.models.error_msg import ErrorMsg
+from opera.api.openapi.models.just_message import JustMessage
 from opera.api.util import xopera_util
 
 logger = get_logger(__name__)
