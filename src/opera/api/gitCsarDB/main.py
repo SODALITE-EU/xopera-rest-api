@@ -3,6 +3,7 @@ import time
 import uuid
 from pathlib import Path
 
+import tempfile
 import git
 
 from . import tag_util
@@ -16,7 +17,7 @@ class GitCsarDB:
     class UnsupportedConnectorType(GitCsarDBError):
         pass
 
-    def __init__(self, connector: Connector, workdir="/tmp/git_db", repo_prefix='gitDB_',
+    def __init__(self, connector: Connector, workdir=tempfile.mkdtemp(), repo_prefix='gitDB_',
                  commit_name="SODALITE-xOpera-REST-API", commit_mail="some-email@xlab.si",
                  guest_permissions="reporter", timeout=60):
         self.git_connector = connector

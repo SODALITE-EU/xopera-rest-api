@@ -50,7 +50,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/just_message'
+                type: object
         404:
           description: Did not find session
           content:
