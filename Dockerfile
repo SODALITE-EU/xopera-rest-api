@@ -4,7 +4,7 @@ COPY . /build/
 RUN /build/generate.sh
 
 
-FROM python:3.8.6-alpine3.12
+FROM python:3.8.7-alpine3.12
 WORKDIR /app
 ENTRYPOINT ["python3"]
 CMD ["-m", "opera.api.cli"]

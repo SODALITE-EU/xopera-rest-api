@@ -20,4 +20,3 @@ def get_public_key():
         if Settings.key_pair == "":
             return JustMessage("Openstack ssh key pair missing"), 404
         return JustMessage(f"Public key {key_name} not found"), 404
-

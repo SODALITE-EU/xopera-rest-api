@@ -1,13 +1,11 @@
 import json
 
-from opera.api.openapi.models.just_message import JustMessage
-from opera.api.openapi.models.git_log import GitLog
-from opera.api.service import csardb_service, sqldb_service
-from opera.api.log import get_logger
-from opera.api.settings import Settings
-from opera.api.openapi.models import InvocationState
 from opera.api.controllers.background_invocation import InvocationService
-
+from opera.api.log import get_logger
+from opera.api.openapi.models import InvocationState, Invocation, GitLog
+from opera.api.openapi.models.just_message import JustMessage
+from opera.api.service import csardb_service, sqldb_service
+from opera.api.settings import Settings
 
 logger = get_logger(__name__)
 
@@ -24,14 +22,12 @@ def get_deploy_log(blueprint_token=None, session_token=None):
     :param session_token: token of session
     :type session_token: str
 
-    :rtype: None
+    :rtype: List[Invocation]
     """
-    data = SQL_database.get_deployment_log(blueprint_token=blueprint_token, session_token=session_token)
+    data = SQL_database.get_deployment_log(blueprint_token, session_token)
     if not data:
         return JustMessage("Log file not found"), 400
-    # TODO solve timestamp format
-    # return [DeploymentLog.from_dict(json.loads(_data[1])) for _data in data], 200
-    return [json.loads(_data[1]) for _data in data], 200
+    return [Invocation.from_dict(json.loads(_data[1])) for _data in data], 200
 
 
 def get_git_log(blueprint_token, version_tag=None, fetch_all=False):
@@ -44,7 +40,7 @@ def get_git_log(blueprint_token, version_tag=None, fetch_all=False):
     :param fetch_all: show all database entries, not just last one
     :type fetch_all: bool
 
-    :rtype: None
+    :rtype: List[GitLog]
     """
 
     data = SQL_database.get_git_transaction_data(blueprint_token, version_tag, fetch_all)
@@ -54,12 +50,13 @@ def get_git_log(blueprint_token, version_tag=None, fetch_all=False):
 
 
 def get_status(token=None):
-    """Obtain job status
+    """
+    Obtain job status
 
     :param token: session_token
     :type token: str
 
-    :rtype: None
+    :rtype: Invocation
     """
     inv = invocation_service.load_invocation(token)
     if inv is None:
@@ -71,4 +68,4 @@ def get_status(token=None):
         InvocationState.FAILED: 500
     }
     logger.debug(json.dumps(inv.to_dict(), indent=2, sort_keys=True))
-    return inv.to_dict(), code[inv.state]
+    return inv, code[inv.state]

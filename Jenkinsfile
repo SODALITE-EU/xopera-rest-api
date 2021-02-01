@@ -94,7 +94,7 @@ pipeline {
                 sh  """ #!/bin/bash
                         python3 -m venv venv-test
                         . venv-test/bin/activate
-                        pip3 install -r requirements.txt
+                        pip3 install --no-cache-dir -r requirements.txt
                         ./generate.sh
                         cd src/
                         touch *.xml

@@ -2,8 +2,8 @@ import os
 
 import connexion
 
-from opera.api.openapi import encoder
 from opera.api.log import get_logger
+from opera.api.openapi import encoder
 from opera.api.settings import Settings
 from opera.api.util import xopera_util
 

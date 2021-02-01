@@ -1,7 +1,7 @@
 import shutil
+import time
 import uuid
 from pathlib import Path
-import time
 
 import git
 
@@ -21,7 +21,7 @@ class GitCsarDB:
                  guest_permissions="reporter", timeout=60):
         self.git_connector = connector
         self.workdir = Path(workdir)
-        self.workdir.mkdir(exist_ok=True)
+        self.workdir.mkdir(exist_ok=True, parents=True)
         self.repo_prefix = repo_prefix
         self.guest_permissions = guest_permissions
         self.commit_name = commit_name

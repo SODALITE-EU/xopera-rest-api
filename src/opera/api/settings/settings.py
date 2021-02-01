@@ -2,8 +2,8 @@ import copy
 import json
 import os
 from pathlib import Path
-from opera.api.log import get_logger
 
+from opera.api.log import get_logger
 
 logger = get_logger(__name__)
 
@@ -23,17 +23,17 @@ class Settings:
 
     # sql_database config
     sql_config = None
-    deployment_log_table = None
-    git_log_table = None
+    deployment_log_table = 'deployment_log'
+    git_log_table = 'git_log'
+    dot_opera_data_table = 'session_data'
 
     # OfflineStorage database (alternative to sql_database) config
-    offline_storage = Path(API_WORKDIR) / Path('storage')
-    offline_deployment_log = offline_storage / Path('deployment_log')
-    offline_git_log = offline_storage / Path('git_log')
+    USE_OFFLINE_STORAGE = False
+    offline_storage = Path(API_WORKDIR) / 'storage'
 
     # gitCsarDB config
     git_config = None
-    workdir = Path("/tmp/xopera/git_db/mockConnector")
+    workdir = Path(API_WORKDIR) / "git_db/mockConnector"
 
     @staticmethod
     def load_settings():
@@ -44,7 +44,7 @@ class Settings:
             'mock_workdir': Settings.workdir,
 
             # optional params
-            'workdir': os.getenv("XOPERA_GIT_WORKDIR", "/tmp/git_db"),
+            'workdir': os.getenv("XOPERA_GIT_WORKDIR", f"{Settings.API_WORKDIR}/git_db/mock_db"),
             'repo_prefix': os.getenv("XOPERA_GIT_REPO_PREFIX", "gitDB_"),
             'commit_name': os.getenv("XOPERA_GIT_COMMIT_NAME", "SODALITE-xOpera-REST-API"),
             'commit_mail': os.getenv("XOPERA_GIT_COMMIT_MAIL", "no-email@domain.com"),
@@ -61,6 +61,7 @@ class Settings:
         }
         Settings.deployment_log_table = os.getenv("XOPERA_DATABASE_DEPLOYMENT_LOG_TABLE", 'deployment_log')
         Settings.git_log_table = os.getenv("XOPERA_DATABASE_GIR_LOG_TABLE", 'git_log')
+        Settings.dot_opera_data_table = os.getenv("XOPERA_DATABASE_DOT_OPERA_DATA_TABLE", 'session_data')
 
         # prepare git_config for printing
         __debug_git_config = copy.deepcopy(Settings.git_config)

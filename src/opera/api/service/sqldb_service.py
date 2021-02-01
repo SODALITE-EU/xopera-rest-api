@@ -12,6 +12,8 @@ from opera.api.util import timestamp_util
 
 
 def connect(sql_config):
+    if Settings.USE_OFFLINE_STORAGE:
+        return OfflineStorage()
     try:
         database = PostgreSQL(sql_config)
         log.info('SQL_database: PostgreSQL')
@@ -32,6 +34,18 @@ class Database:
     def disconnect(self):
         """
         closes database connection
+        """
+        pass
+
+    def save_session_data(self, session_token: str, blueprint_token: str, version_tag: str, tree: dict):
+        """
+        Saves .opera file tree to database
+        """
+        pass
+
+    def get_session_data(self, session_token):
+        """
+        Returns [blueprint_token, version_tag, tree], where tree is content of .opera dir
         """
         pass
 
@@ -74,13 +88,14 @@ class OfflineStorage(Database):
     def __init__(self):
         super().__init__()
         self.db_type = 'OfflineStorage'
+        self.db_path = Settings.offline_storage.absolute()
+        self.deployment_log_path = self.db_path / Settings.deployment_log_table
+        self.git_log_path = self.db_path / Settings.git_log_table
+        self.dot_opera_data_path = self.db_path / Settings.dot_opera_data_table
 
-        if not Settings.offline_storage.exists():
-            Settings.offline_storage.mkdir()
-        if not Settings.offline_deployment_log.exists():
-            Settings.offline_deployment_log.mkdir()
-        if not Settings.offline_git_log.exists():
-            Settings.offline_git_log.mkdir()
+        os.makedirs(self.deployment_log_path, exist_ok=True)
+        os.makedirs(self.git_log_path, exist_ok=True)
+        os.makedirs(self.dot_opera_data_path, exist_ok=True)
 
     @staticmethod
     def file_write(path, content, name=None):
@@ -103,11 +118,40 @@ class OfflineStorage(Database):
         # does not need to do anything
         pass
 
+    def save_session_data(self, session_token: str, blueprint_token: str, version_tag: str, tree: dict):
+        data = {
+            "tree": tree,
+            "blueprint_token": str(blueprint_token),
+            "version_tag": str(version_tag),
+            "session_token": str(session_token),
+            "timestamp": timestamp_util.datetime_now_to_string()
+        }
+        self.file_write(str(self.dot_opera_data_path), name=session_token, content=json.dumps(data))
+
+    def get_session_data(self, session_token):
+        try:
+            return json.loads(self.file_read(str(self.dot_opera_data_path), session_token))
+        except FileNotFoundError:
+            return None
+
+    # def get_last_session_data(self, blueprint_token):
+    #     my_list = []
+    #     for session_file in self.dot_opera_data_path.glob('*'):
+    #         if session_file.is_file():
+    #             session_data = json.loads(session_file.read_text())
+    #             if session_data['blueprint_token'] == blueprint_token:
+    #                 my_list.append((session_data['timestamp'], session_file.name))
+    #     try:
+    #         last_session_token = sorted(my_list, key=lambda x: x[0], reverse=True)[0][1]
+    #         return self.get_session_data(last_session_token)
+    #     except IndexError:
+    #         return None
+
     def update_deployment_log(self, blueprint_token: str, _log: str, session_token: str, timestamp: str):
         """
         updates deployment log with blueprint_token, timestamp, session_token, _log
         """
-        location = "{}/{}".format(Settings.offline_deployment_log, session_token)
+        location = "{}/{}".format(self.deployment_log_path, session_token)
         if os.path.exists(location):
             shutil.rmtree(location)
         os.makedirs(location)
@@ -123,7 +167,7 @@ class OfflineStorage(Database):
         In case of no results returns [0, "not enough parameters"]
         """
         if blueprint_token is not None and session_token is not None:
-            path = "{}/{}".format(Settings.offline_deployment_log, session_token)
+            path = "{}/{}".format(self.deployment_log_path, session_token)
             try:
                 if not self.file_read(path, 'blueprint_token') == str(blueprint_token):
                     # combination of blueprint_token and session_token does not exist
@@ -134,7 +178,7 @@ class OfflineStorage(Database):
             return [[timestamp_util.str_to_datetime(self.file_read(path, "timestamp")), self.file_read(path, "_log")]]
 
         elif blueprint_token is not None:
-            pattern = "{}/*/blueprint_token".format(Settings.offline_deployment_log)
+            pattern = "{}/*/blueprint_token".format(self.deployment_log_path)
             token_file_paths = ["/".join(path.split('/')[:-1]) for path in glob.glob(pattern) if
                                 self.file_read(path) == str(blueprint_token)]
             return [[timestamp_util.str_to_datetime(self.file_read(path, "timestamp")), self.file_read(path, "_log")]
@@ -142,7 +186,7 @@ class OfflineStorage(Database):
                     in token_file_paths]
 
         elif session_token is not None:
-            path = "{}/{}".format(Settings.offline_deployment_log, session_token)
+            path = "{}/{}".format(self.deployment_log_path, session_token)
             try:
                 return [
                     [timestamp_util.str_to_datetime(self.file_read(path, "timestamp")), self.file_read(path, "_log")]]
@@ -159,7 +203,7 @@ class OfflineStorage(Database):
         """
         try:
             timestamp = timestamp_util.datetime_now_to_string()
-            location = Settings.offline_git_log / str(blueprint_token)
+            location = self.git_log_path / str(blueprint_token)
             if not location.exists():
                 os.makedirs(location)
 
@@ -185,7 +229,7 @@ class OfflineStorage(Database):
         """
         Gets last git transaction data (if version_tag is not None, specific transaction data)
         """
-        location = Settings.offline_git_log / str(blueprint_token)
+        location = self.git_log_path / str(blueprint_token)
         logfile_paths = sorted([data for data in location.glob("*")], reverse=True)  # first element was last added
         json_logs = [json.load(file.open('r')) for file in logfile_paths]
         if version_tag:
@@ -234,6 +278,16 @@ class PostgreSQL(Database):
                         primary key (timestamp)
                         );""".format(Settings.git_log_table))
 
+        self.execute("""
+                        create table if not exists {} (
+                        blueprint_token varchar (36),
+                        version_tag varchar(36),
+                        session_token varchar(36),
+                        timestamp timestamp default current_timestamp, 
+                        tree text,
+                        primary key (session_token)
+                        );""".format(Settings.dot_opera_data_table))
+
     def disconnect(self):
         log.info('disconnecting PostgreSQL database')
         self.connection.close()
@@ -252,6 +306,42 @@ class PostgreSQL(Database):
         dbcur.close()
         self.connection.commit()
         return True
+
+    def save_session_data(self, session_token: str, blueprint_token: str, version_tag: str, tree: dict):
+        """
+        Saves .opera file tree to database
+        """
+        tree_str = json.dumps(tree)
+        timestamp = timestamp_util.datetime_now_to_string()
+        response = self.execute(
+            "insert into {} (blueprint_token, version_tag, timestamp, session_token, tree) values (%s, %s, %s, %s, %s)"
+                .format(Settings.dot_opera_data_table),
+            (str(blueprint_token), str(version_tag), timestamp, str(session_token), tree_str))
+        if response:
+            log.info('Updated dot_opera_data in PostgreSQL database')
+        else:
+            log.error('Failed to update dot_opera_data in PostgreSQL database')
+        return response
+
+    def get_session_data(self, session_token):
+        """
+        Returns [blueprint_token, version_tag, tree], where tree is content of .opera dir
+        """
+        dbcur = self.connection.cursor()
+        query = "select blueprint_token, version_tag, session_token, timestamp, tree" \
+                " from {} where session_token = '{}';" \
+            .format(Settings.dot_opera_data_table, str(session_token))
+        dbcur.execute(query)
+        line = dbcur.fetchone()
+        session_data = {
+            'blueprint_token': line[0],
+            'version_tag': line[1],
+            'session_token': line[2],
+            'timestamp': timestamp_util.datetime_to_str(line[3]),
+            'tree': json.loads(line[4])
+        }
+        dbcur.close()
+        return session_data
 
     def update_deployment_log(self, blueprint_token: str, _log: str, session_token: str, timestamp: str):
 

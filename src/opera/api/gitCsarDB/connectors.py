@@ -1,6 +1,6 @@
+import json
 import shutil
 from pathlib import Path
-import json
 
 import git
 import gitlab

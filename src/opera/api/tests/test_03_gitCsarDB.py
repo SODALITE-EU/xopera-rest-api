@@ -31,17 +31,17 @@ def test_repo_name_to_token(db: GitCsarDB):
 
 def test_empty_repo(db: GitCsarDB, generic_cloned_repo: Path):
     path = Path(generic_cloned_repo)
-    assert len([file for file in path.glob("[!.git]*")]) is not 0, "Repo was emtpy before test, could not test"
+    assert len([file for file in path.glob("[!.git]*")]) != 0, "Repo was emtpy before test, could not test"
     db.make_repo_emtpy(path)
-    assert len([file for file in path.glob("[!.git]*")]) is 0, "Did not make repo empty"
-    assert len([file for file in path.glob("*")]) is not 0, "Also deleted .git subdir"
+    assert len([file for file in path.glob("[!.git]*")]) == 0, "Did not make repo empty"
+    assert len([file for file in path.glob("*")]) != 0, "Also deleted .git subdir"
 
 
 def test_copy_content(db: GitCsarDB, generic_cloned_repo: Path, generic_dir: Path):
     path = Path(generic_cloned_repo)
-    assert len([file for file in path.glob("*-new*")]) is 0, "Repo had new files before test, could not test"
+    assert len([file for file in path.glob("*-new*")]) == 0, "Repo had new files before test, could not test"
     db.copy_content(Path(generic_dir), path)
-    assert len([file for file in path.glob("*-new*")]) is not 0, "Copy failed"
+    assert len([file for file in path.glob("*-new*")]) != 0, "Copy failed"
 
 
 def test_save_new_CSAR(db: GitCsarDB, generic_dir: Path):
@@ -107,4 +107,3 @@ def test_get_tag_msg(db: GitCsarDB, generic_dir: Path):
 
     assert db.get_tag_msg(csar_token=csar_token, tag_name='v1.0') == 'gitCsarDB: v1.0'
     assert db.get_tag_msg(csar_token=csar_token, tag_name='v2.0') == 'gitCsarDB: custom_message'
-

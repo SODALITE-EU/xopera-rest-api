@@ -1,13 +1,13 @@
 import connexion
 
-from opera.api.openapi.models.git_revision_metadata import GitRevisionMetadata
+from opera.api.log import get_logger
 from opera.api.openapi.models.collaborators_list import CollaboratorsList
 from opera.api.openapi.models.delete_metadata import DeleteMetadata
 from opera.api.openapi.models.error_msg import ErrorMsg
+from opera.api.openapi.models.git_revision_metadata import GitRevisionMetadata
 from opera.api.openapi.models.just_message import JustMessage
-from opera.api.log import get_logger
-from opera.api.settings import Settings
 from opera.api.service import csardb_service, sqldb_service
+from opera.api.settings import Settings
 from opera.api.util import git_util
 
 logger = get_logger(__name__)
@@ -110,8 +110,8 @@ def post_git_user_manage(blueprint_token, username):
 
     success, error_msg = CSAR_db.add_member_to_blueprint(blueprint_token=blueprint_token, username=username)
     if success:
-
-        return JustMessage(f"invite for user {username} sent" if Settings.git_config['type'] == 'github' else f"user {username} added"), 201
+        return JustMessage(f"invite for user {username} sent" if Settings.git_config[
+                                                                     'type'] == 'github' else f"user {username} added"), 201
 
     return ErrorMsg(f"Could not add user {username} to repository with blueprint_id '{blueprint_token}'",
                     error_msg), 500
