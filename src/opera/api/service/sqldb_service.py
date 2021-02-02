@@ -321,6 +321,8 @@ class PostgreSQL(Database):
             .format(Settings.dot_opera_data_table, str(session_token))
         dbcur.execute(query)
         line = dbcur.fetchone()
+        if not line:
+            return None
         session_data = {
             'blueprint_token': line[0],
             'version_tag': line[1],
