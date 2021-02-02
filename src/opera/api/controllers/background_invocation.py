@@ -58,11 +58,11 @@ class InvocationWorkerProcess(multiprocessing.Process):
 
             try:
                 if inv.operation == OperationType.DEPLOY_FRESH:
-                    InvocationWorkerProcess._deploy_fresh(location, inv)
+                    InvocationWorkerProcess.deploy_fresh(location, inv)
                 elif inv.operation == OperationType.DEPLOY_CONTINUE:
-                    InvocationWorkerProcess._deploy_continue(location, inv)
+                    InvocationWorkerProcess.deploy_continue(location, inv)
                 elif inv.operation == OperationType.UNDEPLOY:
-                    InvocationWorkerProcess._undeploy(location, inv)
+                    InvocationWorkerProcess.undeploy(location, inv)
                 elif inv.operation == OperationType.UPDATE:
                     InvocationWorkerProcess._update(location, inv)
                 else:
@@ -94,7 +94,7 @@ class InvocationWorkerProcess(multiprocessing.Process):
             shutil.rmtree(InvocationService.stdstream_dir(inv.session_token))
 
     @staticmethod
-    def _deploy_fresh(location: Path, inv: Invocation):
+    def deploy_fresh(location: Path, inv: Invocation):
         CSAR_db.get_revision(inv.blueprint_token, location, inv.version_tag)
 
         with xopera_util.cwd(location):
@@ -104,7 +104,7 @@ class InvocationWorkerProcess(multiprocessing.Process):
                          verbose_mode=True, num_workers=inv.workers, delete_existing_state=True)
 
     @staticmethod
-    def _deploy_continue(location: Path, inv: Invocation):
+    def deploy_continue(location: Path, inv: Invocation):
 
         # get blueprint
         CSAR_db.get_revision(inv.blueprint_token, location, inv.version_tag)
@@ -118,7 +118,7 @@ class InvocationWorkerProcess(multiprocessing.Process):
                          verbose_mode=True, num_workers=inv.workers, delete_existing_state=(not inv.resume))
 
     @staticmethod
-    def _undeploy(location: Path, inv: Invocation):
+    def undeploy(location: Path, inv: Invocation):
 
         # get blueprint
         CSAR_db.get_revision(inv.blueprint_token, location, inv.version_tag)
@@ -294,7 +294,7 @@ class InvocationService:
 
             return inv
 
-        except BaseException:
+        except FileNotFoundError:
             return None
 
     @classmethod

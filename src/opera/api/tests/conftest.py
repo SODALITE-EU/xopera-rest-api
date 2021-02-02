@@ -22,7 +22,6 @@ def pytest_sessionstart(session):
     before performing collection and entering the run test loop.
     """
     change_API_WORKDIR('.opera-api-pytest')
-
     shutil.rmtree(Settings.API_WORKDIR, ignore_errors=True)
     xopera_util.init_data()
 
