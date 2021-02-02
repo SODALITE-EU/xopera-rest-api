@@ -12,9 +12,9 @@ xOpera-rest-blueprint
 *.jar
 
 make_docker.sh
-prerequisites.sh
 validate_tag.sh
 sonar-project.properties
 
 **/__pycache__/
+**/.pytest_cache/
 **/*.py[cod]
