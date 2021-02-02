@@ -90,7 +90,7 @@ To run locally, use [docker compose](docker-compose.yml) or [local TOSCA templat
 REST API can be deployed remotely using [TOSCA template](xOpera-rest-blueprint/service.yaml) with compliant orchestrator, for instance [xOpera](https://github.com/xlab-si/xopera-opera).
 
 ## API
-Check [openapi spec](openapi-spec.yml).
+Check [openapi spec](openapi-spec.yml) and [sample api requests](api-calls.http).
 
 ## How to use API
 Standard scenarios of using REST api:

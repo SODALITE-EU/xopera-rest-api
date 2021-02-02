@@ -1,0 +1,173 @@
+###
+# SSH endpoint
+###
+
+# curl -X GET "http://localhost:8080/ssh/keys/public" -H  "accept: application/json"
+GET http://localhost:8080/ssh/keys/public
+accept: application/json
+
+###
+# MANAGE endpoint
+###
+
+# curl -X POST "http://localhost:8080/manage?revision_msg=First%20blueprint%20version" -H  "accept: application/json" -H  "Content-Type: multipart/form-data" -F "CSAR=@CSAR-hello.zip;type=application/zip"
+POST http://localhost:8080/manage?revision_msg=First%20blueprint%20version
+accept: application/json
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="CSAR"; filename="CSAR-hello.zip"
+
+< CSAR-hello.zip
+--WebAppBoundary--
+
+###
+
+# curl -X POST "http://localhost:8080/manage/4a7b9983-dc27-4e43-b7b3-8b696a550fac?revision_msg=Added%20support%20for%20X%20component" -H  "accept: application/json" -H  "Content-Type: multipart/form-data" -F "CSAR=@CSAR-hello.zip;type=application/zip"
+POST http://localhost:8080/manage/4a7b9983-dc27-4e43-b7b3-8b696a550fac?revision_msg=Added%20support%20for%20X%20component
+accept: application/json
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="CSAR"; filename="CSAR-hello.zip"
+
+< CSAR-hello.zip
+--WebAppBoundary--
+
+###
+
+# curl -X DELETE "http://localhost:8080/manage/4a7b9983-dc27-4e43-b7b3-8b696a550fac?version_tag=v2.0&force=false" -H  "accept: application/json"
+DELETE http://localhost:8080/manage/4a7b9983-dc27-4e43-b7b3-8b696a550fac?version_tag=v2.0&force=false
+accept: application/json
+
+###
+
+# curl -X GET "http://localhost:8080/manage/4a7b9983-dc27-4e43-b7b3-8b696a550fac/user" -H  "accept: application/json"
+GET http://localhost:8080/manage/4a7b9983-dc27-4e43-b7b3-8b696a550fac/user
+accept: application/json
+
+###
+
+# curl -X POST "http://localhost:8080/manage/4a7b9983-dc27-4e43-b7b3-8b696a550fac/user?username=git_user" -H  "accept: application/json" -d ""
+POST http://localhost:8080/manage/4a7b9983-dc27-4e43-b7b3-8b696a550fac/user?username=git_user
+accept: application/json
+Content-Type: application/x-www-form-urlencoded
+
+###
+# DEPLOY endpoint
+###
+
+# curl -X POST "http://localhost:8080/deploy/fresh/4a7b9983-dc27-4e43-b7b3-8b696a550fac?version_tag=v3.0&workers=1" -H  "accept: application/json" -H  "Content-Type: multipart/form-data" -F "inputs_file=@hello_inputs.yaml;type=application/x-yaml"
+POST http://localhost:8080/deploy/fresh/4a7b9983-dc27-4e43-b7b3-8b696a550fac?version_tag=v3.0&workers=1
+accept: application/json
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="inputs_file"; filename="hello_inputs.yaml"
+
+< hello_inputs.yaml
+--WebAppBoundary--
+
+###
+
+# curl -X POST "http://localhost:8080/deploy/ca623f09-56d1-4788-b6ab-15ac6e84b8ee?workers=1&resume=true" -H  "accept: application/json" -H  "Content-Type: multipart/form-data" -F "inputs_file=@hello_inputs.yaml;type=application/x-yaml"
+POST http://localhost:8080/deploy/ca623f09-56d1-4788-b6ab-15ac6e84b8ee?workers=1&resume=true
+accept: application/json
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="inputs_file"; filename="hello_inputs.yaml"
+
+< hello_inputs.yaml
+--WebAppBoundary--
+
+###
+# UNDEPLOY endpoint
+###
+
+# curl -X POST "http://localhost:8080/undeploy/ca623f09-56d1-4788-b6ab-15ac6e84b8ee?workers=1" -H  "accept: application/json" -H  "Content-Type: multipart/form-data" -F "inputs_file=@hello_inputs.yaml;type=application/x-yaml"
+POST http://localhost:8080/undeploy/ca623f09-56d1-4788-b6ab-15ac6e84b8ee?workers=1
+accept: application/json
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="inputs_file"; filename="hello_inputs.yaml"
+
+< hello_inputs.yaml
+--WebAppBoundary--
+
+###
+# DIFF endpoint
+###
+
+# curl -X POST "http://localhost:8080/diff/ca623f09-56d1-4788-b6ab-15ac6e84b8ee?blueprint_token=4a7b9983-dc27-4e43-b7b3-8b696a550fac&version_tag=v3.0" -H  "accept: application/json" -H  "Content-Type: multipart/form-data" -F "inputs_file=@hello_inputs.yaml;type=application/x-yaml"
+POST http://localhost:8080/diff/ca623f09-56d1-4788-b6ab-15ac6e84b8ee?blueprint_token=4a7b9983-dc27-4e43-b7b3-8b696a550fac&version_tag=v3.0
+accept: application/json
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="inputs_file"; filename="hello_inputs.yaml"
+
+< hello_inputs.yaml
+--WebAppBoundary--
+
+###
+# UPDATE endpoint
+###
+
+# curl -X POST "http://localhost:8080/update/ca623f09-56d1-4788-b6ab-15ac6e84b8ee?blueprint_token=4a7b9983-dc27-4e43-b7b3-8b696a550fac&version_tag=v3.0&workers=1" -H  "accept: application/json" -H  "Content-Type: multipart/form-data" -F "inputs_file=@hello_inputs.yaml;type=application/x-yaml"
+POST http://localhost:8080/update/ca623f09-56d1-4788-b6ab-15ac6e84b8ee?blueprint_token=4a7b9983-dc27-4e43-b7b3-8b696a550fac&version_tag=v3.0&workers=1
+accept: application/json
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="inputs_file"; filename="hello_inputs.yaml"
+
+< hello_inputs.yaml
+--WebAppBoundary--
+
+###
+# INFO endpoint
+###
+
+# curl -X GET "http://localhost:8080/info/log/deployment?blueprint_token=4a7b9983-dc27-4e43-b7b3-8b696a550fac&session_token=ca623f09-56d1-4788-b6ab-15ac6e84b8ee" -H  "accept: application/json"
+GET http://localhost:8080/info/log/deployment?blueprint_token=4a7b9983-dc27-4e43-b7b3-8b696a550fac&session_token=ca623f09-56d1-4788-b6ab-15ac6e84b8ee
+accept: application/json
+
+###
+
+# curl -X GET "http://localhost:8080/info/log/git/4a7b9983-dc27-4e43-b7b3-8b696a550fac?version_tag=v1.0&fetch_all=true" -H  "accept: application/json"
+GET http://localhost:8080/info/log/git/4a7b9983-dc27-4e43-b7b3-8b696a550fac?version_tag=v1.0&fetch_all=true
+accept: application/json
+
+###
+
+# curl -X GET "http://localhost:8080/info/status?token=ca623f09-56d1-4788-b6ab-15ac6e84b8ee" -H  "accept: application/json"
+GET http://localhost:8080/info/status?token=ca623f09-56d1-4788-b6ab-15ac6e84b8ee
+accept: application/json
+
+###
+# VALIDATE endpoint
+###
+
+# curl -X POST "http://localhost:8080/validate/4a7b9983-dc27-4e43-b7b3-8b696a550fac?version_tag=version_tag" -H  "accept: application/json" -H  "Content-Type: multipart/form-data" -F "inputs_file=@hello_inputs.yaml;type=application/x-yaml"
+POST http://localhost:8080/validate/4a7b9983-dc27-4e43-b7b3-8b696a550fac?version_tag=version_tag
+accept: application/json
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="inputs_file"; filename="hello_inputs.yaml"
+
+< hello_inputs.yaml
+--WebAppBoundary--
+
+###
+# OUTPUTS enpoint
+###
+
+# curl -X GET "http://localhost:8080/outputs/ca623f09-56d1-4788-b6ab-15ac6e84b8ee" -H  "accept: application/json"
+GET http://localhost:8080/outputs/ca623f09-56d1-4788-b6ab-15ac6e84b8ee
+accept: application/json
+
+###
+
