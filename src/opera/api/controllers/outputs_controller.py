@@ -4,10 +4,12 @@ from opera.api.log import get_logger
 from opera.api.openapi.models.error_msg import ErrorMsg
 from opera.api.openapi.models.just_message import JustMessage
 from opera.api.util import xopera_util
+from opera.api.controllers import security_controller
 
 logger = get_logger(__name__)
 
 
+@security_controller.check_role_auth_session
 def get_outputs(session_token):
     """
     Obtain outputs
@@ -20,14 +22,7 @@ def get_outputs(session_token):
     """
 
     session_data = SQL_database.get_session_data(session_token)
-    if not session_data:
-        return JustMessage(f"Session with session_token: {session_token} does not exist, cannot deploy"), 404
-    blueprint_token = session_data['blueprint_token']
-    version_tag = session_data['version_tag']
-    if not CSAR_db.version_exists(blueprint_token, version_tag):
-        return JustMessage(
-            f"Did not find blueprint with token: {blueprint_token} and version_id: {version_tag or 'any'}"), 404
-
+  
     outputs, exception = InvocationWorkerProcess.outputs(session_token)
     if exception:
         return ErrorMsg(exception[0], exception[1]), 500

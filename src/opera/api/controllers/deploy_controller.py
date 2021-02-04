@@ -4,12 +4,14 @@ from opera.api.log import get_logger
 from opera.api.openapi.models import OperationType, Invocation
 from opera.api.openapi.models.just_message import JustMessage
 from opera.api.util import xopera_util
+from opera.api.controllers import security_controller
 
 logger = get_logger(__name__)
 
 invocation_service = InvocationService()
 
 
+@security_controller.check_role_auth_blueprint
 def post_deploy_fresh(blueprint_token, version_tag=None, workers=1):
     """
     Deploy blueprint (fresh)
@@ -25,9 +27,6 @@ def post_deploy_fresh(blueprint_token, version_tag=None, workers=1):
     """
     inputs = xopera_util.inputs_file()
 
-    if not CSAR_db.version_exists(blueprint_token, version_tag):
-        return JustMessage(
-            f"Did not find blueprint with token: {blueprint_token} and version_id: {version_tag or 'any'}"), 404
     session_token_old = None
     result = invocation_service.invoke(OperationType.DEPLOY_FRESH, blueprint_token, version_tag, session_token_old,
                                        workers, inputs)
@@ -35,6 +34,7 @@ def post_deploy_fresh(blueprint_token, version_tag=None, workers=1):
     return result, 202
 
 
+@security_controller.check_role_auth_session
 def post_deploy_continue(session_token, workers=1, resume=True):
     """
     Deploy blueprint (continue)
@@ -51,13 +51,8 @@ def post_deploy_continue(session_token, workers=1, resume=True):
     inputs = xopera_util.inputs_file()
 
     session_data = SQL_database.get_session_data(session_token)
-    if not session_data:
-        return JustMessage(f"Session with session_token: {session_token} does not exist, cannot deploy"), 404
     blueprint_token = session_data['blueprint_token']
     version_tag = session_data['version_tag']
-    if not CSAR_db.version_exists(blueprint_token, version_tag):
-        return JustMessage(
-            f"Did not find blueprint with token: {blueprint_token} and version_id: {version_tag or 'any'}"), 404
 
     result = invocation_service.invoke(OperationType.DEPLOY_CONTINUE, blueprint_token, version_tag, session_token,
                                        workers, inputs, resume)

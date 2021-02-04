@@ -15,7 +15,7 @@ class TestStatus:
 
     def test_missing(self, client):
         token = 'foo'
-        resp = client.get(f"/info/status?token={token}")
+        resp = client.get(f"/info/status?session_token={token}")
         assert resp.status_code == 404
         assert_that(resp.json).contains_only('message')
         assert_that(resp.json['message']).contains(f'Could not find session with session_token {token}')
@@ -25,7 +25,7 @@ class TestStatus:
         inv.state = InvocationState.PENDING
         InvocationService.write_invocation(inv)
 
-        resp = client.get(f"/info/status?token={inv.session_token}")
+        resp = client.get(f"/info/status?session_token={inv.session_token}")
         assert_that(resp.json['session_token'] == inv.state)
         assert resp.status_code == 202
 
@@ -37,7 +37,7 @@ class TestStatus:
         (Path(Settings.STDFILE_DIR) / str(inv.session_token) / 'stdout.txt').write_text('stdout')
         (Path(Settings.STDFILE_DIR) / str(inv.session_token) / 'stderr.txt').write_text('stderr')
 
-        resp = client.get(f"/info/status?token={inv.session_token}")
+        resp = client.get(f"/info/status?session_token={inv.session_token}")
         assert_that(resp.json['session_token'] == inv.state)
         assert resp.status_code == 202
 
@@ -46,7 +46,7 @@ class TestStatus:
         inv.state = InvocationState.SUCCESS
         InvocationService.write_invocation(inv)
 
-        resp = client.get(f"/info/status?token={inv.session_token}")
+        resp = client.get(f"/info/status?session_token={inv.session_token}")
         assert_that(resp.json['session_token'] == inv.state)
         assert resp.status_code == 201
 
@@ -55,7 +55,7 @@ class TestStatus:
         inv.state = InvocationState.FAILED
         InvocationService.write_invocation(inv)
 
-        resp = client.get(f"/info/status?token={inv.session_token}")
+        resp = client.get(f"/info/status?session_token={inv.session_token}")
         assert_that(resp.json['session_token'] == inv.state)
         assert resp.status_code == 500
 

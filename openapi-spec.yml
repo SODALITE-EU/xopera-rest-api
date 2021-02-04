@@ -34,6 +34,9 @@ tags:
 paths:
   /outputs/{session_token}:
     get:
+      security:
+        - apiKey: []
+        - oauth2: [email]       
       tags:
       - outputs
       operationId: get_outputs
@@ -51,6 +54,12 @@ paths:
             application/json:
               schema:
                 type: object
+        401:
+          description: Unauthorized request for this blueprint
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/just_message'                
         404:
           description: Did not find session
           content:
@@ -59,6 +68,9 @@ paths:
                 $ref: '#/components/schemas/just_message'
   /validate/{blueprint_token}:
     post:
+      security:
+        - apiKey: []
+        - oauth2: [email]       
       tags:
       - validate
       operationId: post_validate
@@ -93,6 +105,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/just_message'
+        401:
+          description: Unauthorized request for this blueprint
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/just_message'                  
         404:
           description: Did not find blueprint
           content:
@@ -108,6 +126,9 @@ paths:
 
   /diff/{session_token}:
     post:
+      security:
+        - apiKey: []
+        - oauth2: [email]       
       tags:
       - diff
       operationId: post_diff
@@ -148,6 +169,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Invocation'
+        401:
+          description: Unauthorized request for this blueprint
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/just_message'                  
         404:
           description: Did not find DI1 or DB2
           content:
@@ -156,6 +183,9 @@ paths:
                 $ref: '#/components/schemas/just_message'
   /update/{session_token}:
     post:
+      security:
+        - apiKey: []
+        - oauth2: [email]       
       tags:
       - update
       operationId: post_update
@@ -202,6 +232,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Invocation'
+        401:
+          description: Unauthorized request for this blueprint
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/just_message'                  
         404:
           description: Did not find DI1 or DB2
           content:
@@ -210,6 +246,9 @@ paths:
                 $ref: '#/components/schemas/just_message'
   /deploy/fresh/{blueprint_token}:
     post:
+      security:
+        - apiKey: []
+        - oauth2: [email]       
       tags:
       - deploy
       operationId: post_deploy_fresh
@@ -249,6 +288,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Invocation'
+        401:
+          description: Unauthorized request for this blueprint
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/just_message'                  
         404:
           description: Did not find blueprint
           content:
@@ -257,6 +302,9 @@ paths:
                 $ref: '#/components/schemas/just_message'
   /deploy/{session_token}:
     post:
+      security:
+        - apiKey: []
+        - oauth2: [email]       
       tags:
       - deploy
       operationId: post_deploy_continue
@@ -297,6 +345,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Invocation'
+        401:
+          description: Unauthorized request for this blueprint
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/just_message'                  
         404:
           description: Did not find blueprint
           content:
@@ -305,6 +359,9 @@ paths:
                 $ref: '#/components/schemas/just_message'
   /undeploy/{session_token}:
     post:
+      security:
+        - apiKey: []
+        - oauth2: [email]       
       tags:
       - undeploy
       operationId: post_undeploy
@@ -338,6 +395,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Invocation'
+        401:
+          description: Unauthorized request for this blueprint
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/just_message'                  
         403:
           description: Undeploy not allowed
           content:
@@ -352,6 +415,9 @@ paths:
                 $ref: '#/components/schemas/just_message'
   /info/log/deployment:
     get:
+      security:
+        - apiKey: []
+        - oauth2: [email]       
       tags:
       - info
       operationId: get_deploy_log
@@ -379,8 +445,17 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/just_message'
+        401:
+          description: Unauthorized request for this blueprint
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/just_message'                  
   /info/log/git/{blueprint_token}:
     get:
+      security:
+        - apiKey: []
+        - oauth2: [email]       
       tags:
       - info
       operationId: get_git_log
@@ -413,13 +488,22 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/just_message'
+        401:
+          description: Unauthorized request for this blueprint
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/just_message'                  
   /info/status:
     get:
+      security:
+        - apiKey: []
+        - oauth2: [email]       
       tags:
       - info
       operationId: get_status
       parameters:
-      - name: token
+      - name: session_token
         in: query
         description: session_token
         schema:
@@ -437,6 +521,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Invocation'
+        401:
+          description: Unauthorized request for this blueprint
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/just_message'                  
         404:
           description: Job not found
           content:
@@ -451,6 +541,9 @@ paths:
                 $ref: '#/components/schemas/Invocation'
   /manage:
     post:
+      security:
+        - apiKey: []
+        - oauth2: [email] 
       tags:
       - manage
       operationId: post_new_blueprint_csar
@@ -460,6 +553,11 @@ paths:
         description: Optional comment on submission
         schema:
           type: string
+      - name: project_domain
+        in: query
+        description: Optional project domain this blueprint belongs to
+        schema:
+          type: string          
       requestBody:
         content:
           multipart/form-data:
@@ -480,6 +578,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/git_revision_metadata'
+        401:
+          description: Unauthorized request for this blueprint
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/just_message'                  
         406:
           description: Format not acceptable
           content:
@@ -488,6 +592,9 @@ paths:
                 $ref: '#/components/schemas/just_message'
   /manage/{blueprint_token}:
     post:
+      security:
+        - apiKey: []
+        - oauth2: [email] 
       tags:
       - manage
       operationId: post_manage_csar
@@ -523,6 +630,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/git_revision_metadata'
+        401:
+          description: Unauthorized request for this blueprint
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/just_message'                  
         404:
           description: Blueprint token not found
           content:
@@ -536,6 +649,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/just_message'
     delete:
+      security:
+        - apiKey: []
+        - oauth2: [email]     
       tags:
       - manage
       operationId: delete_manage_csar
@@ -563,6 +679,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/delete_metadata'
+        401:
+          description: Unauthorized request for this blueprint
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/just_message'                  
         403:
           description: Did not undeploy yet, not allowed
           content:
@@ -577,6 +699,9 @@ paths:
                 $ref: '#/components/schemas/delete_metadata'
   /manage/{blueprint_token}/user:
     get:
+      security:
+        - apiKey: []
+        - oauth2: [email]     
       tags:
       - manage
       operationId: get_git_user_manage
@@ -594,6 +719,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/just_message'
+        401:
+          description: Unauthorized request for this blueprint
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/just_message'                  
         404:
           description: blueprint not found
           content:
@@ -607,6 +738,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/error_msg'
     post:
+      security:
+        - apiKey: []
+        - oauth2: [email]     
       tags:
       - manage
       operationId: post_git_user_manage
@@ -630,6 +764,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/just_message'
+        401:
+          description: Unauthorized request for this blueprint
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/just_message'                  
         404:
           description: blueprint not found
           content:
@@ -869,7 +1009,7 @@ components:
           description: xOpera error output for operation.
           type: string
         workers:
-          description: Number of workers for paralell execution
+          description: Number of workers for parallel execution
           type: integer
         resume:
           description: Resume deployment (instead of starting clean)
@@ -888,3 +1028,20 @@ components:
         - deploy_fresh
         - undeploy
         - update
+
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      x-apikeyInfoFunc: opera.api.controllers.security_controller.check_api_key
+      name: X-API-Key
+      in: header
+    oauth2:
+      flows:
+        password: 
+          tokenUrl: http://keycloak:8080/auth/realms/SODALITE/protocol/openid-connect/token
+          scopes:
+            email: Email of the user accessing the service.
+      type: oauth2
+      x-tokenInfoFunc: opera.api.controllers.security_controller.token_info
+      x-scopeValidateFunc: opera.api.controllers.security_controller.validate_scope   
+

@@ -4,10 +4,11 @@ from opera.api.log import get_logger
 from opera.api.openapi.models.error_msg import ErrorMsg
 from opera.api.openapi.models.just_message import JustMessage
 from opera.api.util import xopera_util
+from opera.api.controllers import security_controller
 
 logger = get_logger(__name__)
 
-
+@security_controller.check_role_auth_blueprint
 def post_validate(blueprint_token, version_tag=None):
     """post_validate
 
@@ -21,10 +22,6 @@ def post_validate(blueprint_token, version_tag=None):
     :rtype: JustMessage
     """
     inputs = xopera_util.inputs_file()
-
-    if not CSAR_db.version_exists(blueprint_token, version_tag):
-        return JustMessage(
-            f"Did not find blueprint with token: {blueprint_token} and version_id: {version_tag or 'any'}"), 404
 
     exception = InvocationWorkerProcess.validate(blueprint_token, version_tag, inputs)
     if exception:

@@ -3,8 +3,10 @@ from opera.api.controllers.background_invocation import InvocationWorkerProcess
 from opera.api.openapi.models import Invocation
 from opera.api.openapi.models.just_message import JustMessage
 from opera.api.util import xopera_util
+from opera.api.controllers import security_controller
 
-
+@security_controller.check_role_auth_blueprint
+@security_controller.check_role_auth_session
 def post_diff(session_token, blueprint_token, version_tag=None):
     """
     Diff
@@ -21,11 +23,5 @@ def post_diff(session_token, blueprint_token, version_tag=None):
     :rtype: Invocation
     """
     inputs = xopera_util.inputs_file()
-
-    if not SQL_database.get_session_data(session_token):
-        return JustMessage(f"Session with session_token: {session_token} does not exist, cannot update"), 404
-    if not CSAR_db.version_exists(blueprint_token, version_tag):
-        return JustMessage(
-            f"Did not find blueprint with token: {blueprint_token} and version_id: {version_tag or 'any'}"), 404
 
     return InvocationWorkerProcess.diff(session_token, blueprint_token, version_tag, inputs).outputs(), 200

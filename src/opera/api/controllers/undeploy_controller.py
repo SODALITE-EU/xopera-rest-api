@@ -4,11 +4,13 @@ from opera.api.log import get_logger
 from opera.api.openapi.models import OperationType, Invocation
 from opera.api.openapi.models.just_message import JustMessage
 from opera.api.util import xopera_util
+from opera.api.controllers import security_controller
 
 logger = get_logger(__name__)
 invocation_service = InvocationService()
 
 
+@security_controller.check_role_auth_session
 def post_undeploy(session_token, workers=1):
     """
 
@@ -24,14 +26,8 @@ def post_undeploy(session_token, workers=1):
     inputs = xopera_util.inputs_file()
 
     session_data = SQL_database.get_session_data(session_token)
-    if not session_data:
-        return JustMessage(f"Session with session_token: {session_token} does not exist, cannot undeploy"), 404
     blueprint_token = session_data['blueprint_token']
     version_tag = session_data['version_tag']
-
-    if not CSAR_db.version_exists(blueprint_token, version_tag):
-        return JustMessage(
-            f"Did not find blueprint with token: {blueprint_token} and version_id: {version_tag or 'any'}"), 404
 
     result = invocation_service.invoke(OperationType.UNDEPLOY, blueprint_token, version_tag, session_token, workers,
                                        inputs)

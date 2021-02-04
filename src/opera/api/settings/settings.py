@@ -26,6 +26,7 @@ class Settings:
     deployment_log_table = 'deployment_log'
     git_log_table = 'git_log'
     dot_opera_data_table = 'session_data'
+    project_domain_table = 'project_domain'
 
     # OfflineStorage database (alternative to sql_database) config
     USE_OFFLINE_STORAGE = False
@@ -34,6 +35,16 @@ class Settings:
     # gitCsarDB config
     git_config = None
     workdir = Path(API_WORKDIR) / "git_db/mockConnector"
+
+    # Authorization and Authentication config
+    oidc_introspetion_endpoint_uri = None
+    oidc_client_id = None
+    oidc_client_secret = None
+    vault_secret_storage_uri = None
+    vault_login_uri = None
+    apiKey = None
+
+
 
     @staticmethod
     def load_settings():
@@ -62,6 +73,14 @@ class Settings:
         Settings.deployment_log_table = os.getenv("XOPERA_DATABASE_DEPLOYMENT_LOG_TABLE", 'deployment_log')
         Settings.git_log_table = os.getenv("XOPERA_DATABASE_GIR_LOG_TABLE", 'git_log')
         Settings.dot_opera_data_table = os.getenv("XOPERA_DATABASE_DOT_OPERA_DATA_TABLE", 'session_data')
+
+        Settings.oidc_introspection_endpoint_uri = os.getenv("OIDC_INTROSPECTION_ENDPOINT", "")
+        Settings.oidc_client_id = os.getenv("OIDC_CLIENT_ID", "sodalite-ide")
+        Settings.oidc_client_secret = os.getenv("OIDC_CLIENT_SECRET", "")
+        Settings.apiKey = os.getenv("AUTH_API_KEY", "")
+        
+        Settings.vault_secret_storage_uri = os.getenv("VAULT_SECRET_URI", "http://localhost:8200/v1/")
+        Settings.vault_login_uri = os.getenv("VAULT_LOGIN_URI", "http://localhost:8200/v1/auth/jwt/login")
 
         # prepare git_config for printing
         __debug_git_config = copy.deepcopy(Settings.git_config)

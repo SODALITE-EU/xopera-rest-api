@@ -74,9 +74,10 @@ def mock_ssh_keys_loc():
 
 
 @pytest.fixture(scope="session")
-def client():
+def client(session_mocker):
     """An application for the tests."""
     os.environ['LOG_LEVEL'] = 'debug'
+    session_mocker.patch('connexion.decorators.security.get_authorization_info', return_value={'scope': ['apiKey']})
     Settings.USE_OFFLINE_STORAGE = True
     with test().app.test_client() as client:
         yield client
