@@ -8,6 +8,7 @@ from opera.api.util import timestamp_util, file_util
 from pathlib import Path
 import json
 import pytest
+from pytest_mock import mocker
 
 
 class TestInvocationService:
@@ -185,8 +186,19 @@ class TestInvocationService:
             InvocationService.prepare_location(session_token, get_workdir_path)
         assert "failed" in caplog.text
 
-
     def test_get_instance_state(self, get_workdir_path: Path):
         file_util.json_to_dir(self.dot_opera_json, (get_workdir_path / '.opera'))
         instance_state = InvocationService.get_instance_state(get_workdir_path)
         assert_that(instance_state).is_equal_to(self.instance_state)
+
+    # @mocker.patch('multiprocessing.Queue.put')
+    # @mocker.patch('multiprocessing.Queue')
+    # @mocker.patch('opera.api.controllers.background_invocation.InvocationWorkerProcess.start')
+    # @mocker.patch('opera.api.controllers.background_invocation.InvocationWorkerProcess')
+    # def test_invoke(self, mock_worker, mock_start, mock_queue, mock_put, generic_invocation: Invocation):
+    #     # initiate
+    #     inv_service = InvocationService()
+    #     inv = generic_invocation
+    #
+    #     # run
+    #     inv_service.invoke(inv.operation, inv.blueprint_token, inv.version_tag, inv.session_token_old, inv.workers, inv.inputs, inv.resume)
