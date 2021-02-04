@@ -18,9 +18,9 @@ class TestStatus:
         resp = client.get(f"/info/status?session_token={token}")
         assert resp.status_code == 404
         assert_that(resp.json).contains_only('message')
-        assert_that(resp.json['message']).contains(f'Could not find session with session_token {token}')
+        assert_that(resp.json['message']).contains(f'does not exist')
 
-    def test_pending(self, client, generic_invocation: Invocation):
+    def test_pending(self, client, generic_invocation: Invocation, patch_auth_wrapper):
         inv = generic_invocation
         inv.state = InvocationState.PENDING
         InvocationService.write_invocation(inv)
@@ -29,7 +29,7 @@ class TestStatus:
         assert_that(resp.json['session_token'] == inv.state)
         assert resp.status_code == 202
 
-    def test_in_progress(self, client, generic_invocation: Invocation):
+    def test_in_progress(self, client, generic_invocation: Invocation, patch_auth_wrapper):
         inv = generic_invocation
         inv.state = InvocationState.IN_PROGRESS
         InvocationService.write_invocation(inv)
@@ -41,7 +41,7 @@ class TestStatus:
         assert_that(resp.json['session_token'] == inv.state)
         assert resp.status_code == 202
 
-    def test_success(self, client, generic_invocation: Invocation):
+    def test_success(self, client, generic_invocation: Invocation, patch_auth_wrapper):
         inv = generic_invocation
         inv.state = InvocationState.SUCCESS
         InvocationService.write_invocation(inv)
@@ -50,7 +50,7 @@ class TestStatus:
         assert_that(resp.json['session_token'] == inv.state)
         assert resp.status_code == 201
 
-    def test_failed(self, client, generic_invocation: Invocation):
+    def test_failed(self, client, generic_invocation: Invocation, patch_auth_wrapper):
         inv = generic_invocation
         inv.state = InvocationState.FAILED
         InvocationService.write_invocation(inv)
@@ -62,7 +62,7 @@ class TestStatus:
 
 class TestGitLog:
 
-    def test_not_found(self, client, mocker):
+    def test_not_found(self, client, mocker, patch_auth_wrapper):
         mocker.patch('opera.api.service.sqldb_service.OfflineStorage.get_git_transaction_data', return_value=None)
         blueprint_token = str(uuid.uuid4())
         resp = client.get(f"/info/log/git/{blueprint_token}")
@@ -70,7 +70,7 @@ class TestGitLog:
         assert_that(resp.json).contains_only('message')
         assert resp.json['message'] == "Log file not found"
 
-    def test_keys(self, client, mocker):
+    def test_keys(self, client, mocker, patch_auth_wrapper):
         git_data = GitLog(
             blueprint_token=str(uuid.uuid4()),
             commit_sha="commit_sha",
@@ -95,7 +95,7 @@ class TestGitLog:
 
 class TestDeployLog:
 
-    def test_not_found(self, client, mocker):
+    def test_not_found(self, client, mocker, patch_auth_wrapper):
         mocker.patch('opera.api.service.sqldb_service.OfflineStorage.get_deployment_log', return_value=None)
         blueprint_token = str(uuid.uuid4())
         resp = client.get(f"/info/log/deployment?blueprint_token={blueprint_token}")
@@ -103,7 +103,7 @@ class TestDeployLog:
         assert_that(resp.json).contains_only('message')
         assert resp.json['message'] == "Log file not found"
 
-    def test_keys(self, client, mocker, generic_invocation: Invocation):
+    def test_keys(self, client, mocker, generic_invocation: Invocation, patch_auth_wrapper):
         inv = generic_invocation
         inv.blueprint_token = str(uuid.uuid4())
         inv.version_tag = "version_tag"

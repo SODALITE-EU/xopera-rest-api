@@ -13,7 +13,7 @@ from opera.api.gitCsarDB.connectors import MockConnector
 from opera.api.openapi.models.invocation import Invocation, InvocationState, OperationType
 from opera.api.service import sqldb_service
 from opera.api.settings import Settings
-from opera.api.util import timestamp_util
+from opera.api.util import timestamp_util, xopera_util
 
 
 def pytest_sessionstart(session):
@@ -24,6 +24,7 @@ def pytest_sessionstart(session):
     change_API_WORKDIR('.opera-api-pytest')
 
     shutil.rmtree(Settings.API_WORKDIR, ignore_errors=True)
+    xopera_util.init_data()
 
 
 def pytest_sessionfinish(session, exitstatus):
@@ -52,6 +53,14 @@ def generic_invocation():
     inv.operation = OperationType.DEPLOY_FRESH
     inv.timestamp = timestamp_util.datetime_now_to_string()
     return inv
+
+
+@pytest.fixture()
+def patch_auth_wrapper(mocker):
+    mocker.patch('opera.api.service.csardb_service.GitDB.version_exists', return_value=True)
+    mocker.patch('opera.api.service.sqldb_service.OfflineStorage.get_session_data',
+                 return_value={'blueprint_token': 'foo', 'version_tag': 'bar'})
+    mocker.patch('opera.api.service.sqldb_service.OfflineStorage.get_project_domain', return_value=None)
 
 
 @pytest.fixture()
