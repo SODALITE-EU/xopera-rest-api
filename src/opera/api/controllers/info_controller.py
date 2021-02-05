@@ -1,6 +1,7 @@
 import json
 
 from opera.api.cli import SQL_database
+from opera.api.controllers import security_controller
 from opera.api.controllers.background_invocation import InvocationService
 from opera.api.log import get_logger
 from opera.api.openapi.models import InvocationState, Invocation, GitLog
@@ -11,6 +12,7 @@ logger = get_logger(__name__)
 invocation_service = InvocationService()
 
 
+@security_controller.check_role_auth_session_or_blueprint
 def get_deploy_log(blueprint_token=None, session_token=None):
     """
 
@@ -27,6 +29,7 @@ def get_deploy_log(blueprint_token=None, session_token=None):
     return [Invocation.from_dict(json.loads(_data[1])) for _data in data], 200
 
 
+@security_controller.check_role_auth_blueprint
 def get_git_log(blueprint_token, version_tag=None, fetch_all=False):
     """
 
@@ -46,18 +49,19 @@ def get_git_log(blueprint_token, version_tag=None, fetch_all=False):
     return [GitLog.from_dict(item) for item in data], 200
 
 
-def get_status(token=None):
+@security_controller.check_role_auth_session
+def get_status(session_token):
     """
     Obtain job status
 
-    :param token: session_token
-    :type token: str
+    :param session_token: session_token
+    :type session_token: str
 
     :rtype: Invocation
     """
-    inv = invocation_service.load_invocation(token)
+    inv = invocation_service.load_invocation(session_token)
     if inv is None:
-        return {'message': f'Could not find session with session_token {token}'}, 404
+        return {'message': f'Could not find session with session_token {session_token}'}, 404
     code = {
         InvocationState.PENDING: 202,
         InvocationState.IN_PROGRESS: 202,

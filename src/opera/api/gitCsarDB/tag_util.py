@@ -6,7 +6,7 @@ def decode_tag(tag: str):
     """
     tag_parsed = tag[1:].split('.')
     if len(tag_parsed) == 1:
-        tag_parsed.append(0)
+        tag_parsed.append('0')
     return int(tag_parsed[0]), int(tag_parsed[1])
 
 

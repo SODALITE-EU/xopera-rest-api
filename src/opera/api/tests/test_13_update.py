@@ -11,6 +11,7 @@ class TestUpdate:
     session_data = {'blueprint_token': blueprint_token, 'version_tag': version_tag}
 
     def test_no_session_data(self, client, mocker):
+        mocker.patch('opera.api.service.csardb_service.GitDB.version_exists', return_value=True)
         mock_get_session_data = mocker.MagicMock(name='session_data', return_value=None)
         mocker.patch('opera.api.service.sqldb_service.OfflineStorage.get_session_data', new=mock_get_session_data)
 
@@ -26,8 +27,9 @@ class TestUpdate:
         mocker.patch('opera.api.service.csardb_service.GitDB.version_exists', new=mock_version_exists)
 
         session_token = uuid.uuid4()
-        resp = client.post(
-            f"/update/{session_token}?blueprint_token={TestUpdate.blueprint_token}&version_tag={TestUpdate.version_tag}")
+        resp = client.post(f"/update/{session_token}"
+                           f"?blueprint_token={TestUpdate.blueprint_token}"
+                           f"&version_tag={TestUpdate.version_tag}")
         assert resp.status_code == 404
         mock_version_exists.assert_called_with(TestUpdate.blueprint_token, TestUpdate.version_tag)
 

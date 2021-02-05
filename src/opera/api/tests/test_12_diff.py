@@ -9,6 +9,7 @@ class TestDiff:
     session_data = {'blueprint_token': blueprint_token, 'version_tag': version_tag}
 
     def test_no_session_data(self, client, mocker):
+        mocker.patch('opera.api.service.csardb_service.GitDB.version_exists', return_value=True)
         mock_get_session_data = mocker.MagicMock(name='session_data', return_value=None)
         mocker.patch('opera.api.service.sqldb_service.OfflineStorage.get_session_data', new=mock_get_session_data)
 
@@ -29,7 +30,7 @@ class TestDiff:
         assert resp.status_code == 404
         mock_version_exists.assert_called_with(TestDiff.blueprint_token, TestDiff.version_tag)
 
-    def test_params(self, client, mocker, generic_invocation: Invocation, inputs_1):
+    def test_params(self, client, mocker, generic_invocation: Invocation):
         inv = generic_invocation
         inv.blueprint_token = TestDiff.blueprint_token
         inv.version_tag = TestDiff.version_tag

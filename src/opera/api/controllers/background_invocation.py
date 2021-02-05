@@ -11,10 +11,10 @@ from typing import Optional
 
 from opera.commands.deploy import deploy_service_template as opera_deploy
 from opera.commands.diff import diff_instances as opera_diff_instances
+from opera.commands.outputs import outputs as opera_outputs
 from opera.commands.undeploy import undeploy as opera_undeploy
 from opera.commands.update import update as opera_update
 from opera.commands.validate import validate_service_template as opera_validate
-from opera.commands.outputs import outputs as opera_outputs
 from opera.compare.instance_comparer import InstanceComparer as opera_InstanceComparer
 from opera.compare.template_comparer import TemplateComparer as opera_TemplateComparer
 from opera.storage import Storage
@@ -54,6 +54,7 @@ class InvocationWorkerProcess(multiprocessing.Process):
 
             inv.state = InvocationState.IN_PROGRESS
             InvocationService.write_invocation(inv)
+            InvocationService.save_empty_session_data(inv)
 
             try:
                 if inv.operation == OperationType.DEPLOY_FRESH:
@@ -312,6 +313,14 @@ class InvocationService:
     def save_dot_opera_to_db(cls, inv: Invocation, location: Path) -> None:
         data = file_util.dir_to_json((location / '.opera'))
         SQL_database.save_session_data(inv.session_token, inv.blueprint_token, inv.version_tag, data)
+
+    @classmethod
+    def save_empty_session_data(cls, inv: Invocation):
+        """
+        Function to init session data
+        # TODO remove when moving to deployment_id
+        """
+        SQL_database.save_session_data(inv.session_token, inv.blueprint_token, inv.version_tag, {})
 
     @classmethod
     def get_dot_opera_from_db(cls, session_token, location: Path) -> None:

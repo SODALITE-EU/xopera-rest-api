@@ -13,7 +13,7 @@ from opera.api.gitCsarDB.connectors import MockConnector
 from opera.api.openapi.models.invocation import Invocation, InvocationState, OperationType
 from opera.api.service import sqldb_service
 from opera.api.settings import Settings
-from opera.api.util import timestamp_util
+from opera.api.util import timestamp_util, xopera_util
 
 
 def pytest_sessionstart(session):
@@ -24,6 +24,7 @@ def pytest_sessionstart(session):
     change_API_WORKDIR('.opera-api-pytest')
 
     shutil.rmtree(Settings.API_WORKDIR, ignore_errors=True)
+    xopera_util.init_data()
 
 
 def pytest_sessionfinish(session, exitstatus):
@@ -55,6 +56,14 @@ def generic_invocation():
 
 
 @pytest.fixture()
+def patch_auth_wrapper(mocker):
+    mocker.patch('opera.api.service.csardb_service.GitDB.version_exists', return_value=True)
+    mocker.patch('opera.api.service.sqldb_service.OfflineStorage.get_session_data',
+                 return_value={'blueprint_token': 'foo', 'version_tag': 'bar'})
+    mocker.patch('opera.api.service.sqldb_service.OfflineStorage.get_project_domain', return_value=None)
+
+
+@pytest.fixture()
 def mock_api_workdir():
     old_workdir = Settings.API_WORKDIR
     path = workdir_path()
@@ -74,9 +83,10 @@ def mock_ssh_keys_loc():
 
 
 @pytest.fixture(scope="session")
-def client():
+def client(session_mocker):
     """An application for the tests."""
     os.environ['LOG_LEVEL'] = 'debug'
+    session_mocker.patch('connexion.decorators.security.get_authorization_info', return_value={'scope': ['apiKey']})
     Settings.USE_OFFLINE_STORAGE = True
     with test().app.test_client() as client:
         yield client

@@ -1,6 +1,7 @@
 import connexion
 
 from opera.api.cli import CSAR_db, SQL_database
+from opera.api.controllers import security_controller
 from opera.api.log import get_logger
 from opera.api.openapi.models.collaborators_list import CollaboratorsList
 from opera.api.openapi.models.delete_metadata import DeleteMetadata
@@ -13,6 +14,7 @@ from opera.api.util import git_util
 logger = get_logger(__name__)
 
 
+@security_controller.check_role_auth_blueprint
 def delete_manage_csar(blueprint_token, version_tag=None, force=None):
     """
     Delete one or more versions of blueprint
@@ -40,10 +42,11 @@ def delete_manage_csar(blueprint_token, version_tag=None, force=None):
 
     if status_code == 200:
         version_tags = [version_tag] if version_tag else SQL_database.get_version_tags(blueprint_token)
+        n_msg = ' a version of ' if version_tag else ' '
         for tag in version_tags:
             SQL_database.save_git_transaction_data(blueprint_token=blueprint_token,
                                                    version_tag=tag,
-                                                   revision_msg=f"Deleted {'one version of ' if version_tag else ''}blueprint",
+                                                   revision_msg=f"Deleted{n_msg}blueprint",
                                                    job='delete',
                                                    git_backend=str(CSAR_db.connection.git_connector),
                                                    repo_url=repo_url)
@@ -63,6 +66,7 @@ def delete_manage_csar(blueprint_token, version_tag=None, force=None):
     ), status_code
 
 
+@security_controller.check_role_auth_blueprint
 def get_git_user_manage(blueprint_token):
     """
     Obtain list of git users with access to repository
@@ -72,9 +76,6 @@ def get_git_user_manage(blueprint_token):
 
     :rtype: CollaboratorsList
     """
-    if not CSAR_db.check_token_exists(blueprint_token=blueprint_token):
-        return JustMessage(f"Blueprint with token {blueprint_token} does not exist"), 404
-
     user_list, error_msg = CSAR_db.get_blueprint_user_list(blueprint_token=blueprint_token)
 
     repo_url, repo_error_msg = CSAR_db.get_repo_url(blueprint_token=blueprint_token)
@@ -91,6 +92,7 @@ def get_git_user_manage(blueprint_token):
                     error_msg or repo_error_msg), 500
 
 
+@security_controller.check_role_auth_blueprint
 def post_git_user_manage(blueprint_token, username):
     """
     Add ne user to repository
@@ -102,18 +104,17 @@ def post_git_user_manage(blueprint_token, username):
 
     :rtype: JustMessage
     """
-    if not CSAR_db.check_token_exists(blueprint_token=blueprint_token):
-        return JustMessage(f"Blueprint with token {blueprint_token} does not exist"), 404
-
     success, error_msg = CSAR_db.add_member_to_blueprint(blueprint_token=blueprint_token, username=username)
     if success:
-        return JustMessage(f"invite for user {username} sent" if Settings.git_config[
-                                                                     'type'] == 'github' else f"user {username} added"), 201
+        return JustMessage(f"invite for user {username} sent"
+                           if Settings.git_config['type'] == 'github'
+                           else f"user {username} added"), 201
 
     return ErrorMsg(f"Could not add user {username} to repository with blueprint_id '{blueprint_token}'",
                     error_msg), 500
 
 
+@security_controller.check_role_auth_blueprint
 def post_manage_csar(blueprint_token, revision_msg=None):
     """
     Add new blueprint version to existing blueprint
@@ -125,9 +126,8 @@ def post_manage_csar(blueprint_token, revision_msg=None):
 
     :rtype: GitRevisionMetadata
     """
-    if not CSAR_db.check_token_exists(blueprint_token):
-        return JustMessage("Blueprint token does not exist, 'manage' route instead"), 404
     file = connexion.request.files['CSAR']
+
     result, response = CSAR_db.add_revision(CSAR=file, revision_msg=revision_msg, blueprint_token=blueprint_token)
 
     if result is None:
@@ -144,20 +144,30 @@ def post_manage_csar(blueprint_token, revision_msg=None):
     return GitRevisionMetadata.from_dict(result), 200
 
 
-def post_new_blueprint_csar(revision_msg=None):
+def post_new_blueprint_csar(revision_msg=None, project_domain=None):
     """
     Add new blueprint
 
     :param revision_msg: Optional comment on submission
     :type revision_msg: str
+    :param project_domain: Optional project domain this blueprint belongs to
+    :type project_domain: str
 
     :rtype: GitRevisionMetadata
     """
+    # check roles
+    if project_domain and not security_controller.check_roles(project_domain):
+        return JustMessage(f"Unauthorized request for project: {project_domain}"), 401
+
     file = connexion.request.files['CSAR']
+
     result, response = CSAR_db.add_revision(CSAR=file, revision_msg=revision_msg)
 
     if result is None:
         return JustMessage(f"Invalid CSAR: {response}"), 406
+
+    if project_domain and not SQL_database.save_project_domain(result['blueprint_token'], project_domain):
+        return JustMessage(f"Failed to save project data: {project_domain}"), 500
 
     SQL_database.save_git_transaction_data(blueprint_token=result['blueprint_token'],
                                            version_tag=result['version_tag'],

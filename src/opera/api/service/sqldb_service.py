@@ -63,8 +63,8 @@ class Database:
         """
         pass
 
-    def save_git_transaction_data(self, blueprint_token: uuid, version_tag: str, revision_msg: str, job: str,
-                                  git_backend: str, repo_url: str, commit_sha: str = None):
+    def save_git_transaction_data(self, blueprint_token: uuid, version_tag: str, revision_msg: str,
+                                  job: str, git_backend: str, repo_url: str, commit_sha: str = None):
         """
         Saves transaction data to database
         """
@@ -83,6 +83,18 @@ class Database:
         """
         pass
 
+    def get_project_domain(self, blueprint_token: uuid):
+        """
+        returns list of all version tags for blueprint
+        """
+        pass   
+
+    def save_project_domain(self, blueprint_token: uuid, project_domain: str):
+        """
+        returns list of all version tags for blueprint
+        """
+        pass       
+
 
 class OfflineStorage(Database):
     def __init__(self):
@@ -92,10 +104,12 @@ class OfflineStorage(Database):
         self.deployment_log_path = self.db_path / Settings.deployment_log_table
         self.git_log_path = self.db_path / Settings.git_log_table
         self.dot_opera_data_path = self.db_path / Settings.dot_opera_data_table
+        self.project_domain_path = self.db_path / Settings.project_domain_table
 
         os.makedirs(self.deployment_log_path, exist_ok=True)
         os.makedirs(self.git_log_path, exist_ok=True)
         os.makedirs(self.dot_opera_data_path, exist_ok=True)
+        os.makedirs(self.project_domain_path, exist_ok=True)
 
     @staticmethod
     def file_write(path, content, name=None):
@@ -238,6 +252,26 @@ class OfflineStorage(Database):
         deleted_tags = {json_log['version_tag'] for json_log in log_data if json_log['job'] == 'delete'}
         return sorted(list(all_tags - deleted_tags))
 
+    def get_project_domain(self, blueprint_token: uuid):
+        """
+        returns project domain for blueprint
+        """   
+        try:
+            domain_data = json.loads(self.file_read(str(self.project_domain_path), blueprint_token))
+            return {k: (v if v != 'None' else None) for k, v in domain_data.items()}
+        except FileNotFoundError:
+            return None
+
+    def save_project_domain(self, blueprint_token: uuid, project_domain: str):
+        """
+        Saves project domain for blueprint
+        """   
+        data = {
+            "blueprint_token": str(blueprint_token),
+            "project_domain": project_domain
+        }
+        self.file_write(str(self.project_domain_path), name=blueprint_token, content=json.dumps(data))        
+
 
 class PostgreSQL(Database):
     def __init__(self, settings):
@@ -276,6 +310,13 @@ class PostgreSQL(Database):
                         primary key (session_token)
                         );""".format(Settings.dot_opera_data_table))
 
+        self.execute("""
+                        create table if not exists {} (
+                        blueprint_token varchar (36),
+                        project_domain varchar(250),
+                        primary key (blueprint_token)
+                        );""".format(Settings.project_domain_table))                        
+
     def disconnect(self):
         log.info('disconnecting PostgreSQL database')
         self.connection.close()
@@ -303,7 +344,7 @@ class PostgreSQL(Database):
         timestamp = timestamp_util.datetime_now_to_string()
         response = self.execute(
             "insert into {} (blueprint_token, version_tag, timestamp, session_token, tree) values (%s, %s, %s, %s, %s)"
-                .format(Settings.dot_opera_data_table),
+            .format(Settings.dot_opera_data_table),
             (str(blueprint_token), str(version_tag), timestamp, str(session_token), tree_str))
         if response:
             log.info('Updated dot_opera_data in PostgreSQL database')
@@ -337,7 +378,7 @@ class PostgreSQL(Database):
 
         response = self.execute(
             "insert into {} (blueprint_token, timestamp, session_token, _log) values (%s, %s, %s, %s)"
-                .format(Settings.deployment_log_table),
+            .format(Settings.deployment_log_table),
             (str(blueprint_token), str(timestamp), str(session_token), str(_log)))
         if response:
             log.info('Updated deployment log in PostgreSQL database')
@@ -426,3 +467,32 @@ class PostgreSQL(Database):
         all_tags = {json_log['version_tag'] for json_log in log_data}
         deleted_tags = {json_log['version_tag'] for json_log in log_data if json_log['job'] == 'delete'}
         return sorted(list(all_tags - deleted_tags))
+
+    def get_project_domain(self, blueprint_token: uuid):
+        """
+        returns project domain for blueprint
+        """
+        dbcur = self.connection.cursor()
+        query = """select blueprint_token, project_domain
+            from {} where blueprint_token = '{}';""".format(
+            Settings.project_domain_table, blueprint_token)
+        dbcur.execute(query)
+        line = dbcur.fetchone()
+        if not line:
+            return None
+        project_domain = line[1]
+        dbcur.close()
+        return project_domain
+
+    def save_project_domain(self, blueprint_token: uuid, project_domain: str):
+        """
+        Saves project domain for blueprint
+        """     
+        response = self.execute(
+            "insert into {} (blueprint_token, project_domain) values (%s, %s)"
+            .format(Settings.project_domain_table), (str(blueprint_token), project_domain))
+        if response:
+            log.info('Updated {} in PostgreSQL database'.format(Settings.project_domain_table))
+        else:
+            log.error('Failed to update {} in PostgreSQL database'.format(Settings.project_domain_table))
+        return response

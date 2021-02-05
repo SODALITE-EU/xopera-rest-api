@@ -34,8 +34,8 @@ class TestOutputs:
         mocker.patch('opera.api.service.sqldb_service.OfflineStorage.get_session_data',
                      return_value=TestOutputs.session_data)
 
-        mock_outputs = mocker.MagicMock(name='outputs', return_value=(None, (Exception.__class__.__name__, "Exception "
-                                                                                                           "stacktrace")))
+        mock_outputs = mocker.MagicMock(name='outputs',
+                                        return_value=(None, (Exception.__class__.__name__, "Exception stacktrace")))
         mocker.patch('opera.api.controllers.background_invocation.InvocationWorkerProcess.outputs', new=mock_outputs)
         resp = client.get(f"/outputs/{session_token}")
 

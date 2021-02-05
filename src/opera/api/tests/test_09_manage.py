@@ -65,8 +65,8 @@ class TestDelete:
     def test_json_keys_error(self, client):
         resp = client.delete(f"/manage/{42}")
         assert_that(resp.status_code).is_equal_to(404)
-        assert_that(resp.json).is_not_none().contains_only("message", 'blueprint_token', 'version_tag',
-                                                           'deleted_database_entries', 'force')
+        assert_that(resp.json).is_not_none().contains_only("message")
+        assert_that(resp.json['message']).is_equal_to('Did not find blueprint with token: 42 and version_id: any')
 
     def test_json_keys_success(self, client, csar_1):
         resp = client.post("/manage", data=csar_1)
@@ -174,9 +174,9 @@ class TestUser:
         resp = client.get(f"/manage/{blueprint_token}/user")
         assert_that(resp.status_code).is_equal_to(404)
         assert_that(resp.json).contains_only('message')
-        assert_that(resp.json['message']).is_equal_to('Blueprint with token 42 does not exist')
+        assert_that(resp.json['message']).is_equal_to('Did not find blueprint with token: 42 and version_id: any')
 
-    def test_get_users_git_error(self, client, mocker):
+    def test_get_users_git_error(self, client, mocker, patch_auth_wrapper):
         blueprint_token = str(uuid.uuid4())
         mocker.patch('opera.api.service.csardb_service.GitDB.check_token_exists', return_value=True)
         mocker.patch('opera.api.service.csardb_service.GitDB.get_blueprint_user_list', return_value=[None, None])
@@ -190,9 +190,9 @@ class TestUser:
         blueprint_token = '42'
         resp = client.post(f"/manage/{blueprint_token}/user?username=foo")
         assert_that(resp.status_code).is_equal_to(404)
-        assert_that(resp.json['message']).is_equal_to('Blueprint with token 42 does not exist')
+        assert_that(resp.json['message']).is_equal_to('Did not find blueprint with token: 42 and version_id: any')
 
-    def test_add_users_git_error(self, client, mocker):
+    def test_add_users_git_error(self, client, mocker, patch_auth_wrapper):
         blueprint_token = str(uuid.uuid4())
         username = 'foo'
         mocker.patch('opera.api.service.csardb_service.GitDB.check_token_exists', return_value=True)

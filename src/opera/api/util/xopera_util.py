@@ -15,12 +15,12 @@ from opera.api.settings import Settings
 
 @contextmanager
 def cwd(path):
-    oldpwd = os.getcwd()
+    old_pwd = os.getcwd()
     os.chdir(path)
     try:
         yield
     finally:
-        os.chdir(oldpwd)
+        os.chdir(old_pwd)
 
 
 def configure_ssh_keys():
@@ -34,7 +34,7 @@ def configure_ssh_keys():
         public_key = [str(key) for key in keys if ".pubk" in str(key)][0]
     except IndexError:
         log.error(
-            'Wrong file extention. Public key should have ".pubk" and private key should have ".pk" or no extension '
+            'Wrong file extension. Public key should have ".pubk" and private key should have ".pk" or no extension '
             'at all')
         return
     public_key_check = private_key.replace(".pk", "") + ".pubk"
@@ -93,6 +93,6 @@ def inputs_file():
 
 def mask_workdir(location: Path, stacktrace: str, placeholder="$BLUEPRINT_DIR"):
     """
-    replaces real workdir with placehodler
+    replaces real workdir with placeholder
     """
     return stacktrace.replace(str(location), placeholder)

@@ -78,7 +78,7 @@ class TestXoperaUtil:
         ssh_private_key.write_text('private_key')
 
         xopera_util.configure_ssh_keys()
-        assert 'Wrong file extention' in caplog.text
+        assert 'Wrong file extension' in caplog.text
 
     def test_configure_ssh_keys_key_mismatch(self, mock_ssh_keys_loc: Path, mocker: Mock, caplog):
         # mock os.chown func
