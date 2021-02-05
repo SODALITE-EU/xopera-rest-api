@@ -21,8 +21,6 @@ def get_outputs(session_token):
     :rtype: object
     """
 
-    session_data = SQL_database.get_session_data(session_token)
-  
     outputs, exception = InvocationWorkerProcess.outputs(session_token)
     if exception:
         return ErrorMsg(exception[0], exception[1]), 500

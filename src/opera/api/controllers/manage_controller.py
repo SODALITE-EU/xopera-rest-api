@@ -128,8 +128,6 @@ def post_manage_csar(blueprint_token, revision_msg=None):
     """
     file = connexion.request.files['CSAR']
 
-    blueprint_info = SQL_database.get_git_transaction_data(blueprint_token)
-
     result, response = CSAR_db.add_revision(CSAR=file, revision_msg=revision_msg, blueprint_token=blueprint_token)
 
     if result is None:

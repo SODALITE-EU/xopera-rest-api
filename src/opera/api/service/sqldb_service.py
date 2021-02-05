@@ -63,7 +63,7 @@ class Database:
         """
         pass
 
-    def save_git_transaction_data(self, blueprint_token: uuid, project_domain: str, version_tag: str, revision_msg: str,
+    def save_git_transaction_data(self, blueprint_token: uuid, version_tag: str, revision_msg: str,
                                   job: str, git_backend: str, repo_url: str, commit_sha: str = None):
         """
         Saves transaction data to database
