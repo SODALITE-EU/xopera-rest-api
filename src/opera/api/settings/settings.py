@@ -37,14 +37,13 @@ class Settings:
     workdir = Path(API_WORKDIR) / "git_db/mockConnector"
 
     # Authorization and Authentication config
-    oidc_introspetion_endpoint_uri = None
+    oidc_introspection_endpoint_uri = None
     oidc_client_id = None
     oidc_client_secret = None
     vault_secret_storage_uri = None
     vault_login_uri = None
     apiKey = None
     introspection_protocols = ["http://", "https://"]
-
 
     @staticmethod
     def load_settings():

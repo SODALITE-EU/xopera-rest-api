@@ -63,8 +63,8 @@ class Database:
         """
         pass
 
-    def save_git_transaction_data(self, blueprint_token: uuid, project_domain: str, version_tag: str, revision_msg: str, job: str,
-                                  git_backend: str, repo_url: str, commit_sha: str = None):
+    def save_git_transaction_data(self, blueprint_token: uuid, project_domain: str, version_tag: str, revision_msg: str,
+                                  job: str, git_backend: str, repo_url: str, commit_sha: str = None):
         """
         Saves transaction data to database
         """
@@ -110,7 +110,6 @@ class OfflineStorage(Database):
         os.makedirs(self.git_log_path, exist_ok=True)
         os.makedirs(self.dot_opera_data_path, exist_ok=True)
         os.makedirs(self.project_domain_path, exist_ok=True)
-
 
     @staticmethod
     def file_write(path, content, name=None):
@@ -345,7 +344,7 @@ class PostgreSQL(Database):
         timestamp = timestamp_util.datetime_now_to_string()
         response = self.execute(
             "insert into {} (blueprint_token, version_tag, timestamp, session_token, tree) values (%s, %s, %s, %s, %s)"
-                .format(Settings.dot_opera_data_table),
+            .format(Settings.dot_opera_data_table),
             (str(blueprint_token), str(version_tag), timestamp, str(session_token), tree_str))
         if response:
             log.info('Updated dot_opera_data in PostgreSQL database')
@@ -379,7 +378,7 @@ class PostgreSQL(Database):
 
         response = self.execute(
             "insert into {} (blueprint_token, timestamp, session_token, _log) values (%s, %s, %s, %s)"
-                .format(Settings.deployment_log_table),
+            .format(Settings.deployment_log_table),
             (str(blueprint_token), str(timestamp), str(session_token), str(_log)))
         if response:
             log.info('Updated deployment log in PostgreSQL database')
@@ -491,8 +490,7 @@ class PostgreSQL(Database):
         """     
         response = self.execute(
             "insert into {} (blueprint_token, project_domain) values (%s, %s)"
-                .format(Settings.project_domain_table),
-            (str(blueprint_token), project_domain))
+            .format(Settings.project_domain_table), (str(blueprint_token), project_domain))
         if response:
             log.info('Updated {} in PostgreSQL database'.format(Settings.project_domain_table))
         else:

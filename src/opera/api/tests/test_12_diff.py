@@ -30,7 +30,7 @@ class TestDiff:
         assert resp.status_code == 404
         mock_version_exists.assert_called_with(TestDiff.blueprint_token, TestDiff.version_tag)
 
-    def test_params(self, client, mocker, generic_invocation: Invocation, inputs_1):
+    def test_params(self, client, mocker, generic_invocation: Invocation):
         inv = generic_invocation
         inv.blueprint_token = TestDiff.blueprint_token
         inv.version_tag = TestDiff.version_tag

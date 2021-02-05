@@ -45,7 +45,7 @@ def token_info(access_token) -> dict:
     if not token_request.ok:
         return None
     json = token_request.json()
-    if "active" in json and json["active"] == False:
+    if "active" in json and json["active"] is False:
         return None
     return json
 

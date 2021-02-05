@@ -57,14 +57,14 @@ class TestMain:
 
     def test_main(self, get_workdir_path, csar_unpacked):
         blueprint_path = csar_unpacked / 'CSAR-ok'
-        outputh_path = f"{get_workdir_path}/csar"
-        outputh_path_with_zip = f"{outputh_path}.zip"
+        output_path = f"{get_workdir_path}/csar"
+        output_path_with_zip = f"{output_path}.zip"
         parser = blueprint2CSAR.parse_args(['name', str(blueprint_path),
                                             '--entry-definitions', 'service.yaml',
-                                            '--output', outputh_path])
+                                            '--output', output_path])
         blueprint2CSAR.main(parser)
 
-        assert Path(outputh_path_with_zip).exists()
+        assert Path(output_path_with_zip).exists()
 
 
 class TestValidate:
@@ -87,7 +87,7 @@ class TestValidate:
         csar_path = csar_unpacked / 'CSAR-no-meta-no-meta-section'
         assert not blueprint2CSAR.validate_csar(csar_path)
 
-        with pytest.raises(blueprint2CSAR.NoMetadataExcepion):
+        with pytest.raises(blueprint2CSAR.NoMetadataException):
             blueprint2CSAR.validate_csar(csar_path, raise_exceptions=True)
 
     def test_no_meta_success(self, csar_unpacked):

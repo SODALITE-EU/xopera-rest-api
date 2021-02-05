@@ -1,9 +1,8 @@
-from opera.api.cli import CSAR_db, SQL_database
+from opera.api.controllers import security_controller
 from opera.api.controllers.background_invocation import InvocationWorkerProcess
 from opera.api.openapi.models import Invocation
-from opera.api.openapi.models.just_message import JustMessage
 from opera.api.util import xopera_util
-from opera.api.controllers import security_controller
+
 
 @security_controller.check_role_auth_blueprint
 @security_controller.check_role_auth_session

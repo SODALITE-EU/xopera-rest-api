@@ -23,7 +23,7 @@ def test_init_existing(mock: MockConnector):
 
 def test_repo_exists_false(mock: MockConnector):
     repo_name = 'test_repo'
-    assert not mock.repo_exist(repo_name), "method 'repo_exists' returned True on nonexisting repo"
+    assert not mock.repo_exist(repo_name), "method 'repo_exists' returned True on nonexistent repo"
 
 
 def test_repo_exists_true(mock: MockConnector):

@@ -1,6 +1,7 @@
 import connexion
 
 from opera.api.cli import CSAR_db, SQL_database
+from opera.api.controllers import security_controller
 from opera.api.log import get_logger
 from opera.api.openapi.models.collaborators_list import CollaboratorsList
 from opera.api.openapi.models.delete_metadata import DeleteMetadata
@@ -9,9 +10,9 @@ from opera.api.openapi.models.git_revision_metadata import GitRevisionMetadata
 from opera.api.openapi.models.just_message import JustMessage
 from opera.api.settings import Settings
 from opera.api.util import git_util
-from opera.api.controllers import security_controller
 
 logger = get_logger(__name__)
+
 
 @security_controller.check_role_auth_blueprint
 def delete_manage_csar(blueprint_token, version_tag=None, force=None):
@@ -41,10 +42,11 @@ def delete_manage_csar(blueprint_token, version_tag=None, force=None):
 
     if status_code == 200:
         version_tags = [version_tag] if version_tag else SQL_database.get_version_tags(blueprint_token)
+        n_msg = ' a version of ' if version_tag else ' '
         for tag in version_tags:
             SQL_database.save_git_transaction_data(blueprint_token=blueprint_token,
                                                    version_tag=tag,
-                                                   revision_msg=f"Deleted {'one version of ' if version_tag else ''}blueprint",
+                                                   revision_msg=f"Deleted{n_msg}blueprint",
                                                    job='delete',
                                                    git_backend=str(CSAR_db.connection.git_connector),
                                                    repo_url=repo_url)
@@ -62,6 +64,7 @@ def delete_manage_csar(blueprint_token, version_tag=None, force=None):
         deleted_database_entries=rows_affected,
         force=force or False
     ), status_code
+
 
 @security_controller.check_role_auth_blueprint
 def get_git_user_manage(blueprint_token):
@@ -88,6 +91,7 @@ def get_git_user_manage(blueprint_token):
     return ErrorMsg(f"Could not retrieve list of users for repository with blueprint_id '{blueprint_token}'",
                     error_msg or repo_error_msg), 500
 
+
 @security_controller.check_role_auth_blueprint
 def post_git_user_manage(blueprint_token, username):
     """
@@ -102,8 +106,9 @@ def post_git_user_manage(blueprint_token, username):
     """
     success, error_msg = CSAR_db.add_member_to_blueprint(blueprint_token=blueprint_token, username=username)
     if success:
-        return JustMessage(f"invite for user {username} sent" if Settings.git_config[
-                                                                     'type'] == 'github' else f"user {username} added"), 201
+        return JustMessage(f"invite for user {username} sent"
+                           if Settings.git_config['type'] == 'github'
+                           else f"user {username} added"), 201
 
     return ErrorMsg(f"Could not add user {username} to repository with blueprint_id '{blueprint_token}'",
                     error_msg), 500
@@ -147,12 +152,14 @@ def post_new_blueprint_csar(revision_msg=None, project_domain=None):
 
     :param revision_msg: Optional comment on submission
     :type revision_msg: str
+    :param project_domain: Optional project domain this blueprint belongs to
+    :type project_domain: str
 
     :rtype: GitRevisionMetadata
     """
-    #check roles
+    # check roles
     if project_domain and not security_controller.check_roles(project_domain):
-           return JustMessage(f"Unauthorized request for project: {project_domain}"), 401 
+        return JustMessage(f"Unauthorized request for project: {project_domain}"), 401
 
     file = connexion.request.files['CSAR']
 
@@ -164,7 +171,7 @@ def post_new_blueprint_csar(revision_msg=None, project_domain=None):
     if project_domain and not SQL_database.save_project_domain(result['blueprint_token'], project_domain):
         return JustMessage(f"Failed to save project data: {project_domain}"), 500
 
-    SQL_database.save_git_transaction_data(blueprint_token=result['blueprint_token'],                                          
+    SQL_database.save_git_transaction_data(blueprint_token=result['blueprint_token'],
                                            version_tag=result['version_tag'],
                                            revision_msg=f"Saved new blueprint: {revision_msg}",
                                            job='update',

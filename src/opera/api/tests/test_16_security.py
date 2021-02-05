@@ -1,5 +1,3 @@
-import pytest
-
 from opera.api.controllers import security_controller
 
 
@@ -14,12 +12,12 @@ class TestSecurity:
         mock.ok = False
         mocker.patch("opera.api.controllers.security_controller.session.post", return_value=mock)
         result = security_controller.token_info("ACCESS_TOKEN")
-        assert result == None
+        assert result is None
         mock.ok = True
         mock.json.return_value = {'active': False}
         result = security_controller.token_info("ACCESS_TOKEN")
-        assert result == None
-        mock.json.return_value={'scope': ['email']}
+        assert result is None
+        mock.json.return_value = {'scope': ['email']}
         result = security_controller.token_info("ACCESS_TOKEN")
         assert result["scope"][0] == 'email'
 
@@ -31,12 +29,12 @@ class TestSecurity:
 
         mock.headers = {}
         token = security_controller.get_access_token(mock)
-        assert token == None
+        assert token is None
 
         mock.headers = {"Authorization": "BearerTEST_TOKEN"}
         token = security_controller.get_access_token(mock)
-        assert token == None
+        assert token is None
 
         mock.headers = {"Authorization": "None TEST_TOKEN"}
         token = security_controller.get_access_token(mock)
-        assert token == None
+        assert token is None

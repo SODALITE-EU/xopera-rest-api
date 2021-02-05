@@ -68,7 +68,7 @@ class Connector:
         """
         Adds user as collaborator to repository.
         Args:
-            permissions: either developer or reporter. Addapted after gitlab permissions
+            permissions: either developer or reporter. Adopted after gitlab permissions
             repo_name: name of repository
             username: username of user to be added to repo
 
@@ -151,7 +151,7 @@ class MockConnector(Connector):
         self.workdir = workdir
         if not self.workdir.exists():
             self.workdir.mkdir(parents=True)
-        self.collab_file = self.workdir / 'colaborators.json'
+        self.collab_file = self.workdir / 'collaborators.json'
         if not self.collab_file.exists():
             with self.collab_file.open('w') as file:
                 json.dump({}, file)
@@ -423,7 +423,7 @@ class GithubConnector(Connector):
             raise self.GitAuthenticationError("Could not authenticate to github.com")
 
     def __str__(self):
-        return f"GihubConnector, github.com username: {self.username}, auth_token: {'****' if self.token else None}"
+        return f"GithubConnector, github.com username: {self.username}, auth_token: {'****' if self.token else None}"
 
     def init_repo(self, repo_name: str):
 

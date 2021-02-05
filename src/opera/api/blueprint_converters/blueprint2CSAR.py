@@ -3,10 +3,10 @@ import glob
 import os
 import shutil
 import sys
+import tempfile
 import uuid
 from datetime import datetime
 from pathlib import Path
-import tempfile
 
 import yaml
 
@@ -19,7 +19,7 @@ class MultipleDefinitionsFoundException(TOSCAException):
     pass
 
 
-class NoMetadataExcepion(TOSCAException):
+class NoMetadataException(TOSCAException):
     pass
 
 
@@ -157,7 +157,7 @@ def to_CSAR(blueprint_name: str, blueprint_dir: Path, no_meta: bool = False, ent
 
 def from_CSAR(csar: Path, dst: Path):
     """
-    Unpacks CSAR arhive.
+    Unpacks CSAR archive.
     Args:
         csar: Path to .zip file with CSAR archive
         dst: Path to where archive should be unpacked
@@ -198,7 +198,7 @@ def validate_csar(csar: Path, raise_exceptions=False):
 
         if 'metadata' not in entry_definitions:
             if raise_exceptions:
-                raise NoMetadataExcepion("without metadata file, entry_definitions should have 'metadata' section")
+                raise NoMetadataException("without metadata file, entry_definitions should have 'metadata' section")
             return False
         else:
             metadata = entry_definitions['metadata']
