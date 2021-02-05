@@ -87,14 +87,13 @@ def check_roles(project_domain):
 def get_access_token(request):
     authorization = request.headers.get("Authorization")
     if not authorization:
-        raise Exception("Authorization header absent")
+        return None
     try:
         auth_type, token = authorization.split(None, 1)
     except ValueError:
-        raise Exception("Invalid authorization header")
-
+        return None
     if auth_type.lower() != "bearer":
-        raise Exception("Invalid authorization type")
+        return None
     return token
 
 
