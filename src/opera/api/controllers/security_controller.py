@@ -12,8 +12,8 @@ from opera.api.settings import Settings
 # use connection pool for OAuth tokeninfo
 adapter = requests.adapters.HTTPAdapter(pool_connections=100, pool_maxsize=100)
 session = requests.Session()
-session.mount('http://', adapter)
-session.mount('https://', adapter)
+for protocol in Settings.introspection_protocols:
+    session.mount(protocol, adapter)
 
 role_regex = r"(?P<domain>\w+)_(?P<type>\w+)_(?P<permissions>\w)"
 AADM_SUFFIX = "aadm"

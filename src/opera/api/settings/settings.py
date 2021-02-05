@@ -43,7 +43,7 @@ class Settings:
     vault_secret_storage_uri = None
     vault_login_uri = None
     apiKey = None
-
+    introspection_protocols = ["http://", "https://"]
 
 
     @staticmethod
@@ -80,7 +80,7 @@ class Settings:
         Settings.apiKey = os.getenv("AUTH_API_KEY", "")
         
         Settings.vault_secret_storage_uri = os.getenv("VAULT_SECRET_URI", "http://localhost:8200/v1/")
-        Settings.vault_login_uri = os.getenv("VAULT_LOGIN_URI", "http://localhost:8200/v1/auth/jwt/login")
+        Settings.vault_login_uri = os.getenv("VAULT_LOGIN_URI", "http://localhost:8200/v1/auth/jwt/login")        
 
         # prepare git_config for printing
         __debug_git_config = copy.deepcopy(Settings.git_config)
