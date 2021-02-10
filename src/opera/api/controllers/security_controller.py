@@ -6,8 +6,8 @@ import connexion
 import requests
 
 from opera.api.cli import CSAR_db, SQL_database
-from opera.api.settings import Settings
 from opera.api.openapi.models import InvocationState
+from opera.api.settings import Settings
 
 # use connection pool for OAuth tokeninfo
 adapter = requests.adapters.HTTPAdapter(pool_connections=100, pool_maxsize=100)

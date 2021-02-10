@@ -56,10 +56,12 @@ def generic_invocation():
 
 
 @pytest.fixture()
-def patch_auth_wrapper(mocker):
+def patch_auth_wrapper(mocker, generic_invocation: Invocation):
+    inv = generic_invocation
+    inv.state = InvocationState.SUCCESS
     mocker.patch('opera.api.service.csardb_service.GitDB.version_exists', return_value=True)
-    mocker.patch('opera.api.service.sqldb_service.OfflineStorage.get_session_data',
-                 return_value={'blueprint_token': 'foo', 'version_tag': 'bar'})
+    mocker.patch('opera.api.service.sqldb_service.OfflineStorage.get_deployment_status',
+                 return_value=inv)
     mocker.patch('opera.api.service.sqldb_service.OfflineStorage.get_project_domain', return_value=None)
 
 

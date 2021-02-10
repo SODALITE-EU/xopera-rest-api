@@ -210,8 +210,8 @@ class OfflineStorage(Database):
         inv_ids.sort(key=lambda x: x[0])
         return inv_ids[-1][1]
 
-    def save_git_transaction_data(self, blueprint_id: uuid, version_id: str,
-                                  revision_msg: str, job: str, git_backend: str, repo_url: str, commit_sha: str = None):
+    def save_git_transaction_data(self, blueprint_id: uuid, revision_msg: str, job: str, git_backend: str,
+                                  repo_url: str, version_id: str = None, commit_sha: str = None):
         """
         Saves transaction data to database
         """

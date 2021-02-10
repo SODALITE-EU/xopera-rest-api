@@ -1,18 +1,14 @@
-import connexion
-import six
 import json
 
-from opera.api.openapi.models.deployment_exists import DeploymentExists  # noqa: E501
-from opera.api.openapi.models.invocation import Invocation  # noqa: E501
-from opera.api.openapi.models import InvocationState
-from opera.api.controllers.background_invocation import InvocationWorkerProcess
-from opera.api.openapi import util
-from opera.api.cli import CSAR_db, SQL_database
-from opera.api.controllers.background_invocation import InvocationService
-from opera.api.log import get_logger
-from opera.api.openapi.models import OperationType, Invocation
-from opera.api.util import xopera_util
+from opera.api.cli import SQL_database
 from opera.api.controllers import security_controller
+from opera.api.controllers.background_invocation import InvocationService
+from opera.api.controllers.background_invocation import InvocationWorkerProcess
+from opera.api.log import get_logger
+from opera.api.openapi.models import InvocationState
+from opera.api.openapi.models import OperationType, Invocation
+from opera.api.openapi.models.deployment_exists import DeploymentExists  # noqa: E501
+from opera.api.util import xopera_util
 
 logger = get_logger(__name__)
 invocation_service = InvocationService()

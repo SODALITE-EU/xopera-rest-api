@@ -1,16 +1,14 @@
 import connexion
-import six
 
 from opera.api.cli import CSAR_db, SQL_database
-from opera.api.util import git_util, timestamp_util, xopera_util
-from opera.api.controllers.background_invocation import InvocationWorkerProcess
 from opera.api.controllers import security_controller
+from opera.api.controllers.background_invocation import InvocationWorkerProcess
 from opera.api.log import get_logger
-from opera.api.settings import Settings
 from opera.api.openapi.models.blueprint import Blueprint  # noqa: E501
 from opera.api.openapi.models.error_msg import ErrorMsg  # noqa: E501
 from opera.api.openapi.models.git_log import GitLog  # noqa: E501
-from opera.api.openapi import util
+from opera.api.settings import Settings
+from opera.api.util import timestamp_util, xopera_util
 
 logger = get_logger(__name__)
 
@@ -153,8 +151,10 @@ def get_git_user(blueprint_id):  # noqa: E501
     if user_list is not None:
         return user_list, 200
 
-    return ErrorMsg(f"Could not retrieve list of users for repository with blueprint_id '{blueprint_id}'",
-                    error_msg), 500
+    return ErrorMsg(
+        f"Could not retrieve list of users for repository with blueprint_id '{blueprint_id}'",
+        error_msg
+    ), 500
 
 
 @security_controller.check_role_auth_blueprint
@@ -241,7 +241,7 @@ def post_new_blueprint(revision_msg=None, project_domain=None):  # noqa: E501
         return f"Failed to save project data: {project_domain}", 500
 
     SQL_database.save_git_transaction_data(blueprint_id=result['blueprint_id'],
-                                           version_tag=result['version_tag'],
+                                           version_id=result['version_id'],
                                            revision_msg=f"Saved new blueprint: {revision_msg}",
                                            job='update',
                                            git_backend=str(CSAR_db.connection.git_connector),
