@@ -1,6 +1,5 @@
 from pathlib import Path
 
-from opera.api.openapi.models.just_message import JustMessage
 from opera.api.openapi.models.openstack_key_pair import OpenstackKeyPair
 from opera.api.settings import Settings
 
@@ -18,5 +17,5 @@ def get_public_key():
             return OpenstackKeyPair(key_name, file_string), 200
     except FileNotFoundError:
         if Settings.key_pair == "":
-            return JustMessage("Openstack ssh key pair missing"), 404
-        return JustMessage(f"Public key {key_name} not found"), 404
+            return "Openstack ssh key pair missing", 404
+        return f"Public key {key_name} not found", 404
