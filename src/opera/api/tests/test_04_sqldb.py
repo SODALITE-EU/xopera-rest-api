@@ -26,6 +26,19 @@ class TestDeploymentLog:
         status = sql_db.get_deployment_status(inv.deployment_id)
         assert status.version_id == 'v1.4'
 
+    def test_last_inv_id(self, sql_db: OfflineStorage, generic_invocation: Invocation):
+        # set up
+        inv_ids = [uuid.uuid4() for _ in range(5)]
+        inv = generic_invocation
+        inv.deployment_id = str(uuid.uuid4())
+        for inv_id in inv_ids:
+            inv.timestamp = timestamp_util.datetime_now_to_string()
+            sql_db.update_deployment_log(inv_id, inv)
+
+        # test
+        last_id = sql_db.get_last_invocation_id(inv.deployment_id)
+        assert uuid.UUID(last_id) == inv_ids[-1]
+
 
 class TestSessionData:
 

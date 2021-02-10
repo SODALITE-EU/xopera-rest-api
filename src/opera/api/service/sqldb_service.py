@@ -72,6 +72,12 @@ class Database:
         """
         pass
 
+    def get_last_invocation_id(self, deployment_id: uuid):
+        """
+        This method exists since we do not want to have invocation_id in Invocation object, to not confuse users
+        """
+        pass
+
     def save_git_transaction_data(self, blueprint_id: uuid, version_id: str, revision_msg: str,
                                   job: str, git_backend: str, repo_url: str, commit_sha: str = None):
         """
@@ -191,6 +197,18 @@ class OfflineStorage(Database):
             inv = Invocation.from_dict(json.loads(file.read_text()))
             history.append(inv)
         return sorted(history, key=lambda x: x.timestamp)
+
+    def get_last_invocation_id(self, deployment_id: uuid):
+        """
+        This method exists since we do not want to have invocation_id in Invocation object, to not confuse users
+        """
+        location = self.invocation_path / str(deployment_id)
+        inv_ids = []
+        for file in location.glob('*'):
+            inv_timestamp = Invocation.from_dict(json.loads(file.read_text())).timestamp
+            inv_ids.append((inv_timestamp, file.name))
+        inv_ids.sort(key=lambda x: x[0])
+        return inv_ids[-1][1]
 
     def save_git_transaction_data(self, blueprint_id: uuid, version_id: str,
                                   revision_msg: str, job: str, git_backend: str, repo_url: str, commit_sha: str = None):
@@ -426,6 +444,24 @@ class PostgreSQL(Database):
         dbcur.close()
 
         return history
+
+    def get_last_invocation_id(self, deployment_id: uuid):
+        """
+        This method exists since we do not want to have invocation_id in Invocation object, to not confuse users
+        """
+        dbcur = self.connection.cursor()
+
+        query = "select timestamp, invocation_id from {} where deployment_id = '{}' order by timestamp desc limit 1;" \
+            .format(Settings.invocation_table, deployment_id)
+
+        dbcur.execute(query)
+        line = dbcur.fetchone()
+        if not line:
+            return None
+        inv = line[1]
+        dbcur.close()
+
+        return inv
 
     def save_git_transaction_data(self, blueprint_id: uuid, version_id: str, revision_msg: str, job: str,
                                   git_backend: str, repo_url: str, commit_sha: str = None):

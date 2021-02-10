@@ -48,7 +48,7 @@ paths:
         - oauth2: [email]
       tags:
       - blueprint
-      operationId: post_new_blueprint_csar
+      operationId: post_new_blueprint
       parameters:
       - name: revision_msg
         in: query
@@ -101,11 +101,11 @@ paths:
         - oauth2: [email]
       tags:
       - blueprint
-      operationId: post_manage_csar
+      operationId: post_blueprint
       parameters:
       - name: blueprint_id
         in: path
-        description: token of blueprint
+        description: Id of blueprint
         required: true
         schema:
           type: string
@@ -160,7 +160,7 @@ paths:
         - oauth2: [email]
       tags:
       - blueprint
-      operationId: delete_manage_csar
+      operationId: delete_blueprint
       parameters:
       - name: blueprint_id
         in: path
@@ -208,7 +208,7 @@ paths:
         - oauth2: [ email ]
       tags:
         - blueprint
-      operationId: delete_manage_csar_version
+      operationId: delete_blueprint_version
       parameters:
         - name: blueprint_id
           in: path
@@ -263,7 +263,7 @@ paths:
         - oauth2: [email]
       tags:
       - blueprint
-      operationId: get_git_user_manage
+      operationId: get_git_user
       parameters:
       - name: blueprint_id
         in: path
@@ -309,7 +309,7 @@ paths:
         - oauth2: [email]
       tags:
       - blueprint
-      operationId: post_git_user_manage
+      operationId: post_git_user
       parameters:
       - name: blueprint_id
         in: path
@@ -356,7 +356,7 @@ paths:
         - oauth2: [email]
       tags:
       - blueprint
-      operationId: delete_git_user_manage
+      operationId: delete_git_user
       parameters:
       - name: blueprint_id
         in: path
@@ -1087,7 +1087,6 @@ components:
     Blueprint:
       required:
         - blueprint_id
-        - version_id
         - timestamp
         - url
       type: object
@@ -1225,8 +1224,8 @@ components:
         workers:
           description: Number of workers for parallel execution
           type: integer
-        resume:
-          description: Resume deployment (instead of starting clean)
+        clean_state:
+          description: Clean previous state and start over
           type: boolean
     InvocationState:
       type: string
