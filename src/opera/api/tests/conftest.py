@@ -48,8 +48,8 @@ def change_API_WORKDIR(new_workdir: str):
 def generic_invocation():
     inv = Invocation()
     inv.state = InvocationState.PENDING
-    inv.session_token = str(uuid.uuid4())
-    inv.blueprint_token = str(uuid.uuid4())
+    inv.blueprint_id = str(uuid.uuid4())
+    inv.deployment_id = str(uuid.uuid4())
     inv.operation = OperationType.DEPLOY_FRESH
     inv.timestamp = timestamp_util.datetime_now_to_string()
     return inv
