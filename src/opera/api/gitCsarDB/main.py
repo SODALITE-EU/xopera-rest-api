@@ -130,6 +130,10 @@ class GitCsarDB:
         repo_name = self.repo_name(csar_token)
         return self.git_connector.add_collaborator(repo_name, username, permissions=self.guest_permissions)
 
+    def delete_user(self, csar_token: uuid, username: str):
+        repo_name = self.repo_name(csar_token)
+        return self.git_connector.delete_collaborator(repo_name, username)
+
     def get_user_list(self, csar_token: uuid):
         repo_name = self.repo_name(csar_token)
         return self.git_connector.get_collaborators(repo_name)

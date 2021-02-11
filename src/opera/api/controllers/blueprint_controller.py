@@ -26,8 +26,12 @@ def delete_git_user(blueprint_id, user_id):  # noqa: E501
 
     :rtype: str
     """
-    # TODO implement
-    return 'do some magic!'
+    success, error_msg = CSAR_db.delete_blueprint_user(blueprint_id=blueprint_id, username=user_id)
+    if success:
+        return f"User {user_id} deleted", 201
+
+    return ErrorMsg(f"Could not delete user {user_id} from repository with blueprint_id '{blueprint_id}'",
+                    error_msg), 500
 
 
 @security_controller.check_role_auth_blueprint

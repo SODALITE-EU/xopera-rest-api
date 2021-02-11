@@ -52,6 +52,21 @@ def test_add_collaborator(mock: MockConnector):
     assert not mock.add_collaborator("nonexistent_repo", username)
 
 
+def test_delete_collaborators(mock: MockConnector, mocker):
+    # set up test
+    mocker.patch('opera.api.gitCsarDB.connectors.MockConnector.repo_exist', return_value=True)
+    repo_name = 'foo'
+    user_names = [f"user_{i}" for i in range(5)]
+    collaborators = json.load(mock.collab_file.open('r'))
+    collaborators[repo_name] = user_names
+    json.dump(collaborators, mock.collab_file.open('w'))
+
+    # run test
+    assert mock.get_collaborators(repo_name) == user_names
+    mock.delete_collaborator(repo_name, user_names[-1])
+    assert mock.get_collaborators(repo_name) == user_names[:-1]
+
+
 def test_get_collaborators(mock: MockConnector):
     repo_name = 'test_repo'
     username1 = 'username1'

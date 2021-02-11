@@ -116,6 +116,13 @@ class GitDB:
         except Exception as e:
             return False, str(e)
 
+    def delete_blueprint_user(self, blueprint_id: uuid, username: str):
+        try:
+            self.connection.delete_user(csar_token=blueprint_id, username=username)
+            return True, None
+        except Exception as e:
+            return False, str(e)
+
     def get_blueprint_user_list(self, blueprint_id: uuid):
         try:
             return self.connection.get_user_list(csar_token=blueprint_id), None

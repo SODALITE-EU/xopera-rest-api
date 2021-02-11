@@ -236,13 +236,30 @@ class TestUser:
         resp = client.get(f"/blueprint/{blueprint_token}/user")
         assert_that(resp.json).is_not_empty().contains_only('foo')
 
-    def test_delete_user(self, client, patch_auth_wrapper):
-        # TODO implement when method implemented
-        blueprint_token = str(uuid.uuid4())
+    def test_delete_users_git_error(self, client, mocker, patch_auth_wrapper):
+        blueprint_token = uuid.uuid4()
         username = 'foo'
-        resp = client.delete(f"/blueprint/{blueprint_token}/user/{username}")
-        assert_that(resp.json).contains('do some magic!')
+        mocker.patch('opera.api.service.csardb_service.GitDB.check_token_exists', return_value=True)
+        mocker.patch('opera.api.service.csardb_service.GitDB.delete_blueprint_user', return_value=[None, 'Error_msg'])
 
+        resp = client.delete(f"/blueprint/{blueprint_token}/user/{username}")
+        assert_that(resp.status_code).is_equal_to(500)
+        assert_that(resp.json).contains_only('description', 'stacktrace')
+
+    def test_delete_user_success(self, client, csar_1, patch_auth_wrapper):
+        # upload local blueprint
+        resp = client.post(f"/blueprint", data=csar_1)
+        blueprint_token = resp.json['blueprint_id']
+        username = 'foo'
+        client.post(f"/blueprint/{blueprint_token}/user/{username}")
+        resp = client.get(f"/blueprint/{blueprint_token}/user")
+        assert_that(resp.json).contains_only('foo')
+
+        resp = client.delete(f"/blueprint/{blueprint_token}/user/{username}")
+        assert_that(resp.json).is_equal_to('User foo deleted')
+        assert_that(resp.status_code).is_equal_to(201)
+        resp = client.get(f"/blueprint/{blueprint_token}/user")
+        assert_that(resp.json).is_empty()
 
 class TestValidateExisting:
 
