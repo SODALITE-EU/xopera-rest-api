@@ -8,6 +8,7 @@ import traceback
 import uuid
 from pathlib import Path
 from typing import Optional
+from werkzeug.datastructures import FileStorage
 
 from opera.commands.deploy import deploy_service_template as opera_deploy
 from opera.commands.diff import diff_instances as opera_diff_instances
@@ -20,6 +21,7 @@ from opera.compare.template_comparer import TemplateComparer as opera_TemplateCo
 from opera.storage import Storage
 
 from opera.api.blueprint_converters.blueprint2CSAR import entry_definitions
+from opera.api.blueprint_converters import csar_to_blueprint
 from opera.api.cli import CSAR_db, SQL_database
 from opera.api.log import get_logger
 from opera.api.openapi.models import Invocation, InvocationState, OperationType
@@ -215,6 +217,22 @@ class InvocationWorkerProcess(multiprocessing.Process):
                 return None
             except Exception as e:
                 return e.__class__.__name__, xopera_util.mask_workdir(location, str(e))
+
+    @staticmethod
+    def validate_new(CSAR: FileStorage, inputs: dict):
+        try:
+            with tempfile.TemporaryDirectory() as location:
+                with tempfile.TemporaryDirectory() as csar_workdir:
+                    csar_path = Path(csar_workdir) / Path(CSAR.filename)
+                    CSAR.save(Path(csar_path).open('wb'))
+                    csar_to_blueprint(csar=csar_path, dst=location)
+
+                with xopera_util.cwd(location):
+                    service_template = str(entry_definitions(location))
+                    opera_validate(service_template, inputs)
+                return None
+        except Exception as e:
+            return e.__class__.__name__, xopera_util.mask_workdirs([location, csar_workdir], str(e))
 
     @staticmethod
     def outputs(deployment_id: str):

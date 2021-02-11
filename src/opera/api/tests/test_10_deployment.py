@@ -126,7 +126,7 @@ class TestHistory:
         inv = generic_invocation
         inv.deployment_id = uuid.uuid4()
 
-        mock_log_data = mocker.MagicMock(name='invoke', return_value=[inv.to_dict()])
+        mock_log_data = mocker.MagicMock(name='invoke', return_value=[inv])
         mocker.patch('opera.api.service.sqldb_service.OfflineStorage.get_deployment_history', new=mock_log_data)
 
         resp = client.get(f"/deployment/{inv.deployment_id}/history")

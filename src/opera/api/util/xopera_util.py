@@ -96,3 +96,13 @@ def mask_workdir(location: Path, stacktrace: str, placeholder="$BLUEPRINT_DIR"):
     replaces real workdir with placeholder
     """
     return stacktrace.replace(str(location), placeholder)
+
+
+def mask_workdirs(locations: [Path], stacktrace: str, placeholder="$BLUEPRINT_DIR"):
+    """
+    replaces real workdir with placeholder, for multiple locations
+    """
+
+    for location in locations:
+        stacktrace = stacktrace.replace(str(location), placeholder)
+    return stacktrace

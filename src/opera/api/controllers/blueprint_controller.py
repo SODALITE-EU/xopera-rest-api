@@ -299,5 +299,11 @@ def validate_new():  # noqa: E501
 
     :rtype: str
     """
-    # TODO implement
-    return 'do some magic!'
+    inputs = xopera_util.inputs_file()
+    csar_file = connexion.request.files['CSAR']
+
+    exception = InvocationWorkerProcess.validate_new(csar_file, inputs)
+    if exception:
+        return ErrorMsg(exception[0], exception[1]), 500
+    return "Validation OK", 200
+

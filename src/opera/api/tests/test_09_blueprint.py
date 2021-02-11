@@ -319,10 +319,20 @@ class TestValidateExistingVersion:
 
 class TestValidateNew:
 
-    def test(self, client, csar_1):
-        # TODO implement when method implemented
-        resp = client.put("/blueprint/validate", data=csar_1)
-        assert_that(resp.json).contains('do some magic!')
+    def test_exception(self, client, mocker, csar_1):
+        mocker.patch('opera.api.controllers.background_invocation.InvocationWorkerProcess.validate_new',
+                     return_value=(Exception.__class__.__name__, "Exception stacktrace"))
+        resp = client.put(f"/blueprint/validate", data=csar_1)
+
+        assert resp.status_code == 500
+        assert_that(resp.json).contains_only("description", "stacktrace")
+
+    def test_ok(self, client, mocker, csar_1):
+        mocker.patch('opera.api.controllers.background_invocation.InvocationWorkerProcess.validate', return_value=None)
+        resp = client.put(f"/blueprint/validate", data=csar_1)
+
+        assert resp.status_code == 200
+        assert_that(resp.json).contains("Validation OK")
 
 
 class TestGitHistory:
