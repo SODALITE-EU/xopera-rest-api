@@ -13,6 +13,7 @@ services:
       XOPERA_DATABASE_NAME: postgres
       XOPERA_DATABASE_USER: postgres
       XOPERA_DATABASE_PASSWORD: password
+      AUTH_API_KEY: test
     volumes:
     - "/var/run/docker.sock:/var/run/docker.sock"
     - "/root/.ssh/:/root/.ssh/"

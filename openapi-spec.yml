@@ -1122,7 +1122,6 @@ components:
         - git_backend
         - job
         - timestamp
-        - version_id
       type: object
       properties:
         blueprint_id:

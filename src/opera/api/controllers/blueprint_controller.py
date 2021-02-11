@@ -118,6 +118,7 @@ def delete_blueprint_version(blueprint_id, version_id, force=None):  # noqa: E50
     return message[status_code], status_code
 
 
+# TODO this should work even if blueprint does not exist any more
 @security_controller.check_role_auth_blueprint
 def get_git_log(blueprint_id):  # noqa: E501
     """List all update/delete transactions to git repository with blueprint.

@@ -87,7 +87,6 @@ class InvocationWorkerProcess(multiprocessing.Process):
             inv.stdout = stdout
             inv.stderr = stderr
 
-            # InvocationService.save_to_database(inv)
             InvocationService.save_dot_opera_to_db(inv, location)
             InvocationService.save_invocation(invocation_id, inv)
 
@@ -135,6 +134,7 @@ class InvocationWorkerProcess(multiprocessing.Process):
                 opera_storage.write_json(inv.inputs, "inputs")
             opera_undeploy(opera_storage, verbose_mode=True, num_workers=inv.workers)
             return opera_outputs(opera_storage)
+        # TODO delete session_data
 
     @staticmethod
     def _update(location: Path, inv: Invocation):
@@ -250,8 +250,8 @@ class InvocationService:
 
         inv = Invocation()
         inv.blueprint_id = blueprint_id
+        inv.version_id = version_id or CSAR_db.get_last_tag(blueprint_id)
         inv.deployment_id = deployment_id or uuid.uuid4()
-        inv.version_tag = version_id or CSAR_db.get_last_tag(blueprint_id)
         inv.state = InvocationState.PENDING
         inv.operation = operation_type
         inv.timestamp = now.isoformat()
@@ -263,6 +263,7 @@ class InvocationService:
         inv.stderr = None
         inv.workers = workers
         inv.clean_state = clean_state
+
         self.stdstream_dir(inv.deployment_id).mkdir(parents=True, exist_ok=True)
         self.save_invocation(invocation_id, inv)
 

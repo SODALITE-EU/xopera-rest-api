@@ -44,7 +44,7 @@ def get_deploy_log(deployment_id):  # noqa: E501
     history = SQL_database.get_deployment_history(deployment_id)
     if not history:
         return "History not found", 400
-    return [Invocation.from_dict(inv) for inv in history], 200
+    return history, 200
 
 
 @security_controller.check_role_auth_deployment
@@ -160,6 +160,7 @@ def post_undeploy(deployment_id, workers=1):  # noqa: E501
     inv = SQL_database.get_deployment_status(deployment_id)
     if inv.state in [InvocationState.PENDING, InvocationState.IN_PROGRESS]:
         return f"Previous operation on this deployment still running", 403
+    # TODO after deployment is undeployed, make sure no operation is permitted on it (it doesn't exist any more
 
     result = invocation_service.invoke(OperationType.UNDEPLOY, inv.blueprint_id, inv.version_id, deployment_id, workers,
                                        inputs)

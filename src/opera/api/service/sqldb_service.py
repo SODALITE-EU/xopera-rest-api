@@ -78,14 +78,14 @@ class Database:
         """
         pass
 
-    def save_git_transaction_data(self, blueprint_id: uuid, version_id: str, revision_msg: str,
-                                  job: str, git_backend: str, repo_url: str, commit_sha: str = None):
+    def save_git_transaction_data(self, blueprint_id: uuid, revision_msg: str, job: str, git_backend: str,
+                                  repo_url: str, version_id: str = None, commit_sha: str = None):
         """
         Saves transaction data to database
         """
         pass
 
-    def get_git_transaction_data(self, blueprint_id: uuid, version_id: str = None, all: bool = False):
+    def get_git_transaction_data(self, blueprint_id: uuid, version_id: str = None, fetch_all: bool = False):
         """
         Gets last git transaction data (if version_id is not None, specific transaction data). If all, it returns all
         git transaction data, that satisfy conditions
@@ -242,7 +242,7 @@ class OfflineStorage(Database):
         log.info('Updated git log in OfflineStorage database')
         return True
 
-    def get_git_transaction_data(self, blueprint_id, version_id=None, all=False):
+    def get_git_transaction_data(self, blueprint_id, version_id=None, fetch_all=False):
         """
         Gets last git transaction data (if version_id is not None, specific transaction data). If all, it returns all
         git transaction data, that satisfy conditions
@@ -252,7 +252,7 @@ class OfflineStorage(Database):
         json_logs = [json.load(file.open('r')) for file in logfile_paths]
         if version_id:
             json_logs = [json_log for json_log in json_logs if json_log['version_id'] == version_id]
-        if all:
+        if fetch_all:
             return json_logs
         try:
             return [json_logs[0]]
@@ -263,7 +263,7 @@ class OfflineStorage(Database):
         """
         returns list of all version ids for blueprint
         """
-        log_data = self.get_git_transaction_data(blueprint_id, all=True)
+        log_data = self.get_git_transaction_data(blueprint_id, fetch_all=True)
         all_tags = {json_log['version_id'] for json_log in log_data}
         deleted_tags = {json_log['version_id'] for json_log in log_data if json_log['job'] == 'delete'}
         return sorted(list(all_tags - deleted_tags))
@@ -296,10 +296,10 @@ class PostgreSQL(Database):
         self.connection = psycopg2.connect(**settings)
         self.execute("""
                         create table if not exists {} (
+                        invocation_id varchar (36), 
                         deployment_id varchar (36), 
                         timestamp timestamp, 
-                        invocation_id text, 
-                        _log text,
+                        _log text,  
                         primary key (invocation_id)
                         );""".format(Settings.invocation_table))
 
@@ -357,8 +357,12 @@ class PostgreSQL(Database):
         tree_str = json.dumps(tree)
         timestamp = timestamp_util.datetime_now_to_string()
         response = self.execute(
-            "insert into {} (deployment_id, timestamp, tree) values (%s, %s, %s)"
-                .format(Settings.opera_session_data_table), (str(deployment_id), timestamp, tree_str))
+            """insert into {} (deployment_id, timestamp, tree)
+               values (%s, %s, %s)
+               ON CONFLICT (deployment_id) DO UPDATE
+                   SET timestamp=excluded.timestamp,
+                   tree=excluded.tree;"""
+            .format(Settings.opera_session_data_table), (str(deployment_id), timestamp, tree_str))
         if response:
             log.info('Updated dot_opera_data in PostgreSQL database')
         else:
@@ -370,8 +374,7 @@ class PostgreSQL(Database):
         Returns dict with keys [deployment_id, timestamp, tree], where tree is content of .opera dir
         """
         dbcur = self.connection.cursor()
-        query = "select deployment_id, timestamp, tree" \
-                " from {} where deployment_id = '{}';" \
+        query = "select deployment_id, timestamp, tree  from {} where deployment_id = '{}';" \
             .format(Settings.opera_session_data_table, str(deployment_id))
         dbcur.execute(query)
         line = dbcur.fetchone()
@@ -391,7 +394,7 @@ class PostgreSQL(Database):
         """
         response = self.execute(
             "delete from {} where deployment_id = '{}'"
-                .format(Settings.opera_session_data_table, str(deployment_id)))
+            .format(Settings.opera_session_data_table, str(deployment_id)))
         if response:
             log.info(f'Deleted opera_session_data for {deployment_id} from PostgreSQL database')
         else:
@@ -404,10 +407,14 @@ class PostgreSQL(Database):
         """
         # deployment_id,  timestamp, invocation_id, _log
         response = self.execute(
-            "insert into {} (deployment_id, timestamp, invocation_id, _log) values (%s, %s, %s, %s)"
-                .format(Settings.invocation_table),
-            (str(inv.deployment_id), str(inv.timestamp), str(invocation_id),
-             json.dumps(inv.to_dict(), cls=file_util.UUIDEncoder)))
+            """insert into {} (deployment_id, timestamp, invocation_id, _log)
+               values (%s, %s, %s, %s)
+               ON CONFLICT (invocation_id) DO UPDATE
+                   SET timestamp=excluded.timestamp,
+                        _log=excluded._log;"""
+            .format(Settings.invocation_table),
+            (str(inv.deployment_id), str(inv.timestamp),
+             str(invocation_id), json.dumps(inv.to_dict(), cls=file_util.UUIDEncoder)))
         if response:
             log.info('Updated deployment log in PostgreSQL database')
         else:
@@ -467,8 +474,8 @@ class PostgreSQL(Database):
 
         return inv
 
-    def save_git_transaction_data(self, blueprint_id: uuid, version_id: str, revision_msg: str, job: str,
-                                  git_backend: str, repo_url: str, commit_sha: str = None):
+    def save_git_transaction_data(self, blueprint_id: uuid, revision_msg: str, job: str, git_backend: str,
+                                  repo_url: str, version_id: str = None, commit_sha: str = None):
         """
         Saves transaction data to database
         """
@@ -482,7 +489,7 @@ class PostgreSQL(Database):
             log.error('Fail to update git log in PostgreSQL database')
         return response
 
-    def get_git_transaction_data(self, blueprint_id: uuid, version_id: str = None, all: bool = False):
+    def get_git_transaction_data(self, blueprint_id: uuid, version_id: str = None, fetch_all: bool = False):
         """
         Gets all transaction data for some blueprint
         """
@@ -490,7 +497,7 @@ class PostgreSQL(Database):
         dbcur = self.connection.cursor()
         query = """select blueprint_id, version_id, revision_msg, job, git_backend, repo_url, commit_sha, timestamp
          from {} where blueprint_id = %s {} order by timestamp desc {};""".format(
-            Settings.git_log_table, "and version_id = %s" if version_id else "", "limit 1" if not all else "")
+            Settings.git_log_table, "and version_id = %s" if version_id else "", "limit 1" if not fetch_all else "")
 
         dbcur.execute(query, inputs)
         lines = dbcur.fetchall()
