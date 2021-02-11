@@ -7,7 +7,7 @@ import psycopg2
 
 from opera.api.openapi.models import Invocation
 from opera.api.settings import Settings
-from opera.api.util import timestamp_util
+from opera.api.util import timestamp_util, file_util
 
 
 def connect(sql_config):
@@ -178,13 +178,16 @@ class OfflineStorage(Database):
         """
         location = "{}/{}".format(self.invocation_path, inv.deployment_id)
         os.makedirs(location, exist_ok=True)
-        self.file_write(location, name=str(invocation_id), content=str(json.dumps(inv.to_dict(), indent=2)))
+        self.file_write(location, name=str(invocation_id),
+                        content=str(json.dumps(inv.to_dict(), cls=file_util.UUIDEncoder)))
 
     def get_deployment_status(self, deployment_id: uuid):
         """
         Get last deployment log
         """
         history = self.get_deployment_history(deployment_id)
+        if len(history) == 0:
+            return None
         return history[-1]
 
     def get_deployment_history(self, deployment_id: uuid):
@@ -403,7 +406,8 @@ class PostgreSQL(Database):
         response = self.execute(
             "insert into {} (deployment_id, timestamp, invocation_id, _log) values (%s, %s, %s, %s)"
                 .format(Settings.invocation_table),
-            (str(inv.deployment_id), str(inv.timestamp), str(invocation_id), json.dumps(inv.to_dict())))
+            (str(inv.deployment_id), str(inv.timestamp), str(invocation_id),
+             json.dumps(inv.to_dict(), cls=file_util.UUIDEncoder)))
         if response:
             log.info('Updated deployment log in PostgreSQL database')
         else:
@@ -536,7 +540,7 @@ class PostgreSQL(Database):
         """
         response = self.execute(
             "insert into {} (blueprint_id, project_domain) values (%s, %s)"
-            .format(Settings.project_domain_table), (str(blueprint_id), project_domain))
+                .format(Settings.project_domain_table), (str(blueprint_id), project_domain))
         if response:
             log.info('Updated {} in PostgreSQL database'.format(Settings.project_domain_table))
         else:

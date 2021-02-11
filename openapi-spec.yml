@@ -10,8 +10,8 @@ info:
   description: |+
     xOpera REST API with xOpera==0.6.4 orchestrator and Gitlab / Github integation for blueprint management
 
-servers:
-- url: /
+#servers:
+#- url: /
 tags:
 - name: ssh
   description: SSH key management
@@ -831,7 +831,7 @@ paths:
         schema:
           type: integer
           default: 1
-      - name: clean-state
+      - name: clean_state
         in: query
         description: Clean previous state and start over
         schema:

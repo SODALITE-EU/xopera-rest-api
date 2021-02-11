@@ -4,8 +4,8 @@ from pathlib import Path
 
 from assertpy import assert_that
 
-from opera.api.service.sqldb_service import OfflineStorage
 from opera.api.openapi.models import Invocation
+from opera.api.service.sqldb_service import OfflineStorage
 from opera.api.util import file_util, timestamp_util
 
 

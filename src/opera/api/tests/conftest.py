@@ -50,6 +50,7 @@ def generic_invocation():
     inv.state = InvocationState.PENDING
     inv.blueprint_id = str(uuid.uuid4())
     inv.deployment_id = str(uuid.uuid4())
+    inv.version_id = 'v1.0'
     inv.operation = OperationType.DEPLOY_FRESH
     inv.timestamp = timestamp_util.datetime_now_to_string()
     return inv

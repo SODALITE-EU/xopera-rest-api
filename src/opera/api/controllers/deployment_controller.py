@@ -1,5 +1,3 @@
-import json
-
 from opera.api.cli import SQL_database
 from opera.api.controllers import security_controller
 from opera.api.controllers.background_invocation import InvocationService
@@ -43,10 +41,10 @@ def get_deploy_log(deployment_id):  # noqa: E501
 
     :rtype: List[Invocation]
     """
-    data = SQL_database.get_deployment_history(deployment_id)
-    if not data:
+    history = SQL_database.get_deployment_history(deployment_id)
+    if not history:
         return "History not found", 400
-    return data, 200
+    return [Invocation.from_dict(inv) for inv in history], 200
 
 
 @security_controller.check_role_auth_deployment
@@ -67,14 +65,12 @@ def get_status(deployment_id):  # noqa: E501
         InvocationState.SUCCESS: 201,
         InvocationState.FAILED: 500
     }
-    if not inv:
-        return "Status not found", 400
-    logger.debug(json.dumps(inv.to_dict(), indent=2, sort_keys=True))
+
     return inv, code[inv.state]
 
 
 @security_controller.check_role_auth_deployment
-def post_deploy_continue(deployment_id, workers=None, clean_state=None):  # noqa: E501
+def post_deploy_continue(deployment_id, workers=1, clean_state=False):  # noqa: E501
     """Continue deploy
 
      # noqa: E501
@@ -90,18 +86,19 @@ def post_deploy_continue(deployment_id, workers=None, clean_state=None):  # noqa
     """
     inputs = xopera_util.inputs_file()
 
-    inv_old = SQL_database.get_deployment_status(deployment_id)
-    blueprint_id = inv_old.blueprint_id
-    version_id = inv_old.version_id
+    inv = SQL_database.get_deployment_status(deployment_id)
 
-    result = invocation_service.invoke(OperationType.DEPLOY_CONTINUE, blueprint_id, version_id, deployment_id,
+    if inv.state in [InvocationState.PENDING, InvocationState.IN_PROGRESS]:
+        return f"Previous operation on this deployment still running", 403
+
+    result = invocation_service.invoke(OperationType.DEPLOY_CONTINUE, inv.blueprint_id, inv.version_id, deployment_id,
                                        workers, inputs, clean_state)
-    logger.info(f"Deploying '{blueprint_id}', version_id: {version_id}")
+    logger.info(f"Deploying '{inv.blueprint_id}', version_id: {inv.version_id}")
     return result, 202
 
 
 @security_controller.check_role_auth_blueprint
-def post_deploy_fresh(blueprint_id, version_id=None, workers=None):  # noqa: E501
+def post_deploy_fresh(blueprint_id, version_id=None, workers=1):  # noqa: E501
     """Initialize deployment and deploy
 
      # noqa: E501
@@ -146,7 +143,7 @@ def post_diff(deployment_id, blueprint_id, version_id=None):  # noqa: E501
 
 
 @security_controller.check_role_auth_deployment
-def post_undeploy(deployment_id, workers=None):  # noqa: E501
+def post_undeploy(deployment_id, workers=1):  # noqa: E501
     """Undeploy deployment.
 
      # noqa: E501
@@ -161,6 +158,8 @@ def post_undeploy(deployment_id, workers=None):  # noqa: E501
     inputs = xopera_util.inputs_file()
 
     inv = SQL_database.get_deployment_status(deployment_id)
+    if inv.state in [InvocationState.PENDING, InvocationState.IN_PROGRESS]:
+        return f"Previous operation on this deployment still running", 403
 
     result = invocation_service.invoke(OperationType.UNDEPLOY, inv.blueprint_id, inv.version_id, deployment_id, workers,
                                        inputs)
@@ -170,7 +169,7 @@ def post_undeploy(deployment_id, workers=None):  # noqa: E501
 
 @security_controller.check_role_auth_blueprint
 @security_controller.check_role_auth_deployment
-def post_update(deployment_id, blueprint_id, version_id=None, workers=None):  # noqa: E501
+def post_update(deployment_id, blueprint_id, version_id=None, workers=1):  # noqa: E501
     """Update deployment with new blueprint.
 
     Deploys Instance model (DI2), where DI2 &#x3D; diff(DI1, (B2,V2,I2)) # noqa: E501
@@ -187,6 +186,10 @@ def post_update(deployment_id, blueprint_id, version_id=None, workers=None):  # 
     :rtype: Invocation
     """
     inputs = xopera_util.inputs_file()
+
+    inv = SQL_database.get_deployment_status(deployment_id)
+    if inv.state in [InvocationState.PENDING, InvocationState.IN_PROGRESS]:
+        return f"Previous operation on this deployment still running", 403
 
     result = invocation_service.invoke(OperationType.UPDATE, blueprint_id, version_id, deployment_id,
                                        workers, inputs)

@@ -246,6 +246,8 @@ class InvocationService:
         now = datetime.datetime.now(tz=datetime.timezone.utc)
         logger.info("Invoking %s with ID %s at %s", operation_type, deployment_id, now.isoformat())
 
+        invocation_id = uuid.uuid4()
+
         inv = Invocation()
         inv.blueprint_id = blueprint_id
         inv.deployment_id = deployment_id or uuid.uuid4()
@@ -262,14 +264,14 @@ class InvocationService:
         inv.workers = workers
         inv.clean_state = clean_state
         self.stdstream_dir(inv.deployment_id).mkdir(parents=True, exist_ok=True)
-        self.save_invocation(inv)
+        self.save_invocation(invocation_id, inv)
 
         self.work_queue.put(inv)
         return inv
 
     @classmethod
     def stdstream_dir(cls, deployment_id: uuid) -> Path:
-        return Path(Settings.STDFILE_DIR) / deployment_id
+        return Path(Settings.STDFILE_DIR) / str(deployment_id)
 
     @classmethod
     def stdout_file(cls, deployment_id: str) -> Path:
@@ -281,35 +283,23 @@ class InvocationService:
 
     @classmethod
     def deployment_location(cls, deployment_id: uuid, blueprint_id: uuid) -> Path:
-        return (Path(Settings.DEPLOYMENT_DIR) / str(blueprint_id) / deployment_id).absolute()
+        return (Path(Settings.DEPLOYMENT_DIR) / str(blueprint_id) / str(deployment_id)).absolute()
 
     @classmethod
     def load_invocation(cls, deployment_id: str) -> Optional[Invocation]:
-        # TODO load from db
-        storage = Storage.create(Settings.INVOCATION_DIR)
-        file_path = f"invocation-{deployment_id}.json"
         try:
-            inv = Invocation.from_dict(storage.read_json(file_path))
+            inv = SQL_database.get_deployment_status(deployment_id)
             if inv.state == InvocationState.IN_PROGRESS:
                 inv.stdout = InvocationWorkerProcess.read_file(cls.stdout_file(inv.deployment_id))
                 inv.stderr = InvocationWorkerProcess.read_file(cls.stderr_file(inv.deployment_id))
-                # takes way too much time
-                # location = xopera_util.deployment_location(inv.deployment_id, inv.blueprint_id)
-                # inv.instance_state = InvocationService.get_instance_state(location)
-
             return inv
 
-        except BaseException:
+        except Exception in (FileNotFoundError, AttributeError):
             return None
 
     @classmethod
     def save_invocation(cls, invocation_id: uuid, inv: Invocation):
         SQL_database.update_deployment_log(invocation_id, inv)
-
-    # @classmethod
-    # def save_to_database(cls, inv: Invocation) -> None:
-    #     logfile = json.dumps(inv.to_dict(), indent=2, sort_keys=False)
-    #     SQL_database.update_deployment_log(inv.blueprint_id, logfile, inv.deployment_id, inv.timestamp)
 
     @classmethod
     def save_dot_opera_to_db(cls, inv: Invocation, location: Path) -> None:

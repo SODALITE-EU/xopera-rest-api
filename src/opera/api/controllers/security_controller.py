@@ -6,7 +6,6 @@ import connexion
 import requests
 
 from opera.api.cli import CSAR_db, SQL_database
-from opera.api.openapi.models import InvocationState
 from opera.api.settings import Settings
 
 # use connection pool for OAuth tokeninfo
@@ -128,10 +127,6 @@ def check_role_auth_deployment(func):
         if not inv:
             return f"Deployment with id: {deployment_id} does not exist", 404
 
-        if inv.state in [InvocationState.PENDING, InvocationState.IN_PROGRESS]:
-            # TODO test
-            return f"Previous operation on this deployment still running", 403
-
         if not CSAR_db.version_exists(inv.blueprint_id, inv.version_id):
             return f"Did not find blueprint with id: {inv.blueprint_id} and version_id: {inv.version_id or 'any'}", 404
 
@@ -142,7 +137,6 @@ def check_role_auth_deployment(func):
         return func(*args, **kwargs)
 
     return wrapper_check_role_auth
-
 
 # def check_role_auth_deployment_or_blueprint(func):
 #     @functools.wraps(func)

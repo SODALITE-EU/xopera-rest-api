@@ -1,9 +1,9 @@
 import shutil
+import tempfile
 import time
 import uuid
 from pathlib import Path
 
-import tempfile
 import git
 
 from . import tag_util
