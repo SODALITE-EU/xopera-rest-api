@@ -32,7 +32,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/OpenstackKeyPair'
+                $ref: '#/components/schemas/KeyPair'
         404:
           description: ssh key pair missing
           content:
@@ -1072,7 +1072,7 @@ components:
         stacktrace:
           type: string
           description: Exception stacktrace
-    OpenstackKeyPair:
+    KeyPair:
       required:
       - key_pair_name
       - public_key
