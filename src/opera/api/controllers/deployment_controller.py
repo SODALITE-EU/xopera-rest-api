@@ -27,7 +27,7 @@ def deployment_exists(blueprint_id, version_id=None, inputs_file=None):  # noqa:
     :rtype: DeploymentExists
     """
     # TODO implement
-    return 'do some magic!'
+    return 'Not implemented'
 
 
 @security_controller.check_role_auth_deployment

@@ -15,7 +15,7 @@ class TestDeploymentExists:
         # TODO fix when functionality implemented
         blueprint_id = uuid.uuid4()
         resp = client.put(f"/deployment/exists?blueprint_id={blueprint_id}")
-        assert_that(resp.json).contains('do some magic!')
+        assert_that(resp.json).contains('Not implemented')
 
 
 class TestDeployFresh:

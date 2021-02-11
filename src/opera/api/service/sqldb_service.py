@@ -297,7 +297,8 @@ class PostgreSQL(Database):
         self.execute("""
                         create table if not exists {} (
                         invocation_id varchar (36), 
-                        deployment_id varchar (36), 
+                        deployment_id varchar (36),
+                        blueprint_id varchar (36), 
                         timestamp timestamp, 
                         _log text,  
                         primary key (invocation_id)
@@ -405,16 +406,15 @@ class PostgreSQL(Database):
         """
         updates deployment log with deployment_id, timestamp, invocation_id, _log
         """
-        # deployment_id,  timestamp, invocation_id, _log
         response = self.execute(
-            """insert into {} (deployment_id, timestamp, invocation_id, _log)
-               values (%s, %s, %s, %s)
+            """insert into {} (deployment_id, timestamp, invocation_id, blueprint_id, _log)
+               values (%s, %s, %s, %s, %s)
                ON CONFLICT (invocation_id) DO UPDATE
                    SET timestamp=excluded.timestamp,
                         _log=excluded._log;"""
             .format(Settings.invocation_table),
             (str(inv.deployment_id), str(inv.timestamp),
-             str(invocation_id), json.dumps(inv.to_dict(), cls=file_util.UUIDEncoder)))
+             str(invocation_id), str(inv.blueprint_id), json.dumps(inv.to_dict(), cls=file_util.UUIDEncoder)))
         if response:
             log.info('Updated deployment log in PostgreSQL database')
         else:

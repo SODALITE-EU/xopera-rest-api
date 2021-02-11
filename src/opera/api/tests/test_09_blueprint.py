@@ -191,7 +191,7 @@ class TestUser:
 
         resp = client.get(f"/blueprint/{blueprint_token}/user")
         assert_that(resp.status_code).is_equal_to(500)
-        assert_that(resp.json).contains_only('description', 'stacktrace')
+        assert_that(resp.json).contains('Could not retrieve list of users')
 
     def test_get_users_success(self, client, mocker, patch_auth_wrapper):
         blueprint_token = str(uuid.uuid4())
@@ -217,7 +217,7 @@ class TestUser:
 
         resp = client.post(f"/blueprint/{blueprint_token}/user/{username}")
         assert_that(resp.status_code).is_equal_to(500)
-        assert_that(resp.json).contains_only('description', 'stacktrace')
+        assert_that(resp.json).contains('Could not add user')
 
     def test_add_user_success(self, client, csar_1):
         # upload local blueprint
@@ -244,7 +244,7 @@ class TestUser:
 
         resp = client.delete(f"/blueprint/{blueprint_token}/user/{username}")
         assert_that(resp.status_code).is_equal_to(500)
-        assert_that(resp.json).contains_only('description', 'stacktrace')
+        assert_that(resp.json).contains('Could not delete user')
 
     def test_delete_user_success(self, client, csar_1, patch_auth_wrapper):
         # upload local blueprint
@@ -261,6 +261,7 @@ class TestUser:
         resp = client.get(f"/blueprint/{blueprint_token}/user")
         assert_that(resp.json).is_empty()
 
+
 class TestValidateExisting:
 
     def test_no_blueprint(self, client, mocker):
@@ -275,13 +276,15 @@ class TestValidateExisting:
     def test_exception(self, client, mocker):
         blueprint_id = uuid.uuid4()
         mocker.patch('opera.api.service.csardb_service.GitDB.version_exists', return_value=True)
-        mock_validate = mocker.MagicMock(name='validate', return_value=(Exception.__class__.__name__, "Exception "
-                                                                                                      "stacktrace"))
+        mock_validate = mocker.MagicMock(name='validate',
+                                         return_value="{}: {}".format(Exception.__class__.__name__,
+                                                                      "Exception stacktrace"))
+
         mocker.patch('opera.api.controllers.background_invocation.InvocationWorkerProcess.validate', new=mock_validate)
         resp = client.put(f"/blueprint/{blueprint_id}/validate")
 
         assert resp.status_code == 500
-        assert_that(resp.json).contains_only("description", "stacktrace")
+        assert_that(resp.json).contains("Exception stacktrace")
         mock_validate.assert_called_with(str(blueprint_id), None, None)
 
     def test_ok(self, client, mocker, inputs_1):
@@ -312,13 +315,14 @@ class TestValidateExistingVersion:
         blueprint_id = uuid.uuid4()
         version_id = 'v1.0'
         mocker.patch('opera.api.service.csardb_service.GitDB.version_exists', return_value=True)
-        mock_validate = mocker.MagicMock(name='validate', return_value=(Exception.__class__.__name__, "Exception "
-                                                                                                      "stacktrace"))
+        mock_validate = mocker.MagicMock(name='validate',
+                                         return_value="{}: {}".format(Exception.__class__.__name__,
+                                                                      "Exception stacktrace"))
         mocker.patch('opera.api.controllers.background_invocation.InvocationWorkerProcess.validate', new=mock_validate)
         resp = client.put(f"/blueprint/{blueprint_id}/version/{version_id}/validate")
 
         assert resp.status_code == 500
-        assert_that(resp.json).contains_only("description", "stacktrace")
+        assert_that(resp.json).contains("Exception stacktrace")
         mock_validate.assert_called_with(str(blueprint_id), version_id, None)
 
     def test_ok(self, client, mocker, inputs_1):
@@ -338,11 +342,11 @@ class TestValidateNew:
 
     def test_exception(self, client, mocker, csar_1):
         mocker.patch('opera.api.controllers.background_invocation.InvocationWorkerProcess.validate_new',
-                     return_value=(Exception.__class__.__name__, "Exception stacktrace"))
+                     return_value="{}: {}".format(Exception.__class__.__name__, "Exception stacktrace"))
         resp = client.put(f"/blueprint/validate", data=csar_1)
 
         assert resp.status_code == 500
-        assert_that(resp.json).contains_only("description", "stacktrace")
+        assert_that(resp.json).contains("Exception stacktrace")
 
     def test_ok(self, client, mocker, csar_1):
         mocker.patch('opera.api.controllers.background_invocation.InvocationWorkerProcess.validate', return_value=None)

@@ -299,7 +299,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/error_msg'
+                type: string
 
   /blueprint/{blueprint_id}/user/{user_id}:
     post:
@@ -348,7 +348,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/error_msg'
+                type: string
     delete:
       summary: "Delete user."
       security:
@@ -395,7 +395,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/error_msg'
+                type: string
 
   /blueprint/{blueprint_id}/validate:
     put:
@@ -450,7 +450,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/error_msg'
+                type: string
 
   /blueprint/{blueprint_id}/version/{version_id}/validate:
     put:
@@ -512,7 +512,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/error_msg'
+                type: string
 
   /blueprint/validate:
     put:
@@ -565,7 +565,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/error_msg'
+                type: string
 
 
   /blueprint/{blueprint_id}/git_history:
@@ -593,7 +593,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/git_log'
+                  $ref: '#/components/schemas/GitLog'
         400:
           description: Log file not found
           content:
@@ -1060,18 +1060,6 @@ paths:
 
 components:
   schemas:
-    error_msg:
-      required:
-        - description
-        - stacktrace
-      type: object
-      properties:
-        description:
-          type: string
-          description: Error description
-        stacktrace:
-          type: string
-          description: Exception stacktrace
     KeyPair:
       required:
       - key_pair_name
@@ -1116,7 +1104,7 @@ components:
           type: string
           description: SHA-1 checksum of commit
 
-    git_log:
+    GitLog:
       required:
         - blueprint_id
         - git_backend

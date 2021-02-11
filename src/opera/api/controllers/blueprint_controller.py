@@ -5,7 +5,6 @@ from opera.api.controllers import security_controller
 from opera.api.controllers.background_invocation import InvocationWorkerProcess
 from opera.api.log import get_logger
 from opera.api.openapi.models.blueprint import Blueprint  # noqa: E501
-from opera.api.openapi.models.error_msg import ErrorMsg  # noqa: E501
 from opera.api.openapi.models.git_log import GitLog  # noqa: E501
 from opera.api.settings import Settings
 from opera.api.util import timestamp_util, xopera_util
@@ -30,8 +29,7 @@ def delete_git_user(blueprint_id, user_id):  # noqa: E501
     if success:
         return f"User {user_id} deleted", 201
 
-    return ErrorMsg(f"Could not delete user {user_id} from repository with blueprint_id '{blueprint_id}'",
-                    error_msg), 500
+    return f"Could not delete user {user_id} from repository with blueprint_id '{blueprint_id}': {error_msg}", 500
 
 
 @security_controller.check_role_auth_blueprint
@@ -156,10 +154,7 @@ def get_git_user(blueprint_id):  # noqa: E501
     if user_list is not None:
         return user_list, 200
 
-    return ErrorMsg(
-        f"Could not retrieve list of users for repository with blueprint_id '{blueprint_id}'",
-        error_msg
-    ), 500
+    return f"Could not retrieve list of users for repository with blueprint_id '{blueprint_id}': {error_msg}", 500
 
 
 @security_controller.check_role_auth_blueprint
@@ -184,8 +179,7 @@ def post_git_user(blueprint_id, user_id):  # noqa: E501
         }
         return message[Settings.git_config['type']], 201
 
-    return ErrorMsg(f"Could not add user {user_id} to repository with blueprint_id '{blueprint_id}'",
-                    error_msg), 500
+    return f"Could not add user {user_id} to repository with blueprint_id '{blueprint_id}': {error_msg}", 500
 
 
 @security_controller.check_role_auth_blueprint
@@ -271,7 +265,7 @@ def validate_existing(blueprint_id):  # noqa: E501
 
     exception = InvocationWorkerProcess.validate(blueprint_id, None, inputs)
     if exception:
-        return ErrorMsg(exception[0], exception[1]), 500
+        return exception, 500
     return "Validation OK", 200
 
 
@@ -292,7 +286,7 @@ def validate_existing_version(blueprint_id, version_id):  # noqa: E501
 
     exception = InvocationWorkerProcess.validate(blueprint_id, version_id, inputs)
     if exception:
-        return ErrorMsg(exception[0], exception[1]), 500
+        return exception, 500
     return "Validation OK", 200
 
 
@@ -308,6 +302,6 @@ def validate_new():  # noqa: E501
 
     exception = InvocationWorkerProcess.validate_new(csar_file, inputs)
     if exception:
-        return ErrorMsg(exception[0], exception[1]), 500
+        return exception, 500
     return "Validation OK", 200
 

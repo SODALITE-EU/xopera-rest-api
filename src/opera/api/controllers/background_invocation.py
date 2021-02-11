@@ -80,6 +80,9 @@ class InvocationWorkerProcess(multiprocessing.Process):
                 inv.exception = "{}: {}\n\n{}".format(e.__class__.__name__, str(e), traceback.format_exc())
 
             instance_state = InvocationService.get_instance_state(location)
+
+            file_stdout.flush()
+            file_stderr.flush()
             stdout = InvocationWorkerProcess.read_file(InvocationService.stdout_file(inv.deployment_id))
             stderr = InvocationWorkerProcess.read_file(InvocationService.stderr_file(inv.deployment_id))
             file_stdout.truncate()
@@ -155,7 +158,7 @@ class InvocationWorkerProcess(multiprocessing.Process):
             opera_update(storage_old, location_old,
                          storage_new, location_new,
                          opera_InstanceComparer(), instance_diff,
-                         verbose_mode=True, num_workers=inv.workers, overwrite=True)
+                         verbose_mode=True, num_workers=inv.workers, overwrite=False)
             outputs = opera_outputs(storage_new)
 
         shutil.rmtree(location_old)
@@ -216,7 +219,7 @@ class InvocationWorkerProcess(multiprocessing.Process):
                     opera_validate(service_template, inputs)
                 return None
             except Exception as e:
-                return e.__class__.__name__, xopera_util.mask_workdir(location, str(e))
+                return "{}: {}".format(e.__class__.__name__, xopera_util.mask_workdir(location, str(e)))
 
     @staticmethod
     def validate_new(CSAR: FileStorage, inputs: dict):
@@ -232,7 +235,7 @@ class InvocationWorkerProcess(multiprocessing.Process):
                     opera_validate(service_template, inputs)
                 return None
         except Exception as e:
-            return e.__class__.__name__, xopera_util.mask_workdirs([location, csar_workdir], str(e))
+            return "{}: {}".format(e.__class__.__name__, xopera_util.mask_workdirs([location, csar_workdir], str(e)),)
 
     @staticmethod
     def outputs(deployment_id: str):
@@ -249,6 +252,10 @@ class InvocationWorkerProcess(multiprocessing.Process):
     def read_file(filename):
         with open(filename, "r") as f:
             return f.read()
+
+    @staticmethod
+    def rm_file(filename):
+        Path(filename).unlink(missing_ok=True)
 
 
 class InvocationService:
