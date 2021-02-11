@@ -4,7 +4,7 @@ COPY . /build/
 RUN /build/generate.sh
 
 
-FROM python:3.8.7-alpine3.12
+FROM python:3.8.7-alpine3.13
 WORKDIR /app
 ENTRYPOINT ["python3"]
 CMD ["-m", "opera.api.cli"]
@@ -34,7 +34,7 @@ RUN apk add --update --no-cache curl ca-certificates bash git \
     && apk del curl \
     && rm -f /var/cache/apk/*
 
-RUN export BUILD_PREREQS="gcc musl-dev libffi-dev openssl-dev python3-dev postgresql-dev" \
+RUN export BUILD_PREREQS="gcc musl-dev libffi-dev openssl-dev python3-dev postgresql-dev cargo" \
     && export PACKAGES="git bash openssh-client libpq" \
     && apk add --no-cache $PACKAGES $BUILD_PREREQS \
     && pip3 install --no-cache-dir wheel \
