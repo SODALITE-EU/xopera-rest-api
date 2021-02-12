@@ -6,7 +6,6 @@ import connexion
 import requests
 
 from opera.api.cli import CSAR_db, SQL_database
-from opera.api.openapi.models.just_message import JustMessage
 from opera.api.settings import Settings
 
 # use connection pool for OAuth tokeninfo
@@ -100,78 +99,71 @@ def get_access_token(request):
 def check_role_auth_blueprint(func):
     @functools.wraps(func)
     def wrapper_check_role_auth(*args, **kwargs):
-        blueprint_token = kwargs.get("blueprint_token")
-        if not blueprint_token:
-            return JustMessage(f"Authorization configuration error"), 401
+        blueprint_id = kwargs.get("blueprint_id")
+        if not blueprint_id:
+            return f"Authorization configuration error", 401
 
-        version_tag = kwargs.get("version_tag")
-        if not CSAR_db.version_exists(blueprint_token, version_tag):
-            return JustMessage(
-                f"Did not find blueprint with token: {blueprint_token} and version_id: {version_tag or 'any'}"), 404
+        version_id = kwargs.get("version_id")
+        if not CSAR_db.version_exists(blueprint_id, version_id):
+            return f"Did not find blueprint with id: {blueprint_id} and version_id: {version_id or 'any'}", 404
 
-        project_domain = SQL_database.get_project_domain(blueprint_token)
+        project_domain = SQL_database.get_project_domain(blueprint_id)
         if project_domain and not check_roles(project_domain):
-            return JustMessage(f"Unauthorized request for project: {project_domain}"), 401
+            return f"Unauthorized request for project: {project_domain}", 401
 
         return func(*args, **kwargs)
 
     return wrapper_check_role_auth
 
 
-def check_role_auth_session(func):
+def check_role_auth_deployment(func):
     @functools.wraps(func)
     def wrapper_check_role_auth(*args, **kwargs):
-        session_token = kwargs.get("session_token")
-        if not session_token:
-            return JustMessage(f"Authorization configuration error"), 401
+        deployment_id = kwargs.get("deployment_id")
+        if not deployment_id:
+            return f"Authorization configuration error", 401
 
-        session_data = SQL_database.get_session_data(session_token)
-        if not session_data:
-            return JustMessage(f"Session with session_token: {session_token} does not exist"), 404
+        inv = SQL_database.get_deployment_status(deployment_id)
+        if not inv:
+            return f"Deployment with id: {deployment_id} does not exist", 404
 
-        blueprint_token = session_data['blueprint_token']
-        version_tag = kwargs.get("version_tag", session_data['version_tag'])
-        if not CSAR_db.version_exists(blueprint_token, version_tag):
-            return JustMessage(
-                f"Did not find blueprint with token: {blueprint_token} and version_id: {version_tag or 'any'}"), 404
+        if not CSAR_db.version_exists(inv.blueprint_id, inv.version_id):
+            return f"Did not find blueprint with id: {inv.blueprint_id} and version_id: {inv.version_id or 'any'}", 404
 
-        project_domain = SQL_database.get_project_domain(blueprint_token)
+        project_domain = SQL_database.get_project_domain(inv.blueprint_id)
         if project_domain and not check_roles(project_domain):
-            return JustMessage(f"Unauthorized request for project: {project_domain}"), 401
+            return f"Unauthorized request for project: {project_domain}", 401
 
         return func(*args, **kwargs)
 
     return wrapper_check_role_auth
 
-
-def check_role_auth_session_or_blueprint(func):
-    @functools.wraps(func)
-    def wrapper_check_role_auth(*args, **kwargs):
-        session_token = kwargs.get("session_token")
-        blueprint_token = kwargs.get("blueprint_token")
-        if not session_token and not blueprint_token:
-            return JustMessage(f"No tokens provided"), 404
-
-        elif session_token:
-            session_data = SQL_database.get_session_data(session_token)
-            if not session_data:
-                return JustMessage(f"Session with session_token: {session_token} does not exist"), 404
-
-            blueprint_token = session_data['blueprint_token']
-            version_tag = kwargs.get("version_tag", session_data['version_tag'])
-            if not CSAR_db.version_exists(blueprint_token, version_tag):
-                return JustMessage(
-                    f"Did not find blueprint with token: {blueprint_token} and version_id: {version_tag or 'any'}"), 404
-        elif blueprint_token:
-            version_tag = kwargs.get("version_tag")
-            if not CSAR_db.version_exists(blueprint_token, version_tag):
-                return JustMessage(
-                    f"Did not find blueprint with token: {blueprint_token} and version_id: {version_tag or 'any'}"), 404
-
-        project_domain = SQL_database.get_project_domain(blueprint_token)
-        if project_domain and not check_roles(project_domain):
-            return JustMessage(f"Unauthorized request for project: {project_domain}"), 401
-
-        return func(*args, **kwargs)
-
-    return wrapper_check_role_auth
+# def check_role_auth_deployment_or_blueprint(func):
+#     @functools.wraps(func)
+#     def wrapper_check_role_auth(*args, **kwargs):
+#         deployment_id = kwargs.get("deployment_id")
+#         blueprint_id = kwargs.get("blueprint_id")
+#         if not deployment_id and not blueprint_id:
+#             return f"No tokens provided", 404
+#
+#         elif deployment_id:
+#             inv = SQL_database.get_deployment_status(deployment_id)
+#             if not inv:
+#                 return f"Deployment with id: {deployment_id} does not exist", 404
+#
+#             blueprint_id = inv.blueprint_id
+#             version_id = kwargs.get("version_id", inv.version_id)
+#             if not CSAR_db.version_exists(inv.blueprint_id, inv.version_id):
+#                 return f"Did not find blueprint with id: {inv.blueprint_id} and version_id: {inv.version_id or 'any'}", 404
+#         elif blueprint_id:
+#             version_id = kwargs.get("version_id")
+#             if not CSAR_db.version_exists(blueprint_id, version_id):
+#                 return f"Did not find blueprint with id: {blueprint_id} and version_id: {version_id or 'any'}", 404
+#
+#         project_domain = SQL_database.get_project_domain(blueprint_id)
+#         if project_domain and not check_roles(project_domain):
+#             return f"Unauthorized request for project: {project_domain}", 401
+#
+#         return func(*args, **kwargs)
+#
+#     return wrapper_check_role_auth

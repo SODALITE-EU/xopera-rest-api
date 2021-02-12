@@ -78,6 +78,19 @@ class Connector:
 
         pass
 
+    def delete_collaborator(self, repo_name: str, username: str):
+        """
+        Deletes user as from repository.
+        Args:
+            repo_name: name of repository
+            username: username of user to be added to repo
+
+        Returns: success: bool
+
+        """
+
+        pass
+
     def get_collaborators(self, repo_name):
         """
         returns list of collaborators for specific project
@@ -186,6 +199,16 @@ class MockConnector(Connector):
         collaborators[repo_name].append(username)
         json.dump(collaborators, self.collab_file.open('w'))
         return True
+
+    def delete_collaborator(self, repo_name: str, username: str):
+        collaborators = json.load(self.collab_file.open('r'))
+        if repo_name not in collaborators:
+            return False
+        if username in collaborators[repo_name]:
+            collaborators[repo_name].remove(username)
+            json.dump(collaborators, self.collab_file.open('w'))
+            return True
+        return False
 
     def get_collaborators(self, repo_name):
 
@@ -327,6 +350,16 @@ class GitlabConnector(Connector):
         project.members.create({'user_id': user_id, 'access_level': access_level})
         return True
 
+    def delete_collaborator(self, repo_name: str, username: str):
+        user_id = self.__user_id(username)
+        project_id = self.__project_id(project_name=repo_name)
+
+        gl = Gitlab(url=self.url, private_token=self.auth_token)
+
+        project = gl.projects.get(project_id)
+        project.members.delete(user_id)
+        return True
+
     def get_collaborators(self, repo_name):
         gl = Gitlab(url=self.url, private_token=self.auth_token)
         project_id = self.__project_id(project_name=repo_name)
@@ -451,6 +484,11 @@ class GithubConnector(Connector):
         repo = self.__get_repo(repo_name)
         github_permissions = "push" if permissions == 'developer' else "pull"
         repo.add_to_collaborators(collaborator=username, permission=github_permissions)
+        return True
+
+    def delete_collaborator(self, repo_name: str, username: str):
+        repo = self.__get_repo(repo_name)
+        repo.remove_from_collaborators(username)
         return True
 
     def get_collaborators(self, repo_name):

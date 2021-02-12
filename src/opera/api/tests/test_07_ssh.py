@@ -30,11 +30,11 @@ class TestSsh:
         Settings.key_pair = ''
         resp = client.get("/ssh/keys/public")
         assert_that(resp.status_code).is_equal_to(404)
-        assert_that(resp.json).contains_only('message')
+        assert resp.json == 'Ssh key pair missing'
 
     def test_key_pair_missing(self, client, mock_ssh_keys_loc: Path):
         # set key_pair to non-existent key
         Settings.key_pair = 'foo'
         resp = client.get("/ssh/keys/public")
         assert_that(resp.status_code).is_equal_to(404)
-        assert_that(resp.json).contains_only('message')
+        assert resp.json == 'Public key foo not found'

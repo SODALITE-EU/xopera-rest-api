@@ -49,9 +49,9 @@ def to_CSAR_simple(src: Path, dst: Path, raise_exceptions=False):
 
     Returns: conversion_success (bool)
     """
-    if not validate_csar(src, raise_exceptions=raise_exceptions):
+    if not validate_csar(Path(src), raise_exceptions=raise_exceptions):
         return False
-    os.makedirs(str(dst.parent), exist_ok=True)
+    os.makedirs(str(Path(dst).parent), exist_ok=True)
     shutil.make_archive(str(dst), 'zip', str(src))
     return True
 
@@ -163,7 +163,7 @@ def from_CSAR(csar: Path, dst: Path):
         dst: Path to where archive should be unpacked
 
     """
-    shutil.unpack_archive(str(csar.absolute()), extract_dir=str(dst.absolute()))
+    shutil.unpack_archive(str(Path(csar).absolute()), extract_dir=str(Path(dst).absolute()))
 
 
 def validate_csar(csar: Path, raise_exceptions=False):
@@ -176,7 +176,7 @@ def validate_csar(csar: Path, raise_exceptions=False):
     Returns: csar_is_valid: bool
 
     """
-    tmp_blueprint_path = csar
+    tmp_blueprint_path = Path(csar)
     tosca_meta_path = Path(tmp_blueprint_path / 'TOSCA-Metadata' / 'TOSCA.meta')
 
     if not tosca_meta_path.exists():
@@ -239,7 +239,7 @@ def entry_definitions(csar: Path):
 
     """
 
-    tosca_meta_path = Path(csar / 'TOSCA-Metadata' / 'TOSCA.meta')
+    tosca_meta_path = Path(csar) / 'TOSCA-Metadata' / 'TOSCA.meta'
 
     if not tosca_meta_path.exists():
         yaml_files = glob.glob(str(csar) + "/*.yaml") + glob.glob(str(csar) + "/*.yml")

@@ -10,6 +10,8 @@ xOpera-rest-blueprint/inputs/private
 nginx.conf
 certificates.toml
 docker-compose-editor.yml
+docker-compose-postgres.yml
+docker-compose-editor-2.yml
 docker-compose-production.yml
 *.jar
 

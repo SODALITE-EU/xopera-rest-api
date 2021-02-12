@@ -1,14 +1,13 @@
-import glob
 import json
 import logging as log
 import os
-import shutil
 import uuid
 
 import psycopg2
 
+from opera.api.openapi.models import Invocation
 from opera.api.settings import Settings
-from opera.api.util import timestamp_util
+from opera.api.util import timestamp_util, file_util
 
 
 def connect(sql_config):
@@ -37,63 +36,79 @@ class Database:
         """
         pass
 
-    def save_session_data(self, session_token: str, blueprint_token: str, version_tag: str, tree: dict):
+    def save_opera_session_data(self, deployment_id: uuid, tree: dict):
         """
         Saves .opera file tree to database
         """
         pass
 
-    def get_session_data(self, session_token):
+    def get_opera_session_data(self, deployment_id: uuid):
         """
-        Returns [blueprint_token, version_tag, tree], where tree is content of .opera dir
-        """
-        pass
-
-    def update_deployment_log(self, blueprint_token: str, _log: str, session_token: str, timestamp: str):
-        """
-        updates deployment log with blueprint_token, timestamp, session_token, _log
+        Returns dict with keys [deployment_id, timestamp, tree], where tree is content of .opera dir
         """
         pass
 
-    def get_deployment_log(self, blueprint_token: str = None, session_token: str = None):
+    def delete_opera_session_data(self, deployment_id: uuid):
         """
-        Returns deployment log.
-        It can query by blueprint_token, session_token or combination of both
-        In case of no results returns [0, "not enough parameters"]
+        Delete session data for deployment
         """
         pass
 
-    def save_git_transaction_data(self, blueprint_token: uuid, version_tag: str, revision_msg: str,
-                                  job: str, git_backend: str, repo_url: str, commit_sha: str = None):
+    def update_deployment_log(self, invocation_id: uuid, inv: Invocation):
+        """
+        updates deployment log with deployment_id, timestamp, invocation_id, _log
+        """
+        pass
+
+    def get_deployment_status(self, deployment_id: uuid):
+        """
+        Get last deployment log
+        """
+        pass
+
+    def get_deployment_history(self, deployment_id: uuid):
+        """
+        Get all deployment logs for one deployment
+        """
+        pass
+
+    def get_last_invocation_id(self, deployment_id: uuid):
+        """
+        This method exists since we do not want to have invocation_id in Invocation object, to not confuse users
+        """
+        pass
+
+    def save_git_transaction_data(self, blueprint_id: uuid, revision_msg: str, job: str, git_backend: str,
+                                  repo_url: str, version_id: str = None, commit_sha: str = None):
         """
         Saves transaction data to database
         """
         pass
 
-    def get_git_transaction_data(self, blueprint_token: uuid, version_tag: str = None, all: bool = False):
+    def get_git_transaction_data(self, blueprint_id: uuid, version_id: str = None, fetch_all: bool = False):
         """
-        Gets last git transaction data (if version_tag is not None, specific transaction data). If all, it returns all
+        Gets last git transaction data (if version_id is not None, specific transaction data). If all, it returns all
         git transaction data, that satisfy conditions
         """
         pass
 
-    def get_version_tags(self, blueprint_token: uuid):
+    def get_version_ids(self, blueprint_id: uuid):
+        """
+        returns list of all version ids for blueprint
+        """
+        pass
+
+    def get_project_domain(self, blueprint_id: uuid):
+        """
+        Get project domaing for blueprint
+        """
+        pass
+
+    def save_project_domain(self, blueprint_id: uuid, project_domain: str):
         """
         returns list of all version tags for blueprint
         """
         pass
-
-    def get_project_domain(self, blueprint_token: uuid):
-        """
-        returns list of all version tags for blueprint
-        """
-        pass   
-
-    def save_project_domain(self, blueprint_token: uuid, project_domain: str):
-        """
-        returns list of all version tags for blueprint
-        """
-        pass       
 
 
 class OfflineStorage(Database):
@@ -101,14 +116,14 @@ class OfflineStorage(Database):
         super().__init__()
         self.db_type = 'OfflineStorage'
         self.db_path = Settings.offline_storage.absolute()
-        self.deployment_log_path = self.db_path / Settings.deployment_log_table
+        self.invocation_path = self.db_path / Settings.invocation_table
         self.git_log_path = self.db_path / Settings.git_log_table
-        self.dot_opera_data_path = self.db_path / Settings.dot_opera_data_table
+        self.opera_session_data_path = self.db_path / Settings.opera_session_data_table
         self.project_domain_path = self.db_path / Settings.project_domain_table
 
-        os.makedirs(self.deployment_log_path, exist_ok=True)
+        os.makedirs(self.invocation_path, exist_ok=True)
         os.makedirs(self.git_log_path, exist_ok=True)
-        os.makedirs(self.dot_opera_data_path, exist_ok=True)
+        os.makedirs(self.opera_session_data_path, exist_ok=True)
         os.makedirs(self.project_domain_path, exist_ok=True)
 
     @staticmethod
@@ -132,86 +147,86 @@ class OfflineStorage(Database):
         # does not need to do anything
         pass
 
-    def save_session_data(self, session_token: str, blueprint_token: str, version_tag: str, tree: dict):
+    def save_opera_session_data(self, deployment_id: uuid, tree: dict):
         data = {
             "tree": tree,
-            "blueprint_token": str(blueprint_token),
-            "version_tag": str(version_tag),
-            "session_token": str(session_token),
+            "deployment_id": str(deployment_id),
             "timestamp": timestamp_util.datetime_now_to_string()
         }
-        self.file_write(str(self.dot_opera_data_path), name=session_token, content=json.dumps(data))
+        self.file_write(str(self.opera_session_data_path), name=str(deployment_id), content=json.dumps(data))
 
-    def get_session_data(self, session_token):
+    def get_opera_session_data(self, deployment_id: uuid):
+        """
+        Returns dict with keys [deployment_id, timestamp, tree], where tree is content of .opera dir
+        """
         try:
-            session_data = json.loads(self.file_read(str(self.dot_opera_data_path), session_token))
-            return {k: (v if v != 'None' else None) for k, v in session_data.items()}
+            opera_session_data = json.loads(self.file_read(str(self.opera_session_data_path), str(deployment_id)))
+            return {k: (v if v != 'None' else None) for k, v in opera_session_data.items()}
         except FileNotFoundError:
             return None
 
-    def update_deployment_log(self, blueprint_token: str, _log: str, session_token: str, timestamp: str):
+    def delete_opera_session_data(self, deployment_id: uuid):
         """
-        updates deployment log with blueprint_token, timestamp, session_token, _log
+        Delete session data for deployment
         """
-        location = "{}/{}".format(self.deployment_log_path, session_token)
-        if os.path.exists(location):
-            shutil.rmtree(location)
-        os.makedirs(location)
-        self.file_write(location, name="blueprint_token", content=str(blueprint_token))
-        self.file_write(location, name="timestamp", content=str(timestamp))
-        self.file_write(location, name="session_token", content=str(session_token))
-        self.file_write(location, name="_log", content=str(_log))
+        file_path = self.opera_session_data_path / str(deployment_id)
+        file_path.unlink(missing_ok=True)
 
-    def get_deployment_log(self, blueprint_token: str = None, session_token: str = None):
+    def update_deployment_log(self, invocation_id: uuid, inv: Invocation):
         """
-        Returns deployment log.
-        It can query by blueprint_token, session_token or combination of both
-        In case of no results returns [0, "not enough parameters"]
+        updates deployment log with deployment_id, timestamp, invocation_id, _log
         """
-        if blueprint_token is not None and session_token is not None:
-            path = "{}/{}".format(self.deployment_log_path, session_token)
-            try:
-                if not self.file_read(path, 'blueprint_token') == str(blueprint_token):
-                    # combination of blueprint_token and session_token does not exist
-                    return []
-            except FileNotFoundError:
-                # session_token does not exist
-                return []
-            return [[timestamp_util.str_to_datetime(self.file_read(path, "timestamp")), self.file_read(path, "_log")]]
+        location = "{}/{}".format(self.invocation_path, inv.deployment_id)
+        os.makedirs(location, exist_ok=True)
+        self.file_write(location, name=str(invocation_id),
+                        content=str(json.dumps(inv.to_dict(), cls=file_util.UUIDEncoder)))
 
-        elif blueprint_token is not None:
-            pattern = "{}/*/blueprint_token".format(self.deployment_log_path)
-            token_file_paths = ["/".join(path.split('/')[:-1]) for path in glob.glob(pattern) if
-                                self.file_read(path) == str(blueprint_token)]
-            return [[timestamp_util.str_to_datetime(self.file_read(path, "timestamp")), self.file_read(path, "_log")]
-                    for path
-                    in token_file_paths]
+    def get_deployment_status(self, deployment_id: uuid):
+        """
+        Get last deployment log
+        """
+        history = self.get_deployment_history(deployment_id)
+        if len(history) == 0:
+            return None
+        return history[-1]
 
-        elif session_token is not None:
-            path = "{}/{}".format(self.deployment_log_path, session_token)
-            try:
-                return [
-                    [timestamp_util.str_to_datetime(self.file_read(path, "timestamp")), self.file_read(path, "_log")]]
-            except FileNotFoundError:
-                # session_token does not exist
-                return []
-        else:
-            return []
+    def get_deployment_history(self, deployment_id: uuid):
+        """
+        Get all deployment logs for one deployment
+        """
+        location = self.invocation_path / str(deployment_id)
+        history = []
+        for file in location.glob('*'):
+            inv = Invocation.from_dict(json.loads(file.read_text()))
+            history.append(inv)
+        return sorted(history, key=lambda x: x.timestamp)
 
-    def save_git_transaction_data(self, blueprint_token: uuid, version_tag: str,
-                                  revision_msg: str, job: str, git_backend: str, repo_url: str, commit_sha: str = None):
+    def get_last_invocation_id(self, deployment_id: uuid):
+        """
+        This method exists since we do not want to have invocation_id in Invocation object, to not confuse users
+        """
+        location = self.invocation_path / str(deployment_id)
+        inv_ids = []
+        for file in location.glob('*'):
+            inv_timestamp = Invocation.from_dict(json.loads(file.read_text())).timestamp
+            inv_ids.append((inv_timestamp, file.name))
+        inv_ids.sort(key=lambda x: x[0])
+        return inv_ids[-1][1]
+
+    def save_git_transaction_data(self, blueprint_id: uuid, revision_msg: str, job: str, git_backend: str,
+                                  repo_url: str, version_id: str = None, commit_sha: str = None):
         """
         Saves transaction data to database
         """
         try:
             timestamp = timestamp_util.datetime_now_to_string()
-            location = self.git_log_path / str(blueprint_token)
+            location = self.git_log_path / str(blueprint_id)
             if not location.exists():
                 os.makedirs(location)
 
             git_transaction_data = {
-                'blueprint_token': str(blueprint_token),
-                'version_tag': version_tag,
+                'blueprint_id': str(blueprint_id),
+                'version_id': version_id,
                 'revision_msg': revision_msg,
                 'job': job,
                 'git_backend': git_backend,
@@ -227,50 +242,51 @@ class OfflineStorage(Database):
         log.info('Updated git log in OfflineStorage database')
         return True
 
-    def get_git_transaction_data(self, blueprint_token, version_tag=None, all=False):
+    def get_git_transaction_data(self, blueprint_id, version_id=None, fetch_all=False):
         """
-        Gets last git transaction data (if version_tag is not None, specific transaction data)
+        Gets last git transaction data (if version_id is not None, specific transaction data). If all, it returns all
+        git transaction data, that satisfy conditions
         """
-        location = self.git_log_path / str(blueprint_token)
+        location = self.git_log_path / str(blueprint_id)
         logfile_paths = sorted([data for data in location.glob("*")], reverse=True)  # first element was last added
         json_logs = [json.load(file.open('r')) for file in logfile_paths]
-        if version_tag:
-            json_logs = [json_log for json_log in json_logs if json_log['version_tag'] == version_tag]
-        if all:
+        if version_id:
+            json_logs = [json_log for json_log in json_logs if json_log['version_id'] == version_id]
+        if fetch_all:
             return json_logs
         try:
             return [json_logs[0]]
         except IndexError:
             return []
 
-    def get_version_tags(self, blueprint_token: uuid):
+    def get_version_ids(self, blueprint_id: uuid):
         """
-        returns list of all version tags for blueprint
+        returns list of all version ids for blueprint
         """
-        log_data = self.get_git_transaction_data(blueprint_token, all=True)
-        all_tags = {json_log['version_tag'] for json_log in log_data}
-        deleted_tags = {json_log['version_tag'] for json_log in log_data if json_log['job'] == 'delete'}
+        log_data = self.get_git_transaction_data(blueprint_id, fetch_all=True)
+        all_tags = {json_log['version_id'] for json_log in log_data}
+        deleted_tags = {json_log['version_id'] for json_log in log_data if json_log['job'] == 'delete'}
         return sorted(list(all_tags - deleted_tags))
 
-    def get_project_domain(self, blueprint_token: uuid):
+    def get_project_domain(self, blueprint_id: uuid):
         """
         returns project domain for blueprint
-        """   
+        """
         try:
-            domain_data = json.loads(self.file_read(str(self.project_domain_path), blueprint_token))
+            domain_data = json.loads(self.file_read(str(self.project_domain_path), blueprint_id))
             return {k: (v if v != 'None' else None) for k, v in domain_data.items()}
         except FileNotFoundError:
             return None
 
-    def save_project_domain(self, blueprint_token: uuid, project_domain: str):
+    def save_project_domain(self, blueprint_id: uuid, project_domain: str):
         """
         Saves project domain for blueprint
-        """   
+        """
         data = {
-            "blueprint_token": str(blueprint_token),
+            "blueprint_id": str(blueprint_id),
             "project_domain": project_domain
         }
-        self.file_write(str(self.project_domain_path), name=blueprint_token, content=json.dumps(data))        
+        self.file_write(str(self.project_domain_path), name=blueprint_id, content=json.dumps(data))
 
 
 class PostgreSQL(Database):
@@ -280,17 +296,18 @@ class PostgreSQL(Database):
         self.connection = psycopg2.connect(**settings)
         self.execute("""
                         create table if not exists {} (
-                        blueprint_token varchar (36), 
+                        invocation_id varchar (36), 
+                        deployment_id varchar (36),
+                        blueprint_id varchar (36), 
                         timestamp timestamp, 
-                        session_token text, 
-                        _log text,
-                        primary key (session_token)
-                        );""".format(Settings.deployment_log_table))
+                        _log text,  
+                        primary key (invocation_id)
+                        );""".format(Settings.invocation_table))
 
         self.execute("""
                         create table if not exists {} (
-                        blueprint_token varchar (36),
-                        version_tag varchar(36),
+                        blueprint_id varchar (36),
+                        version_id varchar(36),
                         timestamp timestamp default current_timestamp, 
                         revision_msg text,
                         job varchar(36), 
@@ -302,20 +319,18 @@ class PostgreSQL(Database):
 
         self.execute("""
                         create table if not exists {} (
-                        blueprint_token varchar (36),
-                        version_tag varchar(36),
-                        session_token varchar(36),
+                        deployment_id varchar (36),
                         timestamp timestamp default current_timestamp, 
                         tree text,
-                        primary key (session_token)
-                        );""".format(Settings.dot_opera_data_table))
+                        primary key (deployment_id)
+                        );""".format(Settings.opera_session_data_table))
 
         self.execute("""
                         create table if not exists {} (
-                        blueprint_token varchar (36),
+                        blueprint_id varchar (36),
                         project_domain varchar(250),
-                        primary key (blueprint_token)
-                        );""".format(Settings.project_domain_table))                        
+                        primary key (blueprint_id)
+                        );""".format(Settings.project_domain_table))
 
     def disconnect(self):
         log.info('disconnecting PostgreSQL database')
@@ -336,117 +351,160 @@ class PostgreSQL(Database):
         self.connection.commit()
         return True
 
-    def save_session_data(self, session_token: str, blueprint_token: str, version_tag: str, tree: dict):
+    def save_opera_session_data(self, deployment_id: uuid, tree: dict):
         """
         Saves .opera file tree to database
         """
         tree_str = json.dumps(tree)
         timestamp = timestamp_util.datetime_now_to_string()
         response = self.execute(
-            "insert into {} (blueprint_token, version_tag, timestamp, session_token, tree) values (%s, %s, %s, %s, %s)"
-            .format(Settings.dot_opera_data_table),
-            (str(blueprint_token), str(version_tag), timestamp, str(session_token), tree_str))
+            """insert into {} (deployment_id, timestamp, tree)
+               values (%s, %s, %s)
+               ON CONFLICT (deployment_id) DO UPDATE
+                   SET timestamp=excluded.timestamp,
+                   tree=excluded.tree;"""
+            .format(Settings.opera_session_data_table), (str(deployment_id), timestamp, tree_str))
         if response:
             log.info('Updated dot_opera_data in PostgreSQL database')
         else:
             log.error('Failed to update dot_opera_data in PostgreSQL database')
         return response
 
-    def get_session_data(self, session_token):
+    def get_opera_session_data(self, deployment_id):
         """
-        Returns [blueprint_token, version_tag, tree], where tree is content of .opera dir
+        Returns dict with keys [deployment_id, timestamp, tree], where tree is content of .opera dir
         """
         dbcur = self.connection.cursor()
-        query = "select blueprint_token, version_tag, session_token, timestamp, tree" \
-                " from {} where session_token = '{}';" \
-            .format(Settings.dot_opera_data_table, str(session_token))
+        query = "select deployment_id, timestamp, tree  from {} where deployment_id = '{}';" \
+            .format(Settings.opera_session_data_table, str(deployment_id))
         dbcur.execute(query)
         line = dbcur.fetchone()
         if not line:
             return None
         session_data = {
-            'blueprint_token': line[0],
-            'version_tag': line[1],
-            'session_token': line[2],
-            'timestamp': timestamp_util.datetime_to_str(line[3]),
-            'tree': json.loads(line[4])
+            'deployment_id': line[0],
+            'timestamp': timestamp_util.datetime_to_str(line[1]),
+            'tree': json.loads(line[2])
         }
         dbcur.close()
         return session_data
 
-    def update_deployment_log(self, blueprint_token: str, _log: str, session_token: str, timestamp: str):
-
+    def delete_opera_session_data(self, deployment_id: uuid):
+        """
+        Delete session data for deployment
+        """
         response = self.execute(
-            "insert into {} (blueprint_token, timestamp, session_token, _log) values (%s, %s, %s, %s)"
-            .format(Settings.deployment_log_table),
-            (str(blueprint_token), str(timestamp), str(session_token), str(_log)))
+            "delete from {} where deployment_id = '{}'"
+            .format(Settings.opera_session_data_table, str(deployment_id)))
+        if response:
+            log.info(f'Deleted opera_session_data for {deployment_id} from PostgreSQL database')
+        else:
+            log.error(f'Failed to delete opera_session_data for {deployment_id} from PostgreSQL database')
+        return response
+
+    def update_deployment_log(self, invocation_id: uuid, inv: Invocation):
+        """
+        updates deployment log with deployment_id, timestamp, invocation_id, _log
+        """
+        response = self.execute(
+            """insert into {} (deployment_id, timestamp, invocation_id, blueprint_id, _log)
+               values (%s, %s, %s, %s, %s)
+               ON CONFLICT (invocation_id) DO UPDATE
+                   SET timestamp=excluded.timestamp,
+                        _log=excluded._log;"""
+            .format(Settings.invocation_table),
+            (str(inv.deployment_id), str(inv.timestamp),
+             str(invocation_id), str(inv.blueprint_id), json.dumps(inv.to_dict(), cls=file_util.UUIDEncoder)))
         if response:
             log.info('Updated deployment log in PostgreSQL database')
         else:
             log.error('Failed to update deployment log in PostgreSQL database')
         return response
 
-    def get_deployment_log(self, blueprint_token: str = None, session_token: str = None):
+    def get_deployment_status(self, deployment_id: uuid):
         """
-
-        :param blueprint_token: token of blueprint
-        :param session_token: token of session, that produced log
-        :return: list of lists [[timestamp, log],...]
+        Get last deployment log
         """
 
         dbcur = self.connection.cursor()
 
-        if blueprint_token is not None and session_token is not None:
-            query = "select timestamp, _log from {} where blueprint_token = '{}' and session_token = '{}' order by " \
-                    "timestamp desc;".format(Settings.deployment_log_table, blueprint_token, session_token)
+        query = "select timestamp, _log from {} where deployment_id = '{}' order by timestamp desc limit 1;" \
+            .format(Settings.invocation_table, deployment_id)
 
-        elif blueprint_token is not None:
-            query = "select timestamp, _log from {} where blueprint_token = '{}' order by timestamp desc;".format(
-                Settings.deployment_log_table,
-                str(blueprint_token))
-        elif session_token is not None:
-            query = "select timestamp, _log from {} where session_token = '{}';".format(Settings.deployment_log_table,
-                                                                                        str(session_token))
-        else:
-            return []
+        dbcur.execute(query)
+        line = dbcur.fetchone()
+        if not line:
+            return None
+        inv = Invocation.from_dict(json.loads(line[1]))
+        dbcur.close()
+
+        return inv
+
+    def get_deployment_history(self, deployment_id: uuid):
+        """
+        Get all deployment logs for one deployment
+        """
+        dbcur = self.connection.cursor()
+
+        query = "select timestamp, _log from {} where deployment_id = '{}' order by timestamp;" \
+            .format(Settings.invocation_table, deployment_id)
 
         dbcur.execute(query)
         lines = dbcur.fetchall()
+        history = [Invocation.from_dict(json.loads(line[1])) for line in lines]
         dbcur.close()
 
-        return lines
+        return history
 
-    def save_git_transaction_data(self, blueprint_token: uuid, version_tag: str, revision_msg: str, job: str,
-                                  git_backend: str, repo_url: str, commit_sha: str = None):
+    def get_last_invocation_id(self, deployment_id: uuid):
+        """
+        This method exists since we do not want to have invocation_id in Invocation object, to not confuse users
+        """
+        dbcur = self.connection.cursor()
+
+        query = "select timestamp, invocation_id from {} where deployment_id = '{}' order by timestamp desc limit 1;" \
+            .format(Settings.invocation_table, deployment_id)
+
+        dbcur.execute(query)
+        line = dbcur.fetchone()
+        if not line:
+            return None
+        inv = line[1]
+        dbcur.close()
+
+        return inv
+
+    def save_git_transaction_data(self, blueprint_id: uuid, revision_msg: str, job: str, git_backend: str,
+                                  repo_url: str, version_id: str = None, commit_sha: str = None):
         """
         Saves transaction data to database
         """
         response = self.execute(
-            """insert into {} (blueprint_token, version_tag, revision_msg, job, git_backend, repo_url, commit_sha) 
+            """insert into {} (blueprint_id, version_id, revision_msg, job, git_backend, repo_url, commit_sha) 
             values (%s, %s, %s, %s, %s, %s, %s)""".format(Settings.git_log_table),
-            (str(blueprint_token), version_tag, revision_msg, job, git_backend, repo_url, commit_sha))
+            (str(blueprint_id), version_id, revision_msg, job, git_backend, repo_url, commit_sha))
         if response:
             log.info('Updated git log in PostgreSQL database')
         else:
             log.error('Fail to update git log in PostgreSQL database')
         return response
 
-    def get_git_transaction_data(self, blueprint_token: uuid, version_tag: str = None, all: bool = False):
+    def get_git_transaction_data(self, blueprint_id: uuid, version_id: str = None, fetch_all: bool = False):
         """
         Gets all transaction data for some blueprint
         """
-        inputs = tuple(xi for xi in (str(blueprint_token), version_tag) if xi is not None)
+        inputs = tuple(xi for xi in (str(blueprint_id), version_id) if xi is not None)
         dbcur = self.connection.cursor()
-        query = """select blueprint_token, version_tag, revision_msg, job, git_backend, repo_url, commit_sha, timestamp
-         from {} where blueprint_token = %s {} order by timestamp desc {};""".format(
-            Settings.git_log_table, "and version_tag = %s" if version_tag else "", "limit 1" if not all else "")
+        query = """select blueprint_id, version_id, revision_msg, job, git_backend, repo_url, commit_sha, timestamp
+         from {} where blueprint_id = %s {} order by timestamp desc {};""".format(
+            Settings.git_log_table, "and version_id = %s" if version_id else "", "limit 1" if not fetch_all else "")
 
         dbcur.execute(query, inputs)
         lines = dbcur.fetchall()
         git_transaction_data_list = [
             {
-                'blueprint_token': line[0],
-                'version_tag': line[1],
+                'blueprint_id': line[0],
+                'version_id': line[1],
                 'revision_msg': line[2],
                 'job': line[3],
                 'git_backend': line[4],
@@ -459,23 +517,22 @@ class PostgreSQL(Database):
 
         return git_transaction_data_list
 
-    def get_version_tags(self, blueprint_token: uuid):
+    def get_version_ids(self, blueprint_id: uuid):
         """
-        returns list of all version tags for blueprint
+        returns list of all version ids for blueprint
         """
-        log_data = self.get_git_transaction_data(blueprint_token, all=True)
-        all_tags = {json_log['version_tag'] for json_log in log_data}
-        deleted_tags = {json_log['version_tag'] for json_log in log_data if json_log['job'] == 'delete'}
+        log_data = self.get_git_transaction_data(blueprint_id, all=True)
+        all_tags = {json_log['version_id'] for json_log in log_data}
+        deleted_tags = {json_log['version_id'] for json_log in log_data if json_log['job'] == 'delete'}
         return sorted(list(all_tags - deleted_tags))
 
-    def get_project_domain(self, blueprint_token: uuid):
+    def get_project_domain(self, blueprint_id: uuid):
         """
         returns project domain for blueprint
         """
         dbcur = self.connection.cursor()
-        query = """select blueprint_token, project_domain
-            from {} where blueprint_token = '{}';""".format(
-            Settings.project_domain_table, blueprint_token)
+        query = """select blueprint_id, project_domain from {} where blueprint_id = '{}';""".format(
+            Settings.project_domain_table, blueprint_id)
         dbcur.execute(query)
         line = dbcur.fetchone()
         if not line:
@@ -484,13 +541,13 @@ class PostgreSQL(Database):
         dbcur.close()
         return project_domain
 
-    def save_project_domain(self, blueprint_token: uuid, project_domain: str):
+    def save_project_domain(self, blueprint_id: uuid, project_domain: str):
         """
         Saves project domain for blueprint
-        """     
+        """
         response = self.execute(
-            "insert into {} (blueprint_token, project_domain) values (%s, %s)"
-            .format(Settings.project_domain_table), (str(blueprint_token), project_domain))
+            "insert into {} (blueprint_id, project_domain) values (%s, %s)"
+                .format(Settings.project_domain_table), (str(blueprint_id), project_domain))
         if response:
             log.info('Updated {} in PostgreSQL database'.format(Settings.project_domain_table))
         else:

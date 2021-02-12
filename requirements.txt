@@ -9,7 +9,7 @@ openshift==0.11.2
 
 # Amazon AWS
 boto==2.49.0
-boto3==1.16.63
+boto3==1.17.5
 
 # openapi
 connexion >= 2.7.0
@@ -17,7 +17,7 @@ python-dateutil >= 2.8.1
 tornado==6.1
 
 # GitCSARdb
-GitPython==3.1.12
+GitPython==3.1.13
 PyGithub==1.54.1
 python-gitlab==2.6.0
 

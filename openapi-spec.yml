@@ -10,83 +10,411 @@ info:
   description: |+
     xOpera REST API with xOpera==0.6.4 orchestrator and Gitlab / Github integation for blueprint management
 
-servers:
-- url: /
+#servers:
+#- url: /
 tags:
 - name: ssh
   description: SSH key management
-- name: manage
-  description: Save or delete blueprint to git storage
-- name: deploy
-  description: Submit deployment job of the application described with blueprint
-- name: undeploy
-  description: Undeploy application, remove all application instances and components.
-- name: diff
-  description: Compare TOSCA blueprint to the one already deployed
-- name: update
-  description: Update the deployed TOSCA service template and redeploy it according to the discovered template diff
-- name: info
-  description: Information about deployment
-- name: validate
-  description: validate TOSCA service template
-- name: outputs
-  description: Obtain outputs from TOSCA deployed instance
+- name: blueprint
+  description: Blueprint management
+- name: deployment
+  description: Interaction with Deployed instance
 paths:
-  /outputs/{session_token}:
+  /ssh/keys/public:
     get:
-      security:
-        - apiKey: []
-        - oauth2: [email]       
+      summary: "Get xOpera's public key."
       tags:
-      - outputs
-      operationId: get_outputs
-      parameters:
-      - name: session_token
-        in: path
-        description: Token of TOSCA session
-        required: true
-        schema:
-          type: string
+      - ssh
+      operationId: get_public_key
       responses:
         200:
           description: OK
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/KeyPair'
+        404:
+          description: ssh key pair missing
+          content:
+            application/json:
+              schema:
+                type: string
+
+  /blueprint:
+    post:
+      summary: "Add new blueprint."
+      security:
+        - apiKey: []
+        - oauth2: [email]
+      tags:
+      - blueprint
+      operationId: post_new_blueprint
+      parameters:
+      - name: revision_msg
+        in: query
+        description: Optional comment on submission
+        schema:
+          type: string
+      - name: project_domain
+        in: query
+        description: Optional project domain this blueprint belongs to
+        schema:
+          type: string
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - CSAR
+              properties:
+                CSAR:
+                  type: string
+                  description: TOSCA Cloud Service Archive
+                  format: binary
+        required: true
+      responses:
+        200:
+          description: Successfully saved blueprint to database
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Blueprint'
         401:
           description: Unauthorized request for this blueprint
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/just_message'                
-        404:
-          description: Did not find session
+                type: string
+        406:
+          description: Format not acceptable
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/just_message'
-  /validate/{blueprint_token}:
+                type: string
+
+  /blueprint/{blueprint_id}:
     post:
+      summary: "Add new version to existing blueprint."
       security:
         - apiKey: []
-        - oauth2: [email]       
+        - oauth2: [email]
       tags:
-      - validate
-      operationId: post_validate
-      description: Validates TOSCA service template
+      - blueprint
+      operationId: post_blueprint
       parameters:
-      - name: blueprint_token
+      - name: blueprint_id
         in: path
-        description: Token of TOSCA blueprint
+        description: Id of blueprint
         required: true
         schema:
           type: string
-      - name: version_tag
+          format: uuid
+      - name: revision_msg
         in: query
-        description: Version_tag to of TOSCA blueprint
+        description: Optional comment on submission
         schema:
           type: string
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - CSAR
+              properties:
+                CSAR:
+                  type: string
+                  description: TOSCA Cloud Service Archive
+                  format: binary
+        required: true
+      responses:
+        200:
+          description: Successfully saved blueprint to database
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Blueprint'
+        401:
+          description: Unauthorized request for this blueprint
+          content:
+            application/json:
+              schema:
+                type: string
+        404:
+          description: Blueprint token not found
+          content:
+            application/json:
+              schema:
+                type: string
+        406:
+          description: Format not acceptable
+          content:
+            application/json:
+              schema:
+                type: string
+    delete:
+      summary: "Delete blueprint."
+      security:
+        - apiKey: []
+        - oauth2: [email]
+      tags:
+      - blueprint
+      operationId: delete_blueprint
+      parameters:
+      - name: blueprint_id
+        in: path
+        description: Id of blueprint
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: force
+        in: query
+        description: force delete blueprint
+        schema:
+          type: boolean
+      responses:
+        200:
+          description: Successfully removed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Blueprint'
+        401:
+          description: Unauthorized request for this blueprint
+          content:
+            application/json:
+              schema:
+                type: string
+        403:
+          description: Did not undeploy yet, not allowed
+          content:
+            application/json:
+              schema:
+                type: string
+        404:
+          description: Blueprint not found
+          content:
+            application/json:
+              schema:
+                type: string
+
+  /blueprint/{blueprint_id}/version/{version_id}:
+    delete:
+      summary: "Delete version of blueprint."
+      security:
+        - apiKey: [ ]
+        - oauth2: [ email ]
+      tags:
+        - blueprint
+      operationId: delete_blueprint_version
+      parameters:
+        - name: blueprint_id
+          in: path
+          description: Id of blueprint
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: version_id
+          in: path
+          description: Id of blueprint version
+          required: true
+          schema:
+            type: string
+            pattern: '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
+        - name: force
+          in: query
+          description: force delete blueprint
+          schema:
+            type: boolean
+      responses:
+        200:
+          description: Successfully removed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Blueprint'
+        401:
+          description: Unauthorized request for this blueprint
+          content:
+            application/json:
+              schema:
+                type: string
+        403:
+          description: Did not undeploy yet, not allowed
+          content:
+            application/json:
+              schema:
+                type: string
+        404:
+          description: Blueprint not found
+          content:
+            application/json:
+              schema:
+                type: string
+
+  /blueprint/{blueprint_id}/user:
+    get:
+      summary: "List users with access."
+      security:
+        - apiKey: []
+        - oauth2: [email]
+      tags:
+      - blueprint
+      operationId: get_git_user
+      parameters:
+      - name: blueprint_id
+        in: path
+        description: Id of blueprint
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        200:
+          description: user list returned
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+
+        401:
+          description: Unauthorized request for this blueprint
+          content:
+            application/json:
+              schema:
+                type: string
+        404:
+          description: blueprint not found
+          content:
+            application/json:
+              schema:
+                type: string
+        500:
+          description: DB error when getting user list
+          content:
+            application/json:
+              schema:
+                type: string
+
+  /blueprint/{blueprint_id}/user/{user_id}:
+    post:
+      summary: "Add user to blueprint."
+      security:
+        - apiKey: []
+        - oauth2: [email]
+      tags:
+      - blueprint
+      operationId: post_git_user
+      parameters:
+      - name: blueprint_id
+        in: path
+        description: Id of blueprint
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: user_id
+        in: path
+        description: Username to be added to repository with blueprint
+        required: true
+        schema:
+          type: string
+      responses:
+        201:
+          description: User added or invite send
+          content:
+            application/json:
+              schema:
+                type: string
+        401:
+          description: Unauthorized request for this blueprint
+          content:
+            application/json:
+              schema:
+                type: string
+        404:
+          description: blueprint not found
+          content:
+            application/json:
+              schema:
+                type: string
+        500:
+          description: DB error when adding user
+          content:
+            application/json:
+              schema:
+                type: string
+    delete:
+      summary: "Delete user."
+      security:
+        - apiKey: []
+        - oauth2: [email]
+      tags:
+      - blueprint
+      operationId: delete_git_user
+      parameters:
+      - name: blueprint_id
+        in: path
+        description: Id of blueprint
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: user_id
+        in: path
+        description: Username to be removed from repository with blueprint
+        required: true
+        schema:
+          type: string
+      responses:
+        201:
+          description: User de;eted
+          content:
+            application/json:
+              schema:
+                type: string
+        401:
+          description: Unauthorized request for this blueprint
+          content:
+            application/json:
+              schema:
+                type: string
+        404:
+          description: Blueprint not found
+          content:
+            application/json:
+              schema:
+                type: string
+        500:
+          description: DB error when deleting user
+          content:
+            application/json:
+              schema:
+                type: string
+
+  /blueprint/{blueprint_id}/validate:
+    put:
+      summary: "Validate last version of existing blueprint."
+      security:
+        - apiKey: []
+        - oauth2: [email]
+      tags:
+      - blueprint
+      operationId: validate_existing
+      description: Validates TOSCA service template
+      parameters:
+      - name: blueprint_id
+        in: path
+        description: Id of TOSCA blueprint
+        required: true
+        schema:
+          type: string
+          format: uuid
 
       requestBody:
         content:
@@ -104,53 +432,473 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/just_message'
+                type: string
         401:
           description: Unauthorized request for this blueprint
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/just_message'                  
+                type: string
         404:
           description: Did not find blueprint
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/just_message'
+                type: string
         500:
           description: Fail
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/error_msg'
+                type: string
 
-  /diff/{session_token}:
-    post:
+  /blueprint/{blueprint_id}/version/{version_id}/validate:
+    put:
+      summary: "Validate specific version of existing blueprint."
+      security:
+        - apiKey: [ ]
+        - oauth2: [ email ]
+      tags:
+        - blueprint
+      operationId: validate_existing_version
+      description: Validates TOSCA service template
+      parameters:
+        - name: blueprint_id
+          in: path
+          description: Id of TOSCA blueprint
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: version_id
+          in: path
+          description: Id of blueprint version
+          required: true
+          schema:
+            type: string
+            pattern: '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
+
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                inputs_file:
+                  type: string
+                  description: File with inputs TOSCA blueprint
+                  format: binary
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: string
+        401:
+          description: Unauthorized request for this blueprint
+          content:
+            application/json:
+              schema:
+                type: string
+        404:
+          description: Did not find blueprint
+          content:
+            application/json:
+              schema:
+                type: string
+        500:
+          description: Fail
+          content:
+            application/json:
+              schema:
+                type: string
+
+  /blueprint/validate:
+    put:
+      summary: "Validate new blueprint."
       security:
         - apiKey: []
-        - oauth2: [email]       
+        - oauth2: [email]
       tags:
-      - diff
+      - blueprint
+      operationId: validate_new
+      description: Validates TOSCA service template
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - CSAR
+              properties:
+                CSAR:
+                  type: string
+                  description: TOSCA Cloud Service Archive
+                  format: binary
+                inputs_file:
+                  type: string
+                  description: File with inputs for TOSCA blueprint
+                  format: binary
+        required: true
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: string
+        401:
+          description: Unauthorized request for this blueprint
+          content:
+            application/json:
+              schema:
+                type: string
+        404:
+          description: Did not find blueprint
+          content:
+            application/json:
+              schema:
+                type: string
+        500:
+          description: Fail
+          content:
+            application/json:
+              schema:
+                type: string
+
+
+  /blueprint/{blueprint_id}/git_history:
+    get:
+      summary: "List all update/delete transactions to git repository with blueprint."
+      security:
+        - apiKey: []
+        - oauth2: [email]
+      tags:
+      - blueprint
+      operationId: get_git_log
+      parameters:
+      - name: blueprint_id
+        in: path
+        description: Id of blueprint
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GitLog'
+        400:
+          description: Log file not found
+          content:
+            application/json:
+              schema:
+                type: string
+        401:
+          description: Unauthorized request for this blueprint
+          content:
+            application/json:
+              schema:
+                type: string
+
+  /deployment/exists:
+    put:
+      summary: "Check if deployment exists"
+      security:
+        - apiKey: []
+        - oauth2: [email]
+      tags:
+      - deployment
+      operationId: deployment_exists
+      parameters:
+      - name: blueprint_id
+        in: query
+        description: Id of blueprint
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: version_id
+        in: query
+        description: Id of blueprint version
+        schema:
+          type: string
+          pattern: '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                inputs_file:
+                  type: string
+                  description: File with inputs TOSCA blueprint
+                  format: binary
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeploymentExists'
+        401:
+          description: Unauthorized request for this blueprint
+          content:
+            application/json:
+              schema:
+                type: string
+        404:
+          description: Did not find blueprint
+          content:
+            application/json:
+              schema:
+                type: string
+
+  /deployment/deploy:
+    post:
+      summary: "Initialize deployment and deploy"
+      security:
+        - apiKey: []
+        - oauth2: [email]
+      tags:
+      - deployment
+      operationId: post_deploy_fresh
+      parameters:
+      - name: blueprint_id
+        in: query
+        description: Id of blueprint
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: version_id
+        in: query
+        description: version_tag to deploy
+        schema:
+          type: string
+          pattern: '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
+      - name: workers
+        in: query
+        description: Number of workers
+        schema:
+          type: integer
+          default: 1
+
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                inputs_file:
+                  type: string
+                  description: File with inputs for TOSCA template
+                  format: binary
+      responses:
+        202:
+          description: Deploy job accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invocation'
+        401:
+          description: Unauthorized request for this blueprint
+          content:
+            application/json:
+              schema:
+                type: string
+        404:
+          description: Did not find blueprint
+          content:
+            application/json:
+              schema:
+                type: string
+
+  /deployment/{deployment_id}/status:
+    get:
+      summary: "Get deployment status"
+      security:
+        - apiKey: []
+        - oauth2: [email]
+      tags:
+      - deployment
+      operationId: get_status
+      parameters:
+      - name: deployment_id
+        in: path
+        description: Id of deployment
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        201:
+          description: Job done
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invocation'
+        202:
+          description: Job accepted, still running
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invocation'
+        401:
+          description: Unauthorized request for this blueprint
+          content:
+            application/json:
+              schema:
+                type: string
+        404:
+          description: Job not found
+          content:
+            application/json:
+              schema:
+                type: string
+        500:
+          description: Job failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invocation'
+
+  /deployment/{deployment_id}/history:
+    get:
+      summary: "Get deployment history"
+      security:
+        - apiKey: []
+        - oauth2: [email]
+      tags:
+      - deployment
+      operationId: get_deploy_log
+      parameters:
+      - name: deployment_id
+        in: path
+        description: Id of deployment
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Invocation'
+        400:
+          description: Log file not found
+          content:
+            application/json:
+              schema:
+                type: string
+        401:
+          description: Unauthorized request for this blueprint
+          content:
+            application/json:
+              schema:
+                type: string
+
+  /deployment/{deployment_id}/deploy_continue:
+    post:
+      summary: "Continue deploy"
+      security:
+        - apiKey: []
+        - oauth2: [email]
+      tags:
+      - deployment
+      operationId: post_deploy_continue
+      parameters:
+      - name: deployment_id
+        in: path
+        description: Id of deployment
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: workers
+        in: query
+        description: Number of workers
+        schema:
+          type: integer
+          default: 1
+      - name: clean_state
+        in: query
+        description: Clean previous state and start over
+        schema:
+          type: boolean
+          default: False
+
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                inputs_file:
+                  type: string
+                  description: File with inputs for TOSCA template
+                  format: binary
+      responses:
+        202:
+          description: Deploy job accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invocation'
+        401:
+          description: Unauthorized request for this blueprint
+          content:
+            application/json:
+              schema:
+                type: string
+        404:
+          description: Did not find blueprint
+          content:
+            application/json:
+              schema:
+                type: string
+
+  /deployment/{deployment_id}/diff:
+    put:
+      summary: "Calculate diff between deployment and new blueprint."
+      security:
+        - apiKey: []
+        - oauth2: [email]
+      tags:
+      - deployment
       operationId: post_diff
       description: Calculates the diff betweeen Deployed instance model (DI1) and New blueprint version (DB2 = B2 + V2 + I2)
       parameters:
-      - name: session_token
+      - name: deployment_id
         in: path
-        description: Session_token of Deployed instance model (DI1)
+        description: Id of Deployed instance model (DI1)
         required: true
         schema:
           type: string
-      - name: blueprint_token
+          format: uuid
+      - name: blueprint_id
         in: query
-        description: Token of The new blueprint (B2)
+        description: Id of The new blueprint (B2)
         required: true
         schema:
           type: string
-      - name: version_tag
+          format: uuid
+      - name: version_id
         in: query
-        description: Version_tag to of The new blueprint (V2)
+        description: Id of version of The new blueprint (V2)
         schema:
           type: string
+          pattern: '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
 
       requestBody:
         content:
@@ -168,46 +916,52 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Invocation'
+                type: object
+                #$ref: '#/components/schemas/Invocation'
         401:
           description: Unauthorized request for this blueprint
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/just_message'                  
+                type: string
         404:
           description: Did not find DI1 or DB2
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/just_message'
-  /update/{session_token}:
+                type: string
+
+  /deployment/{deployment_id}/update:
     post:
+      summary: "Update deployment with new blueprint."
       security:
         - apiKey: []
-        - oauth2: [email]       
+        - oauth2: [email]
       tags:
-      - update
+      - deployment
       operationId: post_update
       description: Deployes Instance model (DI2), where DI2 = diff(DI1, (B2,V2,I2))
       parameters:
-      - name: session_token
+      - name: deployment_id
         in: path
-        description: Session_token of old Deployed instance model (DI1)
+        description: Id of Deployed instance model (DI1)
         required: true
         schema:
           type: string
-      - name: blueprint_token
+          format: uuid
+      - name: blueprint_id
         in: query
-        description: Token of the new blueprint (B2)
+        description: Id of the new blueprint (B2)
         required: true
         schema:
           type: string
-      - name: version_tag
+          format: uuid
+      - name: version_id
         in: query
-        description: Version_tag to of the new blueprint (V2)
+        description: Id of version of the new blueprint (V2)
         schema:
           type: string
+          pattern: '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
       - name: workers
         in: query
         description: Number of workers
@@ -237,141 +991,31 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/just_message'                  
+                type: string
         404:
           description: Did not find DI1 or DB2
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/just_message'
-  /deploy/fresh/{blueprint_token}:
-    post:
-      security:
-        - apiKey: []
-        - oauth2: [email]       
-      tags:
-      - deploy
-      operationId: post_deploy_fresh
-      parameters:
-      - name: blueprint_token
-        in: path
-        description: token of blueprint
-        required: true
-        schema:
-          type: string
-      - name: version_tag
-        in: query
-        description: version_tag to deploy
-        schema:
-          type: string
-      - name: workers
-        in: query
-        description: Number of workers
-        schema:
-          type: integer
-          default: 1
+                type: string
 
-      requestBody:
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              properties:
-                inputs_file:
-                  type: string
-                  description: File with inputs for TOSCA template
-                  format: binary
-      responses:
-        202:
-          description: Deploy job accepted
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Invocation'
-        401:
-          description: Unauthorized request for this blueprint
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/just_message'                  
-        404:
-          description: Did not find blueprint
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/just_message'
-  /deploy/{session_token}:
+  /deployment/{deployment_id}/undeploy:
     post:
+      summary: "Undeploy deployment."
       security:
         - apiKey: []
-        - oauth2: [email]       
+        - oauth2: [email]
       tags:
-      - deploy
-      operationId: post_deploy_continue
-      parameters:
-      - name: session_token
-        in: path
-        description: token of session
-        required: true
-        schema:
-          type: string
-      - name: workers
-        in: query
-        description: Number of workers
-        schema:
-          type: integer
-          default: 1
-      - name: resume
-        in: query
-        description: Resume deploy
-        schema:
-          type: boolean
-          default: True
-
-      requestBody:
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              properties:
-                inputs_file:
-                  type: string
-                  description: File with inputs for TOSCA template
-                  format: binary
-      responses:
-        202:
-          description: Deploy job accepted
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Invocation'
-        401:
-          description: Unauthorized request for this blueprint
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/just_message'                  
-        404:
-          description: Did not find blueprint
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/just_message'
-  /undeploy/{session_token}:
-    post:
-      security:
-        - apiKey: []
-        - oauth2: [email]       
-      tags:
-      - undeploy
+      - deployment
       operationId: post_undeploy
       parameters:
-      - name: session_token
+      - name: deployment_id
         in: path
-        description: Token of deploy session
+        description: Id of deployment
         required: true
         schema:
           type: string
+          format: uuid
       - name: workers
         in: query
         description: Number of workers
@@ -400,424 +1044,77 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/just_message'                  
+                type: string
         403:
           description: Undeploy not allowed
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/just_message'
+                type: string
         404:
           description: Did not find blueprint
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/just_message'
-  /info/log/deployment:
-    get:
-      security:
-        - apiKey: []
-        - oauth2: [email]       
-      tags:
-      - info
-      operationId: get_deploy_log
-      parameters:
-      - name: blueprint_token
-        in: query
-        description: token of blueprint
-        schema:
-          type: string
-      - name: session_token
-        in: query
-        description: token of session
-        schema:
-          type: string
-      responses:
-        200:
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/deploymentLogList'
-        400:
-          description: Log file not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/just_message'
-        401:
-          description: Unauthorized request for this blueprint
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/just_message'                  
-  /info/log/git/{blueprint_token}:
-    get:
-      security:
-        - apiKey: []
-        - oauth2: [email]       
-      tags:
-      - info
-      operationId: get_git_log
-      parameters:
-      - name: blueprint_token
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: version_tag
-        in: query
-        description: version_tag of blueprint
-        schema:
-          type: string
-      - name: fetch_all
-        in: query
-        description: show all database entries, not just last one
-        schema:
-          type: boolean
-      responses:
-        200:
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/git_log_list'
-        400:
-          description: Log file not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/just_message'
-        401:
-          description: Unauthorized request for this blueprint
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/just_message'                  
-  /info/status:
-    get:
-      security:
-        - apiKey: []
-        - oauth2: [email]       
-      tags:
-      - info
-      operationId: get_status
-      parameters:
-      - name: session_token
-        in: query
-        description: session_token
-        schema:
-          type: string
-      responses:
-        201:
-          description: Job done
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Invocation'
-        202:
-          description: Job accepted, still running
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Invocation'
-        401:
-          description: Unauthorized request for this blueprint
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/just_message'                  
-        404:
-          description: Job not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/just_message'
-        500:
-          description: Job failed
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Invocation'
-  /manage:
-    post:
-      security:
-        - apiKey: []
-        - oauth2: [email] 
-      tags:
-      - manage
-      operationId: post_new_blueprint_csar
-      parameters:
-      - name: revision_msg
-        in: query
-        description: Optional comment on submission
-        schema:
-          type: string
-      - name: project_domain
-        in: query
-        description: Optional project domain this blueprint belongs to
-        schema:
-          type: string          
-      requestBody:
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              required:
-              - CSAR
-              properties:
-                CSAR:
-                  type: string
-                  description: TOSCA Cloud Service Archive
-                  format: binary
-        required: true
-      responses:
-        200:
-          description: Successfully saved blueprint to database
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/git_revision_metadata'
-        401:
-          description: Unauthorized request for this blueprint
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/just_message'                  
-        406:
-          description: Format not acceptable
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/just_message'
-  /manage/{blueprint_token}:
-    post:
-      security:
-        - apiKey: []
-        - oauth2: [email] 
-      tags:
-      - manage
-      operationId: post_manage_csar
-      parameters:
-      - name: blueprint_token
-        in: path
-        description: token of blueprint
-        required: true
-        schema:
-          type: string
-      - name: revision_msg
-        in: query
-        description: Optional comment on submission
-        schema:
-          type: string
-      requestBody:
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              required:
-              - CSAR
-              properties:
-                CSAR:
-                  type: string
-                  description: TOSCA Cloud Service Archive
-                  format: binary
-        required: true
-      responses:
-        200:
-          description: Successfully saved blueprint to database
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/git_revision_metadata'
-        401:
-          description: Unauthorized request for this blueprint
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/just_message'                  
-        404:
-          description: Blueprint token not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/just_message'
-        406:
-          description: Format not acceptable
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/just_message'
-    delete:
-      security:
-        - apiKey: []
-        - oauth2: [email]     
-      tags:
-      - manage
-      operationId: delete_manage_csar
-      parameters:
-      - name: blueprint_token
-        in: path
-        description: token of blueprint
-        required: true
-        schema:
-          type: string
-      - name: version_tag
-        in: query
-        description: version_tag to delete
-        schema:
-          type: string
-      - name: force
-        in: query
-        description: force delete blueprint
-        schema:
-          type: boolean
-      responses:
-        200:
-          description: Successfully removed
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/delete_metadata'
-        401:
-          description: Unauthorized request for this blueprint
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/just_message'                  
-        403:
-          description: Did not undeploy yet, not allowed
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/just_message'
-        404:
-          description: Blueprint not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/delete_metadata'
-  /manage/{blueprint_token}/user:
-    get:
-      security:
-        - apiKey: []
-        - oauth2: [email]     
-      tags:
-      - manage
-      operationId: get_git_user_manage
-      parameters:
-      - name: blueprint_token
-        in: path
-        description: token of blueprint
-        required: true
-        schema:
-          type: string
-      responses:
-        200:
-          description: user list returned
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/just_message'
-        401:
-          description: Unauthorized request for this blueprint
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/just_message'                  
-        404:
-          description: blueprint not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/collaborators_list'
-        500:
-          description: DB error when getting user list
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/error_msg'
-    post:
-      security:
-        - apiKey: []
-        - oauth2: [email]     
-      tags:
-      - manage
-      operationId: post_git_user_manage
-      parameters:
-      - name: blueprint_token
-        in: path
-        description: token of blueprint
-        required: true
-        schema:
-          type: string
-      - name: username
-        in: query
-        description: username of user to be added to repository with blueprint
-        required: true
-        schema:
-          type: string
-      responses:
-        201:
-          description: invite sent
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/just_message'
-        401:
-          description: Unauthorized request for this blueprint
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/just_message'                  
-        404:
-          description: blueprint not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/just_message'
-        500:
-          description: DB error when adding user
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/error_msg'
-  /ssh/keys/public:
-    get:
-      tags:
-      - ssh
-      operationId: get_public_key
-      responses:
-        200:
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/openstackKeyPair'
-        404:
-          description: ssh key pair missing
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/just_message'
+                type: string
+
 components:
   schemas:
-    git_log_list:
-      type: array
-      items:
-        $ref: '#/components/schemas/git_log'
-    git_log:
+    KeyPair:
       required:
-        - blueprint_token
+      - key_pair_name
+      - public_key
+      type: object
+      properties:
+        key_pair_name:
+          type: string
+          description: Name of xOpera REST API's  private/public key pair
+        public_key:
+          type: string
+          description: Rest api's public key
+    Blueprint:
+      required:
+        - blueprint_id
+        - timestamp
+        - url
+      type: object
+      properties:
+        blueprint_id:
+          type: string
+          format: uuid
+          description: Id of blueprint
+        version_id:
+          type: string
+          pattern: '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
+          description: Id of blueprint version
+        url:
+          type: string
+          format: uri
+          description: Url of git repository
+        timestamp:
+          type: string
+          description: timestamp of database entry
+          format: date-time
+        users:
+          type: array
+          description: List of users with access to git repository
+          items:
+            type: string
+        commit_sha:
+          type: string
+          description: SHA-1 checksum of commit
+
+    GitLog:
+      required:
+        - blueprint_id
         - git_backend
         - job
         - timestamp
-        - version_tag
       type: object
       properties:
-        blueprint_token:
+        blueprint_id:
           type: string
-          description: Token of blueprint
+          description: Id of blueprint
           format: uuid
         commit_sha:
           type: string
@@ -840,148 +1137,46 @@ components:
           type: string
           description: Commit timestamp
           format: date-time
-        version_tag:
+        version_id:
           type: string
-          description: Git tag
+          description: Id of version
+          pattern: '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
 
-    deploymentLogList:
-      type: array
-      items:
-        $ref: '#/components/schemas/Invocation'
-
-    openstackKeyPair:
-      required:
-      - key_pair_name
-      - public_key
+    DeploymentExists:
       type: object
       properties:
-        key_pair_name:
-          type: string
-          description: Name of xOpera REST API's  private/public key pair
-        public_key:
-          type: string
-          description: Rest api's public key
-    just_message:
-      required:
-      - message
-      type: object
-      properties:
-        message:
-          type: string
-          description: return message
-    error_msg:
-      required:
-      - description
-      - stacktrace
-      type: object
-      properties:
-        description:
-          type: string
-          description: Error description
-        stacktrace:
-          type: string
-          description: Exception stacktrace
-    collaborators_list:
-      required:
-      - blueprint_token
-      - collaborators
-      - message
-      - repo_url
-      type: object
-      properties:
-        message:
-          type: string
-          description: return message
-        blueprint_token:
-          type: string
-          description: token of blueprint
-        repo_url:
-          type: string
-          description: Url to repository
-        collaborators:
-          type: array
-          description: List of collaborators
-          items:
-            type: string
-            description: Collaborator
-    git_revision_metadata:
-      required:
-        - blueprint_token
-        - message
-        - timestamp
-        - version_tag
-      type: object
-      properties:
-        message:
-          type: string
-          description: return message
-        blueprint_token:
-          type: string
-          description: token of blueprint
-        url:
-          type: string
-          description: Url of git repository
-        commit_sha:
-          type: string
-          description: SHA-1 checksum of commit
-        version_tag:
-          type: string
-          description: version_tag blueprint
-        users:
-          type: array
-          description: List of users with access to git repository
-          items:
-            type: string
-        timestamp:
-          type: string
-          description: timestamp of database entry
-          format: date-time
-    delete_metadata:
-      required:
-      - blueprint_token
-      - deleted_database_entries
-      - force
-      - message
-      - version_tag
-      type: object
-      properties:
-        message:
-          type: string
-          description: return message
-        blueprint_token:
-          type: string
-          description: token of blueprint
-        version_tag:
-          type: string
-          description: id of current version of blueprint
-        deleted_database_entries:
-          type: integer
-          description: Number of deleted entries
-        force:
+        exists:
           type: boolean
-          description: did we do it with force or not
+        checksum:
+          type: string
+
     Invocation:
       description: An invocation of the deployment.
       type: object
       required:
-        - blueprint_token
-        - session_token
+        - blueprint_id
+      #  - invocation_id
+        - deployment_id
         - state
         - operation
         - timestamp
       properties:
-        blueprint_token:
-          description: Token of blueprint
+        blueprint_id:
+          description: Id of blueprint
           type: string
-        version_tag:
-          description: Version_tag of blueprint
+          format: uuid
+        version_id:
+          description: Id of version of blueprint
           type: string
-        session_token:
-          description: Session_token of this session
+          pattern: '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
+        #invocation_id:
+        #  description: Id of invocation
+        #  type: string
+        #  format: uuid
+        deployment_id:
+          description: Id of deployment
           type: string
-        session_token_old:
-          description: Session_token of previous session
-          type: string
+          format: uuid
         state:
           $ref: "#/components/schemas/InvocationState"
         operation:
@@ -999,6 +1194,11 @@ components:
           type: object
           additionalProperties:
             type: string
+        outputs:
+          description: Outputs of the instances defined in service template.
+          type: object
+          additionalProperties:
+            type: string
         exception:
           description: An internal xOpera error that occurred during the operation.
           type: string
@@ -1011,8 +1211,8 @@ components:
         workers:
           description: Number of workers for parallel execution
           type: integer
-        resume:
-          description: Resume deployment (instead of starting clean)
+        clean_state:
+          description: Clean previous state and start over
           type: boolean
     InvocationState:
       type: string

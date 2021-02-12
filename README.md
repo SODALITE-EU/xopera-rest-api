@@ -95,75 +95,101 @@ Check [openapi spec](openapi-spec.yml) and [sample api requests](api-calls.http)
 ## How to use API
 Standard scenarios of using REST api:
 
-### FIRST RUN
-- GET key pair via ssh/keys/public download and register it on your OpenStack
+### SSH management
+xOpera uses SSH key to connect to instance VMs. Its public key can be obtained with GET to `/ssh/keys/public`. Public 
+key must be registered with cloud provider (e.g. OpenStack).
 
-### MANAGE
-- upload blueprint with POST to /manage
-    - new version of existing one must be POSTed to /manage/{blueprint_token}
-    - save blueprint_metadata, returned by API call -> it is the only way of accessing your blueprint afterwards
+### Blueprint management
+Blueprint consist of TOSCA service template with all corresponding artifacts, neatly packed into [The TOSCA Cloud 
+Service Archive (CSAR)](https://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.3/os/TOSCA-Simple-Profile-YAML-v1.3-os.html#_Toc26969474).
+xOpera REST API leverages GIT server (it supports Github and Gitlab at the moment) for storing CSARs. 
+#### Upload a new blueprint
+A new blueprint can be uploaded with POST to `/blueprint`. `CSAR` must be a valid TOSCA CSAR archive (in zip format). 
+Optionally, user can add `revision_msg`, or specify `project_domain` for blueprint. If successful, response in form 
+of Blueprint schema will include `blueprint_id` and `version_id`, which can later be used for accessing 
+blueprint (version).
 
-- delete entire blueprint with DELETE to /manage/{blueprint_token}
-    - if version_tag is specified, only this version will be deleted
-    - use force, if necessary
+#### Upload a new blueprint version
+A new version can be added to existing blueprint with POST to `/blueprint/{blueprint_id}`. `CSAR` must be a valid TOSCA
+CSAR archive (in zip format). Optionally, user can add `revision_msg`, or specify `project_domain` for blueprint. 
+If successful, response in form of Blueprint schema will include `blueprint_id` and `version_id`, which can 
+later be used for accessing blueprint (version).
 
-#### ACCESS TO REPOSITORY WITH BLUEPRINTS
-- xOpera REST API uses git backend for storing blueprints
-- to obtain access, POST to /manage/<blueprint_token>/user endpoint username
-    - invitation for user with username will be sent to its email address (github.com)
-    - user will be added to repository (gitlab)
-- with GET to /manage/<blueprint_token>/user user_list can be obtained
+#### Delete a blueprint
+Blueprint can be deleted with DELETE to `/blueprint/{blueprint_id}`. Before deleting, REST API will check if blueprint
+ is a part of any existing deployment and block deletion. This behaviour can be overridden with `force=true` parameter.
+ 
+#### Delete a blueprint version
+Blueprint version can be deleted with DELETE to `/blueprint/{blueprint_id}/version/{version_id}`. Before deleting, 
+REST API will check if blueprint version is a part of any existing deployment and block deletion. This behaviour can 
+be overridden with `force=true` parameter.
 
-### VALIDATE
-- TOSCA syntax can be validated with POST to /validate/{blueprint_token}
-    - if version_tag is specified, specific version will be inspected, otherwise the last one
-    - optionally, inputs file to be used with template must also be uploaded within same API call
+#### Obtain list of blueprint users
+List of git users with access to Repository with blueprint can be obtained with GET to `/blueprint/{blueprint_id}/user`.
 
-### FIRST DEPLOY (deploy/fresh/)
-- deploy last version of blueprint with POST to /deploy/fresh/{blueprint_token}
-    - optionally, `inputs_file` to be used with template must also be uploaded within same API call
-    - another version can be specified by `version_tag` parameter
-    - Number of parallel workers can be specified with `workers` parameter
-    - save `session_token`
+#### Add user to blueprint
+Git (Github or Gitlab) user can be added to blueprint with POST to `/blueprint/{blueprint_id}/user/{user_id}`. User will
+be assigned developer access and will be able to modify blueprint.
 
-- using `session_token` with GET to /info/status check status and logs of your job
-- After completion, check logs with GET to /info/log (deprecated, will be removed soon)
+#### Remove user from blueprint
+Git user can be removed with POST to `/blueprint/{blueprint_id}/user/{user_id}`.
 
-### DEPLOY CONTINUE
-If job was interrupted, it can be continued (possibly with new inputs)
-- continue with interrupted deploy job with POST to /deploy/{session_token}
-    - by default, this option will resume deployment, but it can also start over `(resume=false)`
-    - Number of parallel workers can be specified with `workers` parameter
-- A new session_token will be assigned to job (old will be returned as `session_token_old`)
-- using `session_token` with GET to /info/status check status and logs of your job
+#### Validate blueprint
+Blueprint from database can be validated with PUT to `/blueprint/{blueprint_id}/validate`. Optionally, file with inputs
+can be added. If blueprint has multiple versions, the last will be validated.
 
-### UNDEPLOY
-- undeploy blueprint with POST to /undeploy/{blueprint_token}
-    - optionally, inputs file to be used with template must also be uploaded within same API call
-    - optionally also in combination with version_tag
-    - save session_token
-- using status_token with GET to /info/status check status of your job
-- After completion, check logs with GET to /info/log
+#### Validate specific version of blueprint
+Blueprint version from database can be validated with PUT to `/blueprint/{blueprint_id}/version/{version_id}/validate`.
+Optionally, file with inputs can be added.
 
-### OUTPUTS
-If TOSCA service template specified outputs, they can be obtained with GET to /outputs/{session_token}
+#### Validate new blueprint
+Any blueprint in The TOSCA Cloud Service Archive (CSAR) form can be validate with PUT to `/blueprint/validate`.
+After validation, blueprint will be discarded.
 
-### DIFF
-Diff calculates instance difference between Deployed instance model (accessable via `session_token`) and  
-New blueprint version (`blueprint_token` with `version_tag` and `inputs_file`)
+#### Get history of blueprint changes
+History of changes, made by xOpera REST API to git repository with blueprint, can be obtained with GET to
+`/blueprint/{blueprint_id}/git_history`. Changes can be either `update` (addition of blueprint version) or `delete` 
+(deletion of blueprint or blueprint version).
 
-### UPDATE
-- Update deployes new instance model (DI2), which is diff between Deployed instance model, referenced by `session_token` 
-(DI1) and New blueprint (referenced by `blueprint_token` and `version_tag`) with inputs (`inputs_file`).
-    - Number of parallel workers can be specified with `workers` parameter
-    - save `session_token`
-- using status_token with GET to /info/status check status of your job
-- After completion, check logs with GET to /info/log
-                    
-### GIT LOGS
-- Last transaction details for gitCsarDB can be inspected using /info/log/git/{blueprint_token} endpoint.
-    - optionally, logs inspection can be further specified with version_tag
-    - if all=True, all logs that satisfy blueprint_token and version_tag conditions will be returned
+### Deployment management
+Deployment is xOpera REST API's internal representation of current instance state, deployed on cloud platform
+
+#### Check deployment exists (not implemented)
+If deployment, instantiated from blueprint with inputs already exists, can be checked with PUT to `/deployment/exists`.
+If `version_id` is not specified, last version is used. Inputs are optional, depending on blueprint.
+
+#### Initialize and deploy
+To initialize deployment with first deploy, user can POST to `/deployment/deploy`. If `version_id` is not specified, 
+last version is used. Inputs are optional, depending on blueprint. `Workers` is a maximum number of concurrent workers, 
+leveraged by xOpera. In case of successful invocation, REST API returns Invocation schema, with `deployment_id` params,
+which must be used for any further interactions with current deployment.
+
+#### Obtain deployment status
+Status of deployment can be obtained with GET to `/deployment/{deployment_id}/status`. State of deployment can be one of
+`[ pending, in_progress, success, failed ]`. After invocation is done, user can inspect `stdout`, `stderr`, 
+`instance_state` and `outputs` (if defined within service template).
+
+#### Inspect deployment history
+Entire history of deployment (list of all invocations) can be obtained with GET to `/deployment/{deployment_id}/history`.
+
+#### Continue deploy
+In case of deployment failure, deploy invocation can be continued (optionally with new inputs) with POST to
+`/deployment/{deployment_id}/deploy_continue`. Opera will continue, where previous deploy failed. Optionally, it can
+also start from beginning (`clean_state=True`).
+
+#### Calculate diff
+Diff between current deployment state and new blueprint (with inputs) can be obtained by PUT to
+`/deployment/{deployment_id}/diff`. Blueprint (version) can be another version of the previously used blueprint or
+some version of another blueprint.
+
+#### Update deployment
+Deployment can be updated from new blueprint (version) with POST to `/deployment/{deployment_id}/update`. Opera will 
+calculate the difference between deployed instance and new blueprint and (un)deploy it. Blueprint (version) can be 
+another version of the previously used blueprint or some version of another blueprint.
+
+#### Undeploy
+Deployment can be undeployed with POST to `/deployment/{deployment_id}/undeploy`. This is the last invocation in 
+deployment lifecycle, and antoher invocation will not be possible, but logs will be preserved.
 
 ## TOSCA 1.3 Cloud Service Archive (CSAR) format
 
