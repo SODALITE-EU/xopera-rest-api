@@ -149,7 +149,7 @@ topology_template:
         volumes:
           - /var/run/docker.sock:/var/run/docker.sock
           - /root/.ssh/:/root/.ssh/
-          - xopera-openapi:/app/opera/api/openapi/openapi/
+          - xopera-openapi:/app/
         labels:
           traefik.enable: "true"
           traefik.http.services.api.loadbalancer.server.port: "8080"
@@ -179,7 +179,7 @@ topology_template:
         volumes:
           - xopera-openapi:/openapi:ro
         env:
-          SWAGGER_JSON: /openapi/openapi.yaml
+          SWAGGER_JSON: /openapi/openapi-spec.yml
         labels:
           traefik.enable: "true"
           traefik.http.services.ui.loadbalancer.server.port: "8080"

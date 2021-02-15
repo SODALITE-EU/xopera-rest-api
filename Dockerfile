@@ -9,7 +9,7 @@ WORKDIR /app
 ENTRYPOINT ["python3"]
 CMD ["-m", "opera.api.cli"]
 
-COPY requirements.txt requirements.yml /app/
+COPY requirements.txt requirements.yml openapi-spec.yml /app/
 
 ARG HELM_VERSION=3.4.0
 ARG KUBECTL_VERSION=1.20.0

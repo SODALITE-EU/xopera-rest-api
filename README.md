@@ -4,10 +4,6 @@
 Implementation of the xOpera orchestrator REST API
 
 ## Prerequisites
-    
-    - Ubuntu 20.04 or newer
-    - Python 3.8.5 with pip 21 or newer
-    - Docker engine 20.10 or newer
 
 ### GIT backend server (optional, recommended)
 xOpera REST API uses git backend to store blueprints. It supports github.com and gitlab (both gitlab.com and private gitlab based servers).
@@ -49,39 +45,27 @@ Beside obligatory settings following settings can be configured:
  - XOPERA_GIT_GUEST_PERMISSIONS (default: `reporter`) - role, assigned to user, added to repository. See [access to blueprints](#ACCESS-TO-REPOSITORY-WITH-BLUEPRINTS).
 
 See [example config](src/opera/api/settings/example_settings.sh) for example on how to export variables.
-### PostgreSQL (optional, recommended)
-Rest API is using PostgreSQL database for saving bluepints and deployment logs.
-If PostgreSQL database is not available, it uses computer's filesystem.
-
-To connect REST API, config must be exported as series of environmental variables:
-- XOPERA_DATABASE_IP=[database_ip]
-- XOPERA_DATABASE_PORT=[database_port]
-- XOPERA_DATABASE_NAME=[database_name]
-- XOPERA_DATABASE_USER=[database_username]
-- XOPERA_DATABASE_PASSWORD=[database_password]
-- XOPERA_DATABASE_TIMEOUT=[database_timeout], optional
-- XOPERA_DATABASE_LOG_TABLE=[table_name_for_logs], optional
-
-See [example config](src/opera/api/settings/example_settings.sh).
-
-PostgreSQL can be also run as [docker container](#PostgreSQL-docker)
 
 ### Docker registry (optional, recommended)
 In most applications, REST API needs docker registry to store docker images.
 It can be run [locally](#Local-docker-registry) or [remotely](#Connect-to-remote-registry).
 See [docker docs](https://docs.docker.com/engine/security/certificates/) for more details.
-Certificates 
 
-## Installation
+### OAuth
+xOpera REST API uses OAuth 2.0 for authentication.
+
+It can be overridden by setting `AUTH_API_KEY` env var in xopera-rest-api
+container to key_name of choice. 
+This key must be added to requests as `-H  "X-API-Key: [key_name]"`
     
 ### SSH keys
-xOpera needs SSH key pair with `xOpera` substring in name in `/root/.ssh` dir. It can be generated using
+xOpera needs SSH key pair with `xOpera` substring in name in `/root/.ssh` (or other) dir. It can be generated using
 
-    sudo ./Installation/ssh_keys.sh [common name]
+    sudo ./Installation/ssh_keys.sh [common name] [SSH_DIR | default='/root/.ssh'] 
 
 where common name is desired name for SSH key (usually computer's IP).
 
-## Quick start
+## Usage
 
 ### Local run
 To run locally, use [docker compose](docker-compose.yml) or [local TOSCA template](xOpera-rest-blueprint/service-local.yaml) with compliant orchestrator.
@@ -207,26 +191,27 @@ Check help:
 ### Structure of CSAR format  
 For details about CSAR format structure, visit [TOSCA Simple Profile in YAML Version 1.3](https://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.3/os/TOSCA-Simple-Profile-YAML-v1.3-os.html#_Toc26969474)
 
-## Setting up OpenStack
-### Setting the default user
+## Additional configuration
+### Setting up OpenStack
+#### Setting the default user
 When deploying the xOpera Rest API, intended to target Openstack, make sure to pass correct environment variables for 
 openstack orchestration (section `# XOPERA OPENSTACK DEPLOYMENT FALLBACK SETTINGS` in `xopera_env` field in 
 [inputs-local.yaml](xOpera-rest-blueprint/inputs/input-local.yaml) or [inputs-openstack.yaml](xOpera-rest-blueprint/inputs/input-openstack.yaml))
  
-## Docker registry connection
-### Local docker registry
+### Docker registry connection
+#### Local docker registry
 To run docker image registry locally, run the following command:
 
     docker run -d --restart=always --name registry -v /mnt/registry:/var/lib/registry registry:2
 
-### Connect to remote registry
+#### Connect to remote registry
 
-#### Installation with script (Ubuntu only)   
+##### Installation with script (Ubuntu only)   
 If you are using ubuntu, just run the following script:
 
     sudo ./Installation/docker_certs.sh [computer_IP] [registry_IP] [path_to_CA_dir]
    
-#### Manual installation (Ubuntu or CentOS) 
+##### Manual installation (Ubuntu or CentOS) 
 If you choose to preform steps manually, follow the steps below:
 * Ubuntu: add root certificate `ca.crt` to `/usr/share/ca-certificates/` folder, add the filename `ca.crt` to `/etc/ca-certificates.conf` and run `sudo update-ca-certificates` to update certificates.
 * CentOS: add root certificate `ca.crt` to `/etc/pki/ca-trust/source/anchors/` folder and run `sudo update-ca-trust` to update certificates.
@@ -245,3 +230,17 @@ The file structure should be as follows:
        └── ca.crt
 
 See [docker docs](https://docs.docker.com/engine/security/certificates/) for more details.
+
+### PostgreSQL connection
+Rest API is using PostgreSQL database. It is deployed with REST API as part of docker-compose template and TOSCA template.
+REST API can be configured to connect to any PostgreSQL instance by following environmental variables:
+- XOPERA_DATABASE_IP=[database_ip]
+- XOPERA_DATABASE_PORT=[database_port]
+- XOPERA_DATABASE_NAME=[database_name]
+- XOPERA_DATABASE_USER=[database_username]
+- XOPERA_DATABASE_PASSWORD=[database_password]
+- XOPERA_DATABASE_TIMEOUT=[database_timeout], optional
+
+See [example config](src/opera/api/settings/example_settings.sh).
+
+PostgreSQL can be run as [docker container](https://hub.docker.com/_/postgres).
