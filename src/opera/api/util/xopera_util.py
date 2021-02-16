@@ -6,6 +6,8 @@ import re
 import shutil
 from contextlib import contextmanager
 from pathlib import Path
+import hashlib
+import json
 
 import connexion
 import yaml
@@ -106,3 +108,11 @@ def mask_workdirs(locations: [Path], stacktrace: str, placeholder="$BLUEPRINT_DI
     for location in locations:
         stacktrace = stacktrace.replace(str(location), placeholder)
     return stacktrace
+
+
+def calculate_hash(dict_object: dict):
+    """
+    Calculates md5 hash and returns it as hexadecimal string
+    """
+    hash_object = hashlib.md5(json.dumps(dict_object, sort_keys=True).encode())
+    return hash_object.hexdigest()
