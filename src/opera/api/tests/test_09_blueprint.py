@@ -365,6 +365,25 @@ class TestGitHistory:
         assert resp.status_code == 400
         assert_that(resp.json).contains('Log not found')
 
+    def test_no_blueprint(self, client, mocker):
+        # assert endpoint works even when blueprint is gone
+        blueprint_id = uuid.uuid4()
+        mocker.patch('opera.api.service.csardb_service.GitDB.version_exists', return_value=False)
+        git_data = GitLog(
+            blueprint_id=str(blueprint_id),
+            commit_sha="commit_sha",
+            git_backend="MockConnector",
+            job="update",
+            repo_url="local",
+            revision_msg="rev_msg",
+            timestamp=timestamp_util.datetime_now_to_string(),
+            version_id='v1.0'
+        )
+        mocker.patch('opera.api.service.sqldb_service.OfflineStorage.get_git_transaction_data', return_value=[git_data.to_dict()])
+        blueprint_id = uuid.uuid4()
+        resp = client.get(f"/blueprint/{blueprint_id}/git_history")
+        assert resp.status_code == 200
+
     def test_keys(self, client, mocker, patch_auth_wrapper):
         git_data = GitLog(
             blueprint_id=str(uuid.uuid4()),
