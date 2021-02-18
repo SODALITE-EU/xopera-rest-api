@@ -116,6 +116,22 @@ def check_role_auth_blueprint(func):
     return wrapper_check_role_auth
 
 
+def check_role_auth_project_domain(func):
+    @functools.wraps(func)
+    def wrapper_check_role_auth(*args, **kwargs):
+        blueprint_id = kwargs.get("blueprint_id")
+        if not blueprint_id:
+            return f"Authorization configuration error", 401
+
+        project_domain = SQL_database.get_project_domain(blueprint_id)
+        if project_domain and not check_roles(project_domain):
+            return f"Unauthorized request for project: {project_domain}", 401
+
+        return func(*args, **kwargs)
+
+    return wrapper_check_role_auth
+
+
 def check_role_auth_deployment(func):
     @functools.wraps(func)
     def wrapper_check_role_auth(*args, **kwargs):
