@@ -607,58 +607,58 @@ paths:
               schema:
                 type: string
 
-  /deployment/exists:
-    put:
-      summary: "Check if deployment exists"
-      security:
-        - apiKey: []
-        - oauth2: [email]
-      tags:
-      - deployment
-      operationId: deployment_exists
-      parameters:
-      - name: blueprint_id
-        in: query
-        description: Id of blueprint
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - name: version_id
-        in: query
-        description: Id of blueprint version
-        schema:
-          type: string
-          pattern: '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
-      requestBody:
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              properties:
-                inputs_file:
-                  type: string
-                  description: File with inputs TOSCA blueprint
-                  format: binary
-      responses:
-        200:
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DeploymentExists'
-        401:
-          description: Unauthorized request for this blueprint
-          content:
-            application/json:
-              schema:
-                type: string
-        404:
-          description: Did not find blueprint
-          content:
-            application/json:
-              schema:
-                type: string
+#  /deployment/exists:
+#    put:
+#      summary: "Check if deployment exists"
+#      security:
+#        - apiKey: []
+#        - oauth2: [email]
+#      tags:
+#      - deployment
+#      operationId: deployment_exists
+#      parameters:
+#      - name: blueprint_id
+#        in: query
+#        description: Id of blueprint
+#        required: true
+#        schema:
+#          type: string
+#          format: uuid
+#      - name: version_id
+#        in: query
+#        description: Id of blueprint version
+#        schema:
+#          type: string
+#          pattern: '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
+#      requestBody:
+#        content:
+#          multipart/form-data:
+#            schema:
+#              type: object
+#              properties:
+#                inputs_file:
+#                  type: string
+#                  description: File with inputs TOSCA blueprint
+#                  format: binary
+#      responses:
+#        200:
+#          description: OK
+#          content:
+#            application/json:
+#              schema:
+#                $ref: '#/components/schemas/DeploymentExists'
+#        401:
+#          description: Unauthorized request for this blueprint
+#          content:
+#            application/json:
+#              schema:
+#                type: string
+#        404:
+#          description: Did not find blueprint
+#          content:
+#            application/json:
+#              schema:
+#                type: string
 
   /deployment/deploy:
     post:
@@ -1169,10 +1169,6 @@ components:
           description: Id of version of blueprint
           type: string
           pattern: '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
-        #invocation_id:
-        #  description: Id of invocation
-        #  type: string
-        #  format: uuid
         deployment_id:
           description: Id of deployment
           type: string
