@@ -9,7 +9,7 @@ WORKDIR /app
 ENTRYPOINT ["python3"]
 CMD ["-m", "opera.api.cli"]
 
-COPY requirements.txt requirements.yml openapi-spec.yml /app/
+COPY requirements.txt requirements.yml /app/
 
 ARG HELM_VERSION=3.4.0
 ARG KUBECTL_VERSION=1.20.0
@@ -44,3 +44,4 @@ RUN export BUILD_PREREQS="gcc musl-dev libffi-dev openssl-dev python3-dev postgr
     && rm requirements.txt requirements.yml
 
 COPY --from=builder /build/src/ /app/
+COPY openapi-spec.yml /app/

@@ -5,17 +5,15 @@ from opera.api.controllers.background_invocation import InvocationWorkerProcess
 from opera.api.log import get_logger
 from opera.api.openapi.models import InvocationState
 from opera.api.openapi.models import OperationType, Invocation
-from opera.api.openapi.models.deployment_exists import DeploymentExists  # noqa: E501
+from opera.api.openapi.models.deployment_exists import DeploymentExists
 from opera.api.util import xopera_util
 
 logger = get_logger(__name__)
 invocation_service = InvocationService()
 
 
-def deployment_exists(blueprint_id, version_id=None, inputs_file=None):  # noqa: E501
+def deployment_exists(blueprint_id, version_id=None, inputs_file=None):
     """Check if deployment exists
-
-     # noqa: E501
 
     :param blueprint_id: Id of blueprint
     :type blueprint_id: 
@@ -31,10 +29,8 @@ def deployment_exists(blueprint_id, version_id=None, inputs_file=None):  # noqa:
 
 
 @security_controller.check_role_auth_deployment
-def get_deploy_log(deployment_id):  # noqa: E501
+def get_deploy_log(deployment_id):
     """Get deployment history
-
-     # noqa: E501
 
     :param deployment_id: Id of deployment
     :type deployment_id: 
@@ -48,10 +44,8 @@ def get_deploy_log(deployment_id):  # noqa: E501
 
 
 @security_controller.check_role_auth_deployment
-def get_status(deployment_id):  # noqa: E501
+def get_status(deployment_id):
     """Get deployment status
-
-     # noqa: E501
 
     :param deployment_id: Id of deployment
     :type deployment_id: 
@@ -70,10 +64,8 @@ def get_status(deployment_id):  # noqa: E501
 
 
 @security_controller.check_role_auth_deployment
-def post_deploy_continue(deployment_id, workers=1, clean_state=False):  # noqa: E501
+def post_deploy_continue(deployment_id, workers=1, clean_state=False):
     """Continue deploy
-
-     # noqa: E501
 
     :param deployment_id: Id of deployment
     :type deployment_id: 
@@ -98,10 +90,8 @@ def post_deploy_continue(deployment_id, workers=1, clean_state=False):  # noqa: 
 
 
 @security_controller.check_role_auth_blueprint
-def post_deploy_fresh(blueprint_id, version_id=None, workers=1):  # noqa: E501
+def post_deploy_fresh(blueprint_id, version_id=None, workers=1):
     """Initialize deployment and deploy
-
-     # noqa: E501
 
     :param blueprint_id: Id of blueprint
     :type blueprint_id: 
@@ -123,10 +113,10 @@ def post_deploy_fresh(blueprint_id, version_id=None, workers=1):  # noqa: E501
 
 @security_controller.check_role_auth_blueprint
 @security_controller.check_role_auth_deployment
-def post_diff(deployment_id, blueprint_id, version_id=None):  # noqa: E501
+def post_diff(deployment_id, blueprint_id, version_id=None):
     """Calculate diff between deployment and new blueprint.
 
-    Calculates the diff between Deployed instance model (DI1) and New blueprint version (DB2 = B2 + V2 + I2) # noqa: E501
+    Calculates the diff between Deployed instance model (DI1) and New blueprint version (DB2 = B2 + V2 + I2)
 
     :param deployment_id: Id of Deployed instance model (DI1)
     :type deployment_id: 
@@ -143,10 +133,8 @@ def post_diff(deployment_id, blueprint_id, version_id=None):  # noqa: E501
 
 
 @security_controller.check_role_auth_deployment
-def post_undeploy(deployment_id, workers=1):  # noqa: E501
+def post_undeploy(deployment_id, workers=1):
     """Undeploy deployment.
-
-     # noqa: E501
 
     :param deployment_id: Id of deployment
     :type deployment_id: 
@@ -170,10 +158,10 @@ def post_undeploy(deployment_id, workers=1):  # noqa: E501
 
 @security_controller.check_role_auth_blueprint
 @security_controller.check_role_auth_deployment
-def post_update(deployment_id, blueprint_id, version_id=None, workers=1):  # noqa: E501
+def post_update(deployment_id, blueprint_id, version_id=None, workers=1):
     """Update deployment with new blueprint.
 
-    Deploys Instance model (DI2), where DI2 &#x3D; diff(DI1, (B2,V2,I2)) # noqa: E501
+    Deploys Instance model (DI2), where DI2 &#x3D; diff(DI1, (B2,V2,I2))
 
     :param deployment_id: Id of Deployed instance model (DI1)
     :type deployment_id: 

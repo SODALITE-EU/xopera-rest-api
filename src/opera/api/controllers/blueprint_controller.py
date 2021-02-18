@@ -4,8 +4,8 @@ from opera.api.cli import CSAR_db, SQL_database
 from opera.api.controllers import security_controller
 from opera.api.controllers.background_invocation import InvocationWorkerProcess
 from opera.api.log import get_logger
-from opera.api.openapi.models.blueprint import Blueprint  # noqa: E501
-from opera.api.openapi.models.git_log import GitLog  # noqa: E501
+from opera.api.openapi.models.blueprint import Blueprint
+from opera.api.openapi.models.git_log import GitLog
 from opera.api.settings import Settings
 from opera.api.util import timestamp_util, xopera_util
 
@@ -13,10 +13,8 @@ logger = get_logger(__name__)
 
 
 @security_controller.check_role_auth_blueprint
-def delete_git_user(blueprint_id, user_id):  # noqa: E501
+def delete_git_user(blueprint_id, user_id):
     """Delete user.
-
-     # noqa: E501
 
     :param blueprint_id: Id of blueprint
     :type blueprint_id: 
@@ -33,10 +31,8 @@ def delete_git_user(blueprint_id, user_id):  # noqa: E501
 
 
 @security_controller.check_role_auth_blueprint
-def delete_blueprint(blueprint_id, force=None):  # noqa: E501
+def delete_blueprint(blueprint_id, force=None):
     """Delete blueprint.
-
-     # noqa: E501
 
     :param blueprint_id: Id of blueprint
     :type blueprint_id: 
@@ -75,10 +71,8 @@ def delete_blueprint(blueprint_id, force=None):  # noqa: E501
 
 
 @security_controller.check_role_auth_blueprint
-def delete_blueprint_version(blueprint_id, version_id, force=None):  # noqa: E501
+def delete_blueprint_version(blueprint_id, version_id, force=None):
     """Delete version of blueprint.
-
-     # noqa: E501
 
     :param blueprint_id: Id of blueprint
     :type blueprint_id: 
@@ -121,10 +115,8 @@ def delete_blueprint_version(blueprint_id, version_id, force=None):  # noqa: E50
 
 
 @security_controller.check_role_auth_project_domain
-def get_git_log(blueprint_id):  # noqa: E501
+def get_git_log(blueprint_id):
     """List all update/delete transactions to git repository with blueprint.
-
-     # noqa: E501
 
     :param blueprint_id: Id of blueprint
     :type blueprint_id: 
@@ -138,10 +130,8 @@ def get_git_log(blueprint_id):  # noqa: E501
 
 
 @security_controller.check_role_auth_blueprint
-def get_git_user(blueprint_id):  # noqa: E501
+def get_git_user(blueprint_id):
     """List users with access.
-
-     # noqa: E501
 
     :param blueprint_id: Id of blueprint
     :type blueprint_id: 
@@ -157,10 +147,8 @@ def get_git_user(blueprint_id):  # noqa: E501
 
 
 @security_controller.check_role_auth_blueprint
-def post_git_user(blueprint_id, user_id):  # noqa: E501
+def post_git_user(blueprint_id, user_id):
     """Add user to blueprint.
-
-     # noqa: E501
 
     :param blueprint_id: Id of blueprint
     :type blueprint_id: 
@@ -182,10 +170,8 @@ def post_git_user(blueprint_id, user_id):  # noqa: E501
 
 
 @security_controller.check_role_auth_blueprint
-def post_blueprint(blueprint_id, revision_msg=None):  # noqa: E501
+def post_blueprint(blueprint_id, revision_msg=None):
     """Add new version to existing blueprint.
-
-     # noqa: E501
 
     :param blueprint_id: Id of blueprint
     :type blueprint_id:
@@ -212,10 +198,8 @@ def post_blueprint(blueprint_id, revision_msg=None):  # noqa: E501
     return Blueprint.from_dict(result), 200
 
 
-def post_new_blueprint(revision_msg=None, project_domain=None):  # noqa: E501
+def post_new_blueprint(revision_msg=None, project_domain=None):
     """Add new blueprint.
-
-     # noqa: E501
 
     :param revision_msg: Optional comment on submission
     :type revision_msg: str
@@ -250,10 +234,10 @@ def post_new_blueprint(revision_msg=None, project_domain=None):  # noqa: E501
 
 
 @security_controller.check_role_auth_blueprint
-def validate_existing(blueprint_id):  # noqa: E501
+def validate_existing(blueprint_id):
     """Validate last version of existing blueprint.
 
-    Validates TOSCA service template # noqa: E501
+    Validates TOSCA service template
 
     :param blueprint_id: Id of TOSCA blueprint
     :type blueprint_id:
@@ -269,10 +253,10 @@ def validate_existing(blueprint_id):  # noqa: E501
 
 
 @security_controller.check_role_auth_blueprint
-def validate_existing_version(blueprint_id, version_id):  # noqa: E501
+def validate_existing_version(blueprint_id, version_id):
     """Validate specific version of existing blueprint.
 
-    Validates TOSCA service template # noqa: E501
+    Validates TOSCA service template
 
     :param blueprint_id: Id of TOSCA blueprint
     :type blueprint_id: 
@@ -289,10 +273,10 @@ def validate_existing_version(blueprint_id, version_id):  # noqa: E501
     return "Validation OK", 200
 
 
-def validate_new():  # noqa: E501
+def validate_new():
     """Validate new blueprint.
 
-    Validates TOSCA service template # noqa: E501
+    Validates TOSCA service template
 
     :rtype: str
     """
