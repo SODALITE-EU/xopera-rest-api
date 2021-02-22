@@ -32,7 +32,7 @@ def token_info(access_token) -> dict:
     headers = {'Content-type': 'application/x-www-form-urlencoded'}
     token_info_url = Settings.oidc_introspection_endpoint_uri
     if not token_info_url:
-        logging.warn("OAuth 2.0 Introspection endpoint not configured.")
+        logging.warning("OAuth 2.0 Introspection endpoint not configured.")
         return None
     # TODO add multiple client support
     basic_auth_string = '{0}:{1}'.format(
