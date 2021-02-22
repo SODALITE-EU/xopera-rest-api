@@ -148,7 +148,6 @@ def post_undeploy(deployment_id, workers=1):
     inv = SQL_database.get_deployment_status(deployment_id)
     if inv.state in [InvocationState.PENDING, InvocationState.IN_PROGRESS]:
         return f"Previous operation on this deployment still running", 403
-    # TODO after deployment is undeployed, make sure no operation is permitted on it (it doesn't exist any more
 
     result = invocation_service.invoke(OperationType.UNDEPLOY, inv.blueprint_id, inv.version_id, deployment_id, workers,
                                        inputs)

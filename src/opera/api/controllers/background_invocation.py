@@ -139,7 +139,6 @@ class InvocationWorkerProcess(multiprocessing.Process):
                 opera_storage.write_json(inv.inputs, "inputs")
             opera_undeploy(opera_storage, verbose_mode=True, num_workers=inv.workers)
             return opera_outputs(opera_storage)
-        # TODO delete session_data
 
     @staticmethod
     def _update(location: Path, inv: Invocation):
