@@ -223,7 +223,7 @@ paths:
           required: true
           schema:
             type: string
-            pattern: '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
+            pattern: '^v(0|[1-9][0-9]*).(0|[1-9][0-9]*)$'
         - name: force
           in: query
           description: force delete blueprint
@@ -476,7 +476,7 @@ paths:
           required: true
           schema:
             type: string
-            pattern: '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
+            pattern: '^v(0|[1-9][0-9]*).(0|[1-9][0-9]*)$'
 
       requestBody:
         content:
@@ -629,7 +629,7 @@ paths:
 #        description: Id of blueprint version
 #        schema:
 #          type: string
-#          pattern: '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
+#          pattern: '^v(0|[1-9][0-9]*).(0|[1-9][0-9]*)$'
 #      requestBody:
 #        content:
 #          multipart/form-data:
@@ -682,7 +682,7 @@ paths:
         description: version_tag to deploy
         schema:
           type: string
-          pattern: '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
+          pattern: '^v(0|[1-9][0-9]*).(0|[1-9][0-9]*)$'
       - name: workers
         in: query
         description: Number of workers
@@ -898,7 +898,7 @@ paths:
         description: Id of version of The new blueprint (V2)
         schema:
           type: string
-          pattern: '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
+          pattern: '^v(0|[1-9][0-9]*).(0|[1-9][0-9]*)$'
 
       requestBody:
         content:
@@ -961,7 +961,7 @@ paths:
         description: Id of version of the new blueprint (V2)
         schema:
           type: string
-          pattern: '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
+          pattern: '^v(0|[1-9][0-9]*).(0|[1-9][0-9]*)$'
       - name: workers
         in: query
         description: Number of workers
@@ -1085,7 +1085,7 @@ components:
           description: Id of blueprint
         version_id:
           type: string
-          pattern: '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
+          pattern: '^v(0|[1-9][0-9]*).(0|[1-9][0-9]*)$'
           description: Id of blueprint version
         url:
           type: string
@@ -1140,7 +1140,7 @@ components:
         version_id:
           type: string
           description: Id of version
-          pattern: '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
+          pattern: '^v(0|[1-9][0-9]*).(0|[1-9][0-9]*)$'
 
     DeploymentExists:
       type: object
@@ -1168,7 +1168,7 @@ components:
         version_id:
           description: Id of version of blueprint
           type: string
-          pattern: '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
+          pattern: '^v(0|[1-9][0-9]*).(0|[1-9][0-9]*)$'
         deployment_id:
           description: Id of deployment
           type: string
