@@ -102,33 +102,26 @@ class TestDelete:
         assert_that(resp.status_code).is_equal_to(200)
         assert_that(resp.json).is_not_none().contains_only('blueprint_id', 'timestamp', 'url')
 
-    def test_delete_before_undeploy(self, client, csar_1, csar_2):
-        # # upload local blueprint
-        # resp = client.post(f"/blueprint", data=csar_1)
-        # blueprint_token = resp.json['blueprint_token']
-        #
-        # # upload again, mock revision_msg after deploy
-        # client.post(f"/blueprint/{blueprint_token}?revision_msg="
-        #             f"{git_util.after_job_commit_msg(token=blueprint_token, mode='deploy')}", data=csar_2)
-        #
-        # # try to delete
-        # resp = client.delete(f"/blueprint/{blueprint_token}")
-        # assert_that(resp.status_code).is_equal_to(403)
-        pass
+    def test_delete_before_undeploy(self, mocker, client, patch_auth_wrapper):
+        mocker.patch('opera.api.service.sqldb_service.OfflineStorage.blueprint_used_in_deployment', return_value=True)
 
-    def test_force_delete(self, client, csar_1, csar_2):
-        # # upload local blueprint
-        # resp = client.post(f"/blueprint", data=csar_1)
-        # blueprint_token = resp.json['blueprint_token']
-        #
-        # # upload again, mock revision_msg after deploy
-        # client.post(f"/blueprint/{blueprint_token}?revision_msg="
-        #             f"{git_util.after_job_commit_msg(token=blueprint_token, mode='deploy')}", data=csar_2)
-        #
-        # # try to delete with force
-        # resp = client.delete(f"/blueprint/{blueprint_token}?force={True}")
-        # assert_that(resp.status_code).is_equal_to(200)
-        pass
+        # try to delete
+        blueprint_id = uuid.uuid4()
+        resp = client.delete(f"/blueprint/{blueprint_id}")
+        assert_that(resp.status_code).is_equal_to(403)
+        assert_that(resp.json).contains("Cannot delete blueprint, deployment with this blueprint exists")
+
+    def test_force_delete(self, mocker, client, patch_auth_wrapper):
+        repo_url = 'https://url/to/repo.git'
+        mocker.patch('opera.api.service.sqldb_service.OfflineStorage.blueprint_used_in_deployment', return_value=True)
+        mocker.patch('opera.api.service.csardb_service.GitDB.get_repo_url', return_value=[repo_url, None])
+        mocker.patch('opera.api.service.csardb_service.GitDB.delete_blueprint', return_value=[1, 200])
+
+        # delete blueprint
+        blueprint_id = uuid.uuid4()
+        resp = client.delete(f"/blueprint/{blueprint_id}?force=true")
+        assert_that(resp.status_code).is_equal_to(200)
+        assert_that(resp.json['blueprint_id']).is_equal_to(str(blueprint_id))
 
     def test_server_error(self, client, mocker, patch_auth_wrapper):
         mocker.patch('opera.api.service.csardb_service.GitDB.delete_blueprint', return_value=[0, 500])
@@ -161,11 +154,29 @@ class TestDeleteVersion:
         assert uuid.UUID(resp.json['blueprint_id']) == blueprint_id
         assert resp.json['version_id'] == version_id
 
-    def test_delete_before_undeploy(self, client, csar_1, csar_2):
-        pass
+    def test_delete_before_undeploy(self, mocker, client, patch_auth_wrapper):
+        mocker.patch('opera.api.service.sqldb_service.OfflineStorage.blueprint_used_in_deployment', return_value=True)
 
-    def test_force_delete(self, client, csar_1, csar_2):
-        pass
+        # try to delete
+        blueprint_id = uuid.uuid4()
+        version_id = 'v1.0'
+        resp = client.delete(f"/blueprint/{blueprint_id}/version/{version_id}")
+        assert_that(resp.status_code).is_equal_to(403)
+        assert_that(resp.json).contains("Cannot delete blueprint, deployment with this blueprint exists")
+
+    def test_force_delete(self, mocker, client, patch_auth_wrapper):
+        repo_url = 'https://url/to/repo.git'
+        mocker.patch('opera.api.service.sqldb_service.OfflineStorage.blueprint_used_in_deployment', return_value=True)
+        mocker.patch('opera.api.service.csardb_service.GitDB.get_repo_url', return_value=[repo_url, None])
+        mocker.patch('opera.api.service.csardb_service.GitDB.delete_blueprint', return_value=[1, 200])
+
+        # delete blueprint
+        blueprint_id = uuid.uuid4()
+        version_id = 'v1.0'
+        resp = client.delete(f"/blueprint/{blueprint_id}/version/{version_id}?force=true")
+        assert_that(resp.status_code).is_equal_to(200)
+        assert_that(resp.json['blueprint_id']).is_equal_to(str(blueprint_id))
+        assert_that(resp.json['version_id']).is_equal_to(version_id)
 
     def test_server_error(self, client, mocker, patch_auth_wrapper):
         mocker.patch('opera.api.service.csardb_service.GitDB.delete_blueprint', return_value=[0, 500])

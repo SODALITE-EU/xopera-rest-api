@@ -36,6 +36,19 @@ class Database:
         """
         pass
 
+    def get_deployment_ids(self, blueprint_id: uuid, version_id: str = None):
+        """
+        Returns list of deployment_ids od all deployments created from blueprint with blueprint_id
+        """
+        pass
+
+    def blueprint_used_in_deployment(self, blueprint_id: uuid, version_id: str = None):
+        """
+        Checks if blueprint is part of any deployment. If version is specified, it checks if it is used in current
+        deployment state
+        """
+        pass
+
     def save_opera_session_data(self, deployment_id: uuid, tree: dict):
         """
         Saves .opera file tree to database
@@ -100,7 +113,7 @@ class Database:
 
     def get_project_domain(self, blueprint_id: uuid):
         """
-        Get project domaing for blueprint
+        Get project domain for blueprint
         """
         pass
 
@@ -146,6 +159,43 @@ class OfflineStorage(Database):
     def disconnect(self):
         # does not need to do anything
         pass
+
+    def get_deployment_ids(self, blueprint_id: uuid, version_id: str = None):
+        """
+        Returns list of deployment_ids od all deployments created from blueprint with blueprint_id
+        """
+        deployment_ids = []
+        location = self.invocation_path
+        file_paths = [path for path in location.rglob('*') if path.is_file()]
+        for file in file_paths:
+            inv = Invocation.from_dict(json.loads(file.read_text()))
+            if str(inv.blueprint_id) == str(blueprint_id):
+                deployment_ids.append(uuid.UUID(inv.deployment_id))
+
+        return list(set(deployment_ids))
+
+    def blueprint_used_in_deployment(self, blueprint_id: uuid, version_id: str = None):
+        """
+        Checks if blueprint is part of any deployment. If version is specified, it checks if it is used in current
+        deployment state
+        """
+        deployment_ids = self.get_deployment_ids(blueprint_id, version_id)
+        if not deployment_ids:
+            return False
+
+        if version_id:
+            for deployment_id in deployment_ids:
+                location = self.invocation_path / str(deployment_id)
+                invs = []
+                for file in location.glob('*'):
+                    inv = Invocation.from_dict(json.loads(file.read_text()))
+                    invs.append(inv)
+                invs.sort(key=lambda x: x.timestamp)
+                if invs[-1].version_id == version_id:
+                    return True
+            return False
+
+        return True
 
     def save_opera_session_data(self, deployment_id: uuid, tree: dict):
         data = {
@@ -298,7 +348,8 @@ class PostgreSQL(Database):
                         create table if not exists {} (
                         invocation_id varchar (36), 
                         deployment_id varchar (36),
-                        blueprint_id varchar (36), 
+                        blueprint_id varchar (36),
+                        version_id varchar(36), 
                         timestamp timestamp, 
                         _log text,  
                         primary key (invocation_id)
@@ -349,6 +400,50 @@ class PostgreSQL(Database):
             return False
         dbcur.close()
         self.connection.commit()
+        return True
+
+    def get_deployment_ids(self, blueprint_id: uuid, version_id: str = None):
+        """
+        Returns list of deployment_ids od all deployments created from blueprint with blueprint_id (and version_id)
+        """
+        dbcur = self.connection.cursor()
+
+        if version_id:
+            query = "select deployment_id from {} where blueprint_id = '{}' and version_id = '{}' " \
+                    "group by deployment_id;" \
+                .format(Settings.invocation_table, blueprint_id, version_id)
+        else:
+            query = "select deployment_id from {} where blueprint_id = '{}' group by deployment_id;" \
+                .format(Settings.invocation_table, blueprint_id)
+
+        dbcur.execute(query)
+        lines = dbcur.fetchall()
+        deployment_ids = [uuid.UUID(line[0]) for line in lines]
+        dbcur.close()
+
+        return deployment_ids
+
+    def blueprint_used_in_deployment(self, blueprint_id: uuid, version_id: str = None):
+        """
+        Checks if blueprint is part of any deployment. If version is specified, it checks if it is used in current
+        deployment state
+        """
+        deployment_ids = self.get_deployment_ids(blueprint_id, version_id)
+        if not deployment_ids:
+            return False
+
+        if version_id:
+            # TODO check if last version
+            dbcur = self.connection.cursor()
+            for deployment_id in deployment_ids:
+                query = "select version_id from {} where deployment_id = '{}' order by timestamp desc limit 1"\
+                    .format(Settings.invocation_table, deployment_id)
+                dbcur.execute(query)
+                lines = dbcur.fetchall()
+                if lines[0][0] == version_id:
+                    return True
+            dbcur.close()
+            return False
         return True
 
     def save_opera_session_data(self, deployment_id: uuid, tree: dict):
@@ -407,14 +502,15 @@ class PostgreSQL(Database):
         updates deployment log with deployment_id, timestamp, invocation_id, _log
         """
         response = self.execute(
-            """insert into {} (deployment_id, timestamp, invocation_id, blueprint_id, _log)
-               values (%s, %s, %s, %s, %s)
+            """insert into {} (deployment_id, timestamp, invocation_id, blueprint_id, version_id, _log)
+               values (%s, %s, %s, %s, %s, %s)
                ON CONFLICT (invocation_id) DO UPDATE
                    SET timestamp=excluded.timestamp,
                         _log=excluded._log;"""
             .format(Settings.invocation_table),
             (str(inv.deployment_id), str(inv.timestamp),
-             str(invocation_id), str(inv.blueprint_id), json.dumps(inv.to_dict(), cls=file_util.UUIDEncoder)))
+             str(invocation_id), str(inv.blueprint_id),
+             inv.version_id, json.dumps(inv.to_dict(), cls=file_util.UUIDEncoder)))
         if response:
             log.info('Updated deployment log in PostgreSQL database')
         else:
@@ -553,3 +649,15 @@ class PostgreSQL(Database):
         else:
             log.error('Failed to update {} in PostgreSQL database'.format(Settings.project_domain_table))
         return response
+
+
+if __name__ == '__main__':
+    db = PostgreSQL({
+        'host': 'localhost',
+        'port': "5432",
+        'database': 'postgres',
+        'user': 'postgres',
+        'password': 'password'
+    })
+    a = db.blueprint_used_in_deployment('7c3f36d2-089c-403d-9723-a6275b5b69d1')
+    print(a)

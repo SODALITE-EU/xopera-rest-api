@@ -40,6 +40,55 @@ class TestDeploymentLog:
         assert uuid.UUID(last_id) == inv_ids[-1]
 
 
+class TestBlueprintInDeployment:
+    def test_get_deployment_ids(self, sql_db: OfflineStorage, generic_invocation):
+        # save a couple invocations with same blueprint_id
+        blueprint_id = uuid.uuid4()
+        deployment_ids = [uuid.uuid4() for i in range(5)]
+        for i, deployment_id in enumerate(deployment_ids):
+            inv = generic_invocation
+            inv.deployment_id = deployment_id
+            inv.version_id = f"v{i}.0"
+            inv.blueprint_id = blueprint_id
+            sql_db.update_deployment_log(uuid.uuid4(), inv)
+
+        # test
+        deployment_ids_new = sql_db.get_deployment_ids(blueprint_id)
+        assert set(deployment_ids) == set(deployment_ids_new)
+
+    def test_blueprint_in_deployment(self, sql_db: OfflineStorage, generic_invocation):
+        # save invocation
+        inv = generic_invocation
+        inv.deployment_id = uuid.uuid4()
+        inv.version_id = "v1.0"
+        inv.blueprint_id = uuid.uuid4()
+        sql_db.update_deployment_log(uuid.uuid4(), inv)
+
+        # blueprint is part of deployment
+        assert_that(sql_db.blueprint_used_in_deployment(inv.blueprint_id)).is_true()
+
+        # random blueprint is not part of deployment
+        assert_that(sql_db.blueprint_used_in_deployment(uuid.uuid4())).is_false()
+
+    def test_blueprint_version_in_deployment(self, sql_db: OfflineStorage, generic_invocation):
+        # save a couple invocations with same blueprint_id and deployment_id
+        blueprint_id = uuid.uuid4()
+        deployment_id = uuid.uuid4()
+        version_ids = [f"v{i}.0" for i in range(3)]
+        for version_id in version_ids:
+            inv = generic_invocation
+            inv.deployment_id = deployment_id
+            inv.version_id = version_id
+            inv.blueprint_id = blueprint_id
+            inv.timestamp = timestamp_util.datetime_now_to_string()
+            sql_db.update_deployment_log(uuid.uuid4(), inv)
+
+        # Last version is part of deployment, other two are not
+        assert_that(sql_db.blueprint_used_in_deployment(blueprint_id, version_ids[-1])).is_true()
+        assert_that(sql_db.blueprint_used_in_deployment(blueprint_id, version_ids[0])).is_false()
+        assert_that(sql_db.blueprint_used_in_deployment(blueprint_id, version_ids[1])).is_false()
+
+
 class TestSessionData:
 
     def test_save_session_data(self, sql_db: OfflineStorage, generic_dir: Path):
