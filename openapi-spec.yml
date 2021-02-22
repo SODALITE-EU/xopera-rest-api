@@ -331,7 +331,7 @@ paths:
           type: string
       responses:
         200:
-          description: User added or invite send
+          description: User added or invite sent
           content:
             application/json:
               schema:
