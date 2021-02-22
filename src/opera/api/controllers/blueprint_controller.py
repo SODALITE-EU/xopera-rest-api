@@ -6,6 +6,7 @@ from opera.api.controllers.background_invocation import InvocationWorkerProcess
 from opera.api.log import get_logger
 from opera.api.openapi.models.blueprint import Blueprint
 from opera.api.openapi.models.git_log import GitLog
+from opera.api.openapi.models.blueprint_validation import BlueprintValidation
 from opera.api.settings import Settings
 from opera.api.util import timestamp_util, xopera_util
 
@@ -245,7 +246,8 @@ def validate_existing(blueprint_id):
     inputs = xopera_util.inputs_file()
 
     exception = InvocationWorkerProcess.validate(blueprint_id, None, inputs)
-    return exception or "Validation OK", 200
+    blueprint_valid = exception is None
+    return BlueprintValidation(blueprint_valid, exception), 200
 
 
 @security_controller.check_role_auth_blueprint
@@ -264,7 +266,8 @@ def validate_existing_version(blueprint_id, version_id):
     inputs = xopera_util.inputs_file()
 
     exception = InvocationWorkerProcess.validate(blueprint_id, version_id, inputs)
-    return exception or "Validation OK", 200
+    blueprint_valid = exception is None
+    return BlueprintValidation(blueprint_valid, exception), 200
 
 
 def validate_new():
@@ -278,5 +281,6 @@ def validate_new():
     csar_file = connexion.request.files['CSAR']
 
     exception = InvocationWorkerProcess.validate_new(csar_file, inputs)
-    return exception or "Validation OK", 200
+    blueprint_valid = exception is None
+    return BlueprintValidation(blueprint_valid, exception), 200
 

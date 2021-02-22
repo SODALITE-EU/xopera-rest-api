@@ -437,7 +437,7 @@ paths:
           content:
             application/json:
               schema:
-                type: string
+                $ref: '#/components/schemas/BlueprintValidation'
         401:
           description: Unauthorized request for this blueprint
           content:
@@ -493,7 +493,7 @@ paths:
           content:
             application/json:
               schema:
-                type: string
+                $ref: '#/components/schemas/BlueprintValidation'
         401:
           description: Unauthorized request for this blueprint
           content:
@@ -540,7 +540,7 @@ paths:
           content:
             application/json:
               schema:
-                type: string
+                $ref: '#/components/schemas/BlueprintValidation'
         401:
           description: Unauthorized request for this blueprint
           content:
@@ -1046,6 +1046,17 @@ paths:
 
 components:
   schemas:
+    BlueprintValidation:
+      required:
+        - blueprint_valid
+      type: object
+      properties:
+        blueprint_valid:
+          type: boolean
+          description: Blueprint is a valid TOSCA Cloud Service Archive
+        error:
+          type: string
+          description: Error description
     KeyPair:
       required:
       - key_pair_name
@@ -1141,7 +1152,6 @@ components:
       type: object
       required:
         - blueprint_id
-      #  - invocation_id
         - deployment_id
         - state
         - operation
