@@ -42,8 +42,7 @@ def delete_blueprint(blueprint_id, force=None):
     :rtype: Blueprint
     """
     if not force:
-        # TODO check in DB if all deployments with blueprint have been deployed
-        if False:
+        if SQL_database.blueprint_used_in_deployment(blueprint_id):
             return "Cannot delete blueprint, deployment with this blueprint exists", 403
 
     repo_url, _ = CSAR_db.get_repo_url(blueprint_id)
@@ -84,8 +83,7 @@ def delete_blueprint_version(blueprint_id, version_id, force=None):
     :rtype: Blueprint
     """
     if not force:
-        # TODO check in DB if all deployments with blueprint have been deployed
-        if False:
+        if SQL_database.blueprint_used_in_deployment(blueprint_id, version_id):
             return "Cannot delete blueprint, deployment with this blueprint exists", 403
 
     repo_url, _ = CSAR_db.get_repo_url(blueprint_id)
