@@ -53,14 +53,7 @@ def get_status(deployment_id):
     :rtype: Invocation
     """
     inv = invocation_service.load_invocation(deployment_id)
-    code = {
-        InvocationState.PENDING: 202,
-        InvocationState.IN_PROGRESS: 202,
-        InvocationState.SUCCESS: 201,
-        InvocationState.FAILED: 500
-    }
-
-    return inv, code[inv.state]
+    return inv, 200
 
 
 @security_controller.check_role_auth_deployment

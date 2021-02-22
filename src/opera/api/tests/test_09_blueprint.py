@@ -37,7 +37,7 @@ class TestPostNew:
 
     def test_success(self, client, csar_1):
         resp = client.post("/blueprint", data=csar_1)
-        assert_that(resp.status_code).is_equal_to(200)
+        assert_that(resp.status_code).is_equal_to(201)
         assert_that(resp.json).is_not_none().contains_only('blueprint_id', 'url',
                                                            'version_id', 'users', 'commit_sha', 'timestamp')
         uuid.UUID(resp.get_json()['blueprint_id'])
@@ -68,7 +68,7 @@ class TestPostMultipleVersions:
     def test_emtpy_request(self, client, csar_empty, csar_1):
         # prepare blueprint
         resp = client.post("/blueprint", data=csar_1)
-        assert_that(resp.status_code).is_equal_to(200)
+        assert_that(resp.status_code).is_equal_to(201)
         token = resp.json['blueprint_id']
 
         resp = client.post("/blueprint/{}".format(token), data=csar_empty, content_type='multipart/form-data')
@@ -81,7 +81,7 @@ class TestPostMultipleVersions:
         blueprint_id = resp1.json['blueprint_id']
         # test new version
         resp2 = client.post(f"/blueprint/{blueprint_id}", data=csar_2)
-        assert_that(resp2.status_code).is_equal_to(200)
+        assert_that(resp2.status_code).is_equal_to(201)
         assert_that(resp2.json).is_not_none().contains_only('blueprint_id', 'url', 'version_id',
                                                             'users', 'commit_sha', 'timestamp')
         assert_that(resp2.json['version_id']).is_equal_to('v2.0')
@@ -242,7 +242,7 @@ class TestUser:
         resp = client.post(f"/blueprint/{blueprint_token}/user/{username}")
         # since this is MockConnector, message should be 'user foo added'
         assert_that(resp.json).is_equal_to('User foo added')
-        assert_that(resp.status_code).is_equal_to(201)
+        assert_that(resp.status_code).is_equal_to(200)
 
         resp = client.get(f"/blueprint/{blueprint_token}/user")
         assert_that(resp.json).is_not_empty().contains_only('foo')
@@ -268,7 +268,7 @@ class TestUser:
 
         resp = client.delete(f"/blueprint/{blueprint_token}/user/{username}")
         assert_that(resp.json).is_equal_to('User foo deleted')
-        assert_that(resp.status_code).is_equal_to(201)
+        assert_that(resp.status_code).is_equal_to(200)
         resp = client.get(f"/blueprint/{blueprint_token}/user")
         assert_that(resp.json).is_empty()
 
@@ -294,7 +294,7 @@ class TestValidateExisting:
         mocker.patch('opera.api.controllers.background_invocation.InvocationWorkerProcess.validate', new=mock_validate)
         resp = client.put(f"/blueprint/{blueprint_id}/validate")
 
-        assert resp.status_code == 500
+        assert resp.status_code == 200
         assert_that(resp.json).contains("Exception stacktrace")
         mock_validate.assert_called_with(str(blueprint_id), None, None)
 
@@ -332,7 +332,7 @@ class TestValidateExistingVersion:
         mocker.patch('opera.api.controllers.background_invocation.InvocationWorkerProcess.validate', new=mock_validate)
         resp = client.put(f"/blueprint/{blueprint_id}/version/{version_id}/validate")
 
-        assert resp.status_code == 500
+        assert resp.status_code == 200
         assert_that(resp.json).contains("Exception stacktrace")
         mock_validate.assert_called_with(str(blueprint_id), version_id, None)
 
@@ -356,7 +356,7 @@ class TestValidateNew:
                      return_value="{}: {}".format(Exception.__class__.__name__, "Exception stacktrace"))
         resp = client.put(f"/blueprint/validate", data=csar_1)
 
-        assert resp.status_code == 500
+        assert resp.status_code == 200
         assert_that(resp.json).contains("Exception stacktrace")
 
     def test_ok(self, client, mocker, csar_1):

@@ -25,7 +25,7 @@ def delete_git_user(blueprint_id, user_id):
     """
     success, error_msg = CSAR_db.delete_blueprint_user(blueprint_id=blueprint_id, username=user_id)
     if success:
-        return f"User {user_id} deleted", 201
+        return f"User {user_id} deleted", 200
 
     return f"Could not delete user {user_id} from repository with blueprint_id '{blueprint_id}': {error_msg}", 500
 
@@ -162,7 +162,7 @@ def post_git_user(blueprint_id, user_id):
             'gitlab': f"User {user_id} added",
             'mock': f"User {user_id} added"
         }
-        return message[Settings.git_config['type']], 201
+        return message[Settings.git_config['type']], 200
 
     return f"Could not add user {user_id} to repository with blueprint_id '{blueprint_id}': {error_msg}", 500
 
@@ -193,7 +193,7 @@ def post_blueprint(blueprint_id, revision_msg=None):
                                            repo_url=result['url'],
                                            commit_sha=result['commit_sha'])
 
-    return Blueprint.from_dict(result), 200
+    return Blueprint.from_dict(result), 201
 
 
 def post_new_blueprint(revision_msg=None, project_domain=None):
@@ -228,7 +228,7 @@ def post_new_blueprint(revision_msg=None, project_domain=None):
                                            repo_url=result['url'],
                                            commit_sha=result['commit_sha'])
 
-    return Blueprint.from_dict(result), 200
+    return Blueprint.from_dict(result), 201
 
 
 @security_controller.check_role_auth_blueprint
@@ -245,9 +245,7 @@ def validate_existing(blueprint_id):
     inputs = xopera_util.inputs_file()
 
     exception = InvocationWorkerProcess.validate(blueprint_id, None, inputs)
-    if exception:
-        return exception, 500
-    return "Validation OK", 200
+    return exception or "Validation OK", 200
 
 
 @security_controller.check_role_auth_blueprint
@@ -266,9 +264,7 @@ def validate_existing_version(blueprint_id, version_id):
     inputs = xopera_util.inputs_file()
 
     exception = InvocationWorkerProcess.validate(blueprint_id, version_id, inputs)
-    if exception:
-        return exception, 500
-    return "Validation OK", 200
+    return exception or "Validation OK", 200
 
 
 def validate_new():
@@ -282,7 +278,5 @@ def validate_new():
     csar_file = connexion.request.files['CSAR']
 
     exception = InvocationWorkerProcess.validate_new(csar_file, inputs)
-    if exception:
-        return exception, 500
-    return "Validation OK", 200
+    return exception or "Validation OK", 200
 
