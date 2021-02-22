@@ -433,7 +433,6 @@ class PostgreSQL(Database):
             return False
 
         if version_id:
-            # TODO check if last version
             dbcur = self.connection.cursor()
             for deployment_id in deployment_ids:
                 query = "select version_id from {} where deployment_id = '{}' order by timestamp desc limit 1"\
