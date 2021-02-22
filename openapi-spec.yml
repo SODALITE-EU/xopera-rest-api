@@ -74,7 +74,7 @@ paths:
                   format: binary
         required: true
       responses:
-        200:
+        201:
           description: Successfully saved blueprint to database
           content:
             application/json:
@@ -129,7 +129,7 @@ paths:
                   format: binary
         required: true
       responses:
-        200:
+        201:
           description: Successfully saved blueprint to database
           content:
             application/json:
@@ -142,7 +142,7 @@ paths:
               schema:
                 type: string
         404:
-          description: Blueprint token not found
+          description: Blueprint not found
           content:
             application/json:
               schema:
@@ -274,7 +274,7 @@ paths:
           format: uuid
       responses:
         200:
-          description: user list returned
+          description: User list returned
           content:
             application/json:
               schema:
@@ -289,13 +289,13 @@ paths:
               schema:
                 type: string
         404:
-          description: blueprint not found
+          description: Blueprint not found
           content:
             application/json:
               schema:
                 type: string
         500:
-          description: DB error when getting user list
+          description: DB or REST API error
           content:
             application/json:
               schema:
@@ -325,7 +325,7 @@ paths:
         schema:
           type: string
       responses:
-        201:
+        200:
           description: User added or invite send
           content:
             application/json:
@@ -344,7 +344,7 @@ paths:
               schema:
                 type: string
         500:
-          description: DB error when adding user
+          description: DB or REST API error
           content:
             application/json:
               schema:
@@ -372,8 +372,8 @@ paths:
         schema:
           type: string
       responses:
-        201:
-          description: User de;eted
+        200:
+          description: User deleted
           content:
             application/json:
               schema:
@@ -391,7 +391,7 @@ paths:
               schema:
                 type: string
         500:
-          description: DB error when deleting user
+          description: DB or REST API error
           content:
             application/json:
               schema:
@@ -428,7 +428,7 @@ paths:
                   format: binary
       responses:
         200:
-          description: OK
+          description: Blueprint validated
           content:
             application/json:
               schema:
@@ -441,12 +441,6 @@ paths:
                 type: string
         404:
           description: Did not find blueprint
-          content:
-            application/json:
-              schema:
-                type: string
-        500:
-          description: Fail
           content:
             application/json:
               schema:
@@ -490,7 +484,7 @@ paths:
                   format: binary
       responses:
         200:
-          description: OK
+          description: Blueprint validated
           content:
             application/json:
               schema:
@@ -503,12 +497,6 @@ paths:
                 type: string
         404:
           description: Did not find blueprint
-          content:
-            application/json:
-              schema:
-                type: string
-        500:
-          description: Fail
           content:
             application/json:
               schema:
@@ -543,7 +531,7 @@ paths:
         required: true
       responses:
         200:
-          description: OK
+          description: Blueprint validated
           content:
             application/json:
               schema:
@@ -556,12 +544,6 @@ paths:
                 type: string
         404:
           description: Did not find blueprint
-          content:
-            application/json:
-              schema:
-                type: string
-        500:
-          description: Fail
           content:
             application/json:
               schema:
@@ -762,12 +744,6 @@ paths:
             application/json:
               schema:
                 type: string
-        500:
-          description: Job failed
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Invocation'
 
   /deployment/{deployment_id}/history:
     get:
@@ -917,7 +893,6 @@ paths:
             application/json:
               schema:
                 type: object
-                #$ref: '#/components/schemas/Invocation'
         401:
           description: Unauthorized request for this blueprint
           content:
