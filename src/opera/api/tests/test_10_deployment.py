@@ -120,7 +120,7 @@ class TestHistory:
         mocker.patch('opera.api.service.sqldb_service.OfflineStorage.get_deployment_history', return_value=[])
         deployment_id = uuid.uuid4()
         resp = client.get(f"/deployment/{deployment_id}/history")
-        assert resp.status_code == 400
+        assert resp.status_code == 404
         assert_that(resp.json).contains("History not found")
 
     def test_success(self, client, mocker, generic_invocation: Invocation, patch_auth_wrapper):

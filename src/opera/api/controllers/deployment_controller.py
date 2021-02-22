@@ -39,7 +39,7 @@ def get_deploy_log(deployment_id):
     """
     history = SQL_database.get_deployment_history(deployment_id)
     if not history:
-        return "History not found", 400
+        return "History not found", 404
     return history, 200
 
 

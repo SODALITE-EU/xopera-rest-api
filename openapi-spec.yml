@@ -92,6 +92,12 @@ paths:
             application/json:
               schema:
                 type: string
+        500:
+          description: DB or REST API exception
+          content:
+            application/json:
+              schema:
+                type: string
 
   /blueprint/{blueprint_id}:
     post:
@@ -281,7 +287,6 @@ paths:
                 type: array
                 items:
                   type: string
-
         401:
           description: Unauthorized request for this blueprint
           content:
@@ -720,14 +725,8 @@ paths:
           type: string
           format: uuid
       responses:
-        201:
-          description: Job done
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Invocation'
-        202:
-          description: Job accepted, still running
+        200:
+          description: Job found
           content:
             application/json:
               schema:
@@ -771,7 +770,7 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Invocation'
-        400:
+        404:
           description: Log file not found
           content:
             application/json:
@@ -833,6 +832,12 @@ paths:
                 $ref: '#/components/schemas/Invocation'
         401:
           description: Unauthorized request for this blueprint
+          content:
+            application/json:
+              schema:
+                type: string
+        403:
+          description: Not allowed, previous operation on deployment still running
           content:
             application/json:
               schema:
@@ -967,6 +972,12 @@ paths:
             application/json:
               schema:
                 type: string
+        403:
+          description: Not allowed, previous operation on deployment still running
+          content:
+            application/json:
+              schema:
+                type: string
         404:
           description: Did not find DI1 or DB2
           content:
@@ -1021,7 +1032,7 @@ paths:
               schema:
                 type: string
         403:
-          description: Undeploy not allowed
+          description: Not allowed, previous operation on deployment still running
           content:
             application/json:
               schema:
