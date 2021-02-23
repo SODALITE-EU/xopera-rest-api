@@ -74,7 +74,7 @@ paths:
                   format: binary
         required: true
       responses:
-        200:
+        201:
           description: Successfully saved blueprint to database
           content:
             application/json:
@@ -88,6 +88,12 @@ paths:
                 type: string
         406:
           description: Format not acceptable
+          content:
+            application/json:
+              schema:
+                type: string
+        500:
+          description: DB or REST API exception
           content:
             application/json:
               schema:
@@ -129,7 +135,7 @@ paths:
                   format: binary
         required: true
       responses:
-        200:
+        201:
           description: Successfully saved blueprint to database
           content:
             application/json:
@@ -142,7 +148,7 @@ paths:
               schema:
                 type: string
         404:
-          description: Blueprint token not found
+          description: Blueprint not found
           content:
             application/json:
               schema:
@@ -274,14 +280,13 @@ paths:
           format: uuid
       responses:
         200:
-          description: user list returned
+          description: User list returned
           content:
             application/json:
               schema:
                 type: array
                 items:
                   type: string
-
         401:
           description: Unauthorized request for this blueprint
           content:
@@ -289,13 +294,13 @@ paths:
               schema:
                 type: string
         404:
-          description: blueprint not found
+          description: Blueprint not found
           content:
             application/json:
               schema:
                 type: string
         500:
-          description: DB error when getting user list
+          description: DB or REST API error
           content:
             application/json:
               schema:
@@ -325,8 +330,8 @@ paths:
         schema:
           type: string
       responses:
-        201:
-          description: User added or invite send
+        200:
+          description: User added or invite sent
           content:
             application/json:
               schema:
@@ -344,7 +349,7 @@ paths:
               schema:
                 type: string
         500:
-          description: DB error when adding user
+          description: DB or REST API error
           content:
             application/json:
               schema:
@@ -372,8 +377,8 @@ paths:
         schema:
           type: string
       responses:
-        201:
-          description: User de;eted
+        200:
+          description: User deleted
           content:
             application/json:
               schema:
@@ -391,7 +396,7 @@ paths:
               schema:
                 type: string
         500:
-          description: DB error when deleting user
+          description: DB or REST API error
           content:
             application/json:
               schema:
@@ -428,11 +433,11 @@ paths:
                   format: binary
       responses:
         200:
-          description: OK
+          description: Blueprint validated
           content:
             application/json:
               schema:
-                type: string
+                $ref: '#/components/schemas/BlueprintValidation'
         401:
           description: Unauthorized request for this blueprint
           content:
@@ -441,12 +446,6 @@ paths:
                 type: string
         404:
           description: Did not find blueprint
-          content:
-            application/json:
-              schema:
-                type: string
-        500:
-          description: Fail
           content:
             application/json:
               schema:
@@ -490,11 +489,11 @@ paths:
                   format: binary
       responses:
         200:
-          description: OK
+          description: Blueprint validated
           content:
             application/json:
               schema:
-                type: string
+                $ref: '#/components/schemas/BlueprintValidation'
         401:
           description: Unauthorized request for this blueprint
           content:
@@ -503,12 +502,6 @@ paths:
                 type: string
         404:
           description: Did not find blueprint
-          content:
-            application/json:
-              schema:
-                type: string
-        500:
-          description: Fail
           content:
             application/json:
               schema:
@@ -543,11 +536,11 @@ paths:
         required: true
       responses:
         200:
-          description: OK
+          description: Blueprint validated
           content:
             application/json:
               schema:
-                type: string
+                $ref: '#/components/schemas/BlueprintValidation'
         401:
           description: Unauthorized request for this blueprint
           content:
@@ -556,12 +549,6 @@ paths:
                 type: string
         404:
           description: Did not find blueprint
-          content:
-            application/json:
-              schema:
-                type: string
-        500:
-          description: Fail
           content:
             application/json:
               schema:
@@ -738,14 +725,8 @@ paths:
           type: string
           format: uuid
       responses:
-        201:
-          description: Job done
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Invocation'
-        202:
-          description: Job accepted, still running
+        200:
+          description: Job found
           content:
             application/json:
               schema:
@@ -762,12 +743,6 @@ paths:
             application/json:
               schema:
                 type: string
-        500:
-          description: Job failed
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Invocation'
 
   /deployment/{deployment_id}/history:
     get:
@@ -795,7 +770,7 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Invocation'
-        400:
+        404:
           description: Log file not found
           content:
             application/json:
@@ -861,6 +836,12 @@ paths:
             application/json:
               schema:
                 type: string
+        403:
+          description: Not allowed, previous operation on deployment still running
+          content:
+            application/json:
+              schema:
+                type: string
         404:
           description: Did not find blueprint
           content:
@@ -917,7 +898,6 @@ paths:
             application/json:
               schema:
                 type: object
-                #$ref: '#/components/schemas/Invocation'
         401:
           description: Unauthorized request for this blueprint
           content:
@@ -992,6 +972,12 @@ paths:
             application/json:
               schema:
                 type: string
+        403:
+          description: Not allowed, previous operation on deployment still running
+          content:
+            application/json:
+              schema:
+                type: string
         404:
           description: Did not find DI1 or DB2
           content:
@@ -1046,7 +1032,7 @@ paths:
               schema:
                 type: string
         403:
-          description: Undeploy not allowed
+          description: Not allowed, previous operation on deployment still running
           content:
             application/json:
               schema:
@@ -1060,6 +1046,17 @@ paths:
 
 components:
   schemas:
+    BlueprintValidation:
+      required:
+        - blueprint_valid
+      type: object
+      properties:
+        blueprint_valid:
+          type: boolean
+          description: Blueprint is a valid TOSCA Cloud Service Archive
+        error:
+          type: string
+          description: Error description
     KeyPair:
       required:
       - key_pair_name
@@ -1155,7 +1152,6 @@ components:
       type: object
       required:
         - blueprint_id
-      #  - invocation_id
         - deployment_id
         - state
         - operation

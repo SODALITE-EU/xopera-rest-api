@@ -75,7 +75,7 @@ class TestStatus:
 
         resp = client.get(f"/deployment/{inv.deployment_id}/status")
         assert resp.json['state'] == inv.state
-        assert resp.status_code == 202
+        assert resp.status_code == 200
 
     def test_in_progress(self, client, generic_invocation: Invocation, patch_auth_wrapper):
         inv = generic_invocation
@@ -89,7 +89,7 @@ class TestStatus:
 
         resp = client.get(f"/deployment/{inv.deployment_id}/status")
         assert resp.json['state'] == inv.state
-        assert resp.status_code == 202
+        assert resp.status_code == 200
 
     def test_success(self, client, generic_invocation: Invocation, patch_auth_wrapper):
         inv = generic_invocation
@@ -100,7 +100,7 @@ class TestStatus:
 
         resp = client.get(f"/deployment/{inv.deployment_id}/status")
         assert resp.json['state'] == inv.state
-        assert resp.status_code == 201
+        assert resp.status_code == 200
 
     def test_failed(self, client, generic_invocation: Invocation, patch_auth_wrapper):
         inv = generic_invocation
@@ -111,7 +111,7 @@ class TestStatus:
 
         resp = client.get(f"/deployment/{inv.deployment_id}/status")
         assert resp.json['state'] == inv.state
-        assert resp.status_code == 500
+        assert resp.status_code == 200
 
 
 class TestHistory:
@@ -120,7 +120,7 @@ class TestHistory:
         mocker.patch('opera.api.service.sqldb_service.OfflineStorage.get_deployment_history', return_value=[])
         deployment_id = uuid.uuid4()
         resp = client.get(f"/deployment/{deployment_id}/history")
-        assert resp.status_code == 400
+        assert resp.status_code == 404
         assert_that(resp.json).contains("History not found")
 
     def test_success(self, client, mocker, generic_invocation: Invocation, patch_auth_wrapper):
