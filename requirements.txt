@@ -9,7 +9,7 @@ openshift==0.11.2
 
 # Amazon AWS
 boto==2.49.0
-boto3==1.17.8
+boto3==1.17.15
 
 # openapi
 connexion[swagger-ui] >= 2.7.0
