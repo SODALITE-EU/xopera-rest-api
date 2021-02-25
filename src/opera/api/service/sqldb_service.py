@@ -619,7 +619,7 @@ class PostgreSQL(Database):
         """
         returns list of all version ids for blueprint
         """
-        log_data = self.get_git_transaction_data(blueprint_id, all=True)
+        log_data = self.get_git_transaction_data(blueprint_id, fetch_all=True)
         all_tags = {json_log['version_id'] for json_log in log_data}
         deleted_tags = {json_log['version_id'] for json_log in log_data if json_log['job'] == 'delete'}
         return sorted(list(all_tags - deleted_tags))
