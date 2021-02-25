@@ -220,7 +220,10 @@ class OfflineStorage(Database):
         Delete session data for deployment
         """
         file_path = self.opera_session_data_path / str(deployment_id)
-        file_path.unlink(missing_ok=True)
+        # TODO change back to unlink(missing_ok=True) when jenkins upgrades to python3.8
+        # file_path.unlink(missing_ok=True)
+        if file_path.exists():
+            file_path.unlink()
 
     def update_deployment_log(self, invocation_id: uuid, inv: Invocation):
         """
