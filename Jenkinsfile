@@ -183,10 +183,10 @@ pipeline {
                     python3 -m pip install --upgrade pip
                     python3 -m pip install opera[openstack]==0.6.4 docker
                     ansible-galaxy install geerlingguy.pip,2.0.0 --force
-                    ansible-galaxy install geerlingguy.docker,2.9.0 --force
+                    ansible-galaxy install geerlingguy.docker,3.0.0 --force
                     ansible-galaxy install geerlingguy.repo-epel,3.0.0 --force
                     rm -r -f xOpera-rest-blueprint/modules/
-                    git clone -b 3.1.1 https://github.com/SODALITE-EU/iac-modules.git xOpera-rest-blueprint/modules/
+                    git clone -b 3.2.1 https://github.com/SODALITE-EU/iac-modules.git xOpera-rest-blueprint/modules/
                     cp ${ca_crt_file} xOpera-rest-blueprint/modules/docker/artifacts/ca.crt
                     cp ${ca_crt_file} xOpera-rest-blueprint/modules/misc/tls/artifacts/ca.crt
                     cp ${ca_key_file} xOpera-rest-blueprint/modules/docker/artifacts/ca.key
