@@ -29,6 +29,10 @@ postgres_env:
 xopera_env:
   DEBUG: "${xopera_debug}"
   LOG_LEVEL: ${xopera_log_level}
+  # OIDC SETTINGS
+  OIDC_INTROSPECTION_ENDPOINT: ${oidc_endpoint}
+  OIDC_CLIENT_SECRET: ${oidc_secret}
+  AUTH_API_KEY: ${auth_api_key}
   # XOPERA GIT SETTINGS
   XOPERA_GIT_TYPE: ${git_type}
   XOPERA_GIT_URL: ${git_server_url}
