@@ -94,10 +94,10 @@ pipeline {
                 sh  """ #!/bin/bash
                         python3 -m venv venv-test
                         . venv-test/bin/activate
-                        pip3 install --no-cache-dir -r requirements.txt
+                        python3 -m pip install --upgrade pip
+                        python3 -m pip install --no-cache-dir -r requirements.txt
                         ./generate.sh
                         cd src/
-                        touch *.xml
                         python3 -m pytest --junitxml=results.xml --cov=./opera/api/ --cov=./opera/api/gitCsarDB --cov=./opera/api/blueprint_converters --cov=./opera/api/settings --cov=./opera/api/service --cov=./opera/api/util --cov=./opera/api/controllers --cov-report xml
                     """
                 junit 'src/results.xml'
