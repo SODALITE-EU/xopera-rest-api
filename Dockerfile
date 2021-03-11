@@ -14,8 +14,8 @@ RUN export BUILD_PREREQS="gcc musl-dev libffi-dev openssl-dev postgresql-dev car
 
 FROM python:3.8.8-alpine3.13
 
-ARG HELM_VERSION=3.4.0
-ARG KUBECTL_VERSION=1.20.0
+ARG HELM_VERSION=3.5.3
+ARG KUBECTL_VERSION=1.20.4
 ENV BASE_URL=https://get.helm.sh
 ENV TAR_FILE=helm-v${HELM_VERSION}-linux-amd64.tar.gz
 
