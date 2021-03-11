@@ -2,14 +2,14 @@
 opera==0.6.4
 
 # openstack
-openstacksdk==0.53.0
+openstacksdk==0.54.0
 
 # k8s
-openshift==0.11.2
+openshift==0.12.0
 
 # Amazon AWS
 boto==2.49.0
-boto3==1.17.15
+boto3==1.17.25
 
 # openapi
 connexion[swagger-ui] >= 2.7.0
@@ -17,7 +17,7 @@ python-dateutil >= 2.8.1
 tornado==6.1
 
 # GitCSARdb
-GitPython==3.1.13
+GitPython==3.1.14
 PyGithub==1.54.1
 python-gitlab==2.6.0
 
