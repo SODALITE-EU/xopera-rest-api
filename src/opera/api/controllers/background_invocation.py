@@ -6,6 +6,7 @@ import shutil
 import tempfile
 import traceback
 import uuid
+import sys
 from pathlib import Path
 from typing import Optional
 from werkzeug.datastructures import FileStorage
@@ -79,18 +80,14 @@ class InvocationWorkerProcess(multiprocessing.Process):
                 inv.state = InvocationState.FAILED
                 inv.exception = "{}: {}\n\n{}".format(e.__class__.__name__, str(e), traceback.format_exc())
 
-            instance_state = InvocationService.get_instance_state(location)
+            inv.instance_state = InvocationService.get_instance_state(location)
 
-            file_stdout.flush()
-            file_stderr.flush()
-            stdout = InvocationWorkerProcess.read_file(InvocationService.stdout_file(inv.deployment_id))
-            stderr = InvocationWorkerProcess.read_file(InvocationService.stderr_file(inv.deployment_id))
-            file_stdout.truncate()
-            file_stderr.truncate()
-
-            inv.instance_state = instance_state
-            inv.stdout = stdout
-            inv.stderr = stderr
+            sys.stdout.flush()
+            sys.stderr.flush()
+            inv.stdout = InvocationWorkerProcess.read_file(InvocationService.stdout_file(inv.deployment_id))
+            inv.stderr = InvocationWorkerProcess.read_file(InvocationService.stderr_file(inv.deployment_id))
+            file_stdout.close()
+            file_stderr.close()
 
             InvocationService.save_dot_opera_to_db(inv, location)
             InvocationService.save_invocation(invocation_id, inv)
@@ -107,7 +104,7 @@ class InvocationWorkerProcess(multiprocessing.Process):
             opera_storage = Storage.create(".opera")
             service_template = str(entry_definitions(location))
             opera_deploy(service_template, inv.inputs, opera_storage,
-                         verbose_mode=True, num_workers=inv.workers, delete_existing_state=True)
+                         verbose_mode=False, num_workers=inv.workers, delete_existing_state=True)
             return opera_outputs(opera_storage)
 
     @staticmethod
@@ -122,7 +119,7 @@ class InvocationWorkerProcess(multiprocessing.Process):
             opera_storage = Storage.create(".opera")
             service_template = str(entry_definitions(location))
             opera_deploy(service_template, inv.inputs, opera_storage,
-                         verbose_mode=True, num_workers=inv.workers, delete_existing_state=inv.clean_state)
+                         verbose_mode=False, num_workers=inv.workers, delete_existing_state=inv.clean_state)
             return opera_outputs(opera_storage)
 
     @staticmethod
@@ -137,7 +134,7 @@ class InvocationWorkerProcess(multiprocessing.Process):
             opera_storage = Storage.create(".opera")
             if inv.inputs:
                 opera_storage.write_json(inv.inputs, "inputs")
-            opera_undeploy(opera_storage, verbose_mode=True, num_workers=inv.workers)
+            opera_undeploy(opera_storage, verbose_mode=False, num_workers=inv.workers)
             return opera_outputs(opera_storage)
 
     @staticmethod
@@ -152,12 +149,12 @@ class InvocationWorkerProcess(multiprocessing.Process):
             instance_diff = opera_diff_instances(storage_old, location_old,
                                                  storage_new, location_new,
                                                  opera_TemplateComparer(), opera_InstanceComparer(),
-                                                 verbose_mode=True)
+                                                 verbose_mode=False)
 
             opera_update(storage_old, location_old,
                          storage_new, location_new,
                          opera_InstanceComparer(), instance_diff,
-                         verbose_mode=True, num_workers=inv.workers, overwrite=False)
+                         verbose_mode=False, num_workers=inv.workers, overwrite=False)
             outputs = opera_outputs(storage_new)
 
         shutil.rmtree(location_old)
@@ -203,7 +200,7 @@ class InvocationWorkerProcess(multiprocessing.Process):
             instance_diff = opera_diff_instances(storage_old, location_old,
                                                  storage_new, location_new,
                                                  opera_TemplateComparer(), opera_InstanceComparer(),
-                                                 verbose_mode=True)
+                                                 verbose_mode=False)
         shutil.rmtree(location_new)
         shutil.rmtree(location_old)
         return instance_diff
@@ -319,8 +316,11 @@ class InvocationService:
                 inv.stderr = InvocationWorkerProcess.read_file(cls.stderr_file(inv.deployment_id))
             return inv
 
-        except Exception in (FileNotFoundError, AttributeError):
-            return None
+        except BaseException as e:
+            if isinstance(e, FileNotFoundError) or isinstance(e, AttributeError):
+                return None
+            else:
+                raise e
 
     @classmethod
     def save_invocation(cls, invocation_id: uuid, inv: Invocation):
