@@ -31,7 +31,7 @@ pipeline {
        // OIDC secrets
        oidc_endpoint = credentials('oidc-endpoint')
        oidc_secret = credentials('oidc-secret')
-       auth_api_key = credentials('xopera-auth-api-key')
+       auth_api_key = credentials('auth-api-key')
        // GIT SETTINGS
        git_type = "gitlab"
        git_server_url = "https://gitlab.com"
