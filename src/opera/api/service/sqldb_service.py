@@ -1,5 +1,4 @@
 import json
-import logging as log
 import os
 import uuid
 
@@ -18,11 +17,11 @@ def connect(sql_config):
         return OfflineStorage()
     try:
         database = PostgreSQL(sql_config)
-        log.info('SQL_database: PostgreSQL')
+        logger.info('SQL_database: PostgreSQL')
     except psycopg2.Error as e:
-        log.error(f"Error while connecting to PostgreSQL: {str(e)}")
+        logger.error(f"Error while connecting to PostgreSQL: {str(e)}")
         database = OfflineStorage()
-        log.info("SQL_database: OfflineStorage")
+        logger.info("SQL_database: OfflineStorage")
 
     return database
 
@@ -305,9 +304,9 @@ class OfflineStorage(Database):
             (location / str(timestamp)).write_text(json.dumps(git_transaction_data, indent=2))
         except Exception as e:
 
-            log.error(f'Failed to update git log in OfflineStorage database: {str(e)}')
+            logger.error(f'Failed to update git log in OfflineStorage database: {str(e)}')
             return False
-        log.info('Updated git log in OfflineStorage database')
+        logger.info('Updated git log in OfflineStorage database')
         return True
 
     def get_git_transaction_data(self, blueprint_id, version_id=None, fetch_all=False):
@@ -402,7 +401,7 @@ class PostgreSQL(Database):
                         );""".format(Settings.project_domain_table))
 
     def disconnect(self):
-        log.info('disconnecting PostgreSQL database')
+        logger.info('disconnecting PostgreSQL database')
         self.connection.close()
 
     def execute(self, command, replacements=None):
@@ -413,7 +412,7 @@ class PostgreSQL(Database):
             else:
                 dbcur.execute(command)
         except psycopg2.Error as e:
-            log.debug(str(e))
+            logger.debug(str(e))
             dbcur.execute("ROLLBACK")
             return False
         dbcur.close()
@@ -520,9 +519,9 @@ class PostgreSQL(Database):
                    tree=excluded.tree;"""
             .format(Settings.opera_session_data_table), (str(deployment_id), timestamp, tree_str))
         if response:
-            log.info('Updated dot_opera_data in PostgreSQL database')
+            logger.info('Updated dot_opera_data in PostgreSQL database')
         else:
-            log.error('Failed to update dot_opera_data in PostgreSQL database')
+            logger.error('Failed to update dot_opera_data in PostgreSQL database')
         return response
 
     def get_opera_session_data(self, deployment_id):
@@ -552,9 +551,9 @@ class PostgreSQL(Database):
             "delete from {} where deployment_id = '{}'"
             .format(Settings.opera_session_data_table, str(deployment_id)))
         if response:
-            log.info(f'Deleted opera_session_data for {deployment_id} from PostgreSQL database')
+            logger.info(f'Deleted opera_session_data for {deployment_id} from PostgreSQL database')
         else:
-            log.error(f'Failed to delete opera_session_data for {deployment_id} from PostgreSQL database')
+            logger.error(f'Failed to delete opera_session_data for {deployment_id} from PostgreSQL database')
         return response
 
     def update_deployment_log(self, invocation_id: uuid, inv: Invocation):
@@ -572,9 +571,9 @@ class PostgreSQL(Database):
              str(invocation_id), str(inv.blueprint_id),
              inv.version_id, json.dumps(inv.to_dict(), cls=file_util.UUIDEncoder)))
         if response:
-            log.info('Updated deployment log in PostgreSQL database')
+            logger.info('Updated deployment log in PostgreSQL database')
         else:
-            log.error('Failed to update deployment log in PostgreSQL database')
+            logger.error('Failed to update deployment log in PostgreSQL database')
         return response
 
     def get_deployment_status(self, deployment_id: uuid):
@@ -640,9 +639,9 @@ class PostgreSQL(Database):
             values (%s, %s, %s, %s, %s, %s, %s)""".format(Settings.git_log_table),
             (str(blueprint_id), version_id, revision_msg, job, git_backend, repo_url, commit_sha))
         if response:
-            log.info('Updated git log in PostgreSQL database')
+            logger.info('Updated git log in PostgreSQL database')
         else:
-            log.error('Fail to update git log in PostgreSQL database')
+            logger.error('Fail to update git log in PostgreSQL database')
         return response
 
     def get_git_transaction_data(self, blueprint_id: uuid, version_id: str = None, fetch_all: bool = False):
@@ -705,9 +704,9 @@ class PostgreSQL(Database):
             "insert into {} (blueprint_id, project_domain) values (%s, %s)"
                 .format(Settings.project_domain_table), (str(blueprint_id), project_domain))
         if response:
-            log.info('Updated {} in PostgreSQL database'.format(Settings.project_domain_table))
+            logger.info('Updated {} in PostgreSQL database'.format(Settings.project_domain_table))
         else:
-            log.error('Failed to update {} in PostgreSQL database'.format(Settings.project_domain_table))
+            logger.error('Failed to update {} in PostgreSQL database'.format(Settings.project_domain_table))
         return response
 
 

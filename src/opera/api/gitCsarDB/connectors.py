@@ -6,6 +6,10 @@ import git
 import gitlab
 from github import Github, GithubException
 from gitlab import Gitlab
+from opera.api.log import get_logger
+
+
+logger = get_logger(__name__)
 
 
 class Connector:
@@ -305,7 +309,7 @@ class GitlabConnector(Connector):
             project = gl.projects.create({'name': repo_name, 'visibility': "private"})
         except gitlab.exceptions.GitlabCreateError as e:
             raise self.RepoExistsError(
-                f"Could not create repo {repo_name} at {self.url}, repo already exists: {str(e)}")
+                f"Could not create repo {repo_name} at {self.url}: {str(e)}")
 
     def __project_id(self, project_name):
         gl = Gitlab(url=self.url, private_token=self.auth_token)

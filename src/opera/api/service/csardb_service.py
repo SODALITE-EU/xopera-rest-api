@@ -1,4 +1,3 @@
-import logging as log
 import shutil
 import tempfile
 import uuid
@@ -10,6 +9,10 @@ from opera.api import gitCsarDB
 from opera.api.blueprint_converters import csar_to_blueprint
 from opera.api.blueprint_converters.blueprint2CSAR import validate_csar
 from opera.api.util.timestamp_util import datetime_now_to_string
+from opera.api.log import get_logger
+
+
+logger = get_logger(__name__)
 
 
 class GitDB:
@@ -65,14 +68,14 @@ class GitDB:
             try:
                 csar_to_blueprint(csar=CSAR_path, dst=path)
             except shutil.ReadError as e:
-                log.error(str(e))
+                logger.error(str(e))
                 shutil.rmtree(str(workdir))
                 return None, str(e)
             shutil.rmtree(str(workdir))
             try:
                 validate_csar(path, raise_exceptions=True)
             except Exception as e:
-                log.error(str(e))
+                logger.error(str(e))
                 shutil.rmtree(str(path))
                 return None, str(e)
 
@@ -152,20 +155,20 @@ class GitDB:
         if version_id is not None:
             try:
                 if self.connection.delete_tag(csar_token=blueprint_id, version_tag=version_id):
-                    log.debug(f'deleted tag {version_id}')
+                    logger.debug(f'deleted tag {version_id}')
                     return 1, 200
-                log.debug(f'tag {version_id} does not exist')
+                logger.debug(f'tag {version_id} does not exist')
                 return 0, 404  # tag does not exist
             except FileNotFoundError as e:
-                log.debug(str(e))
+                logger.debug(str(e))
                 return 0, 404  # blueprint does not exist
 
         try:
 
             return self.connection.delete_repo(csar_token=blueprint_id), 200
         except FileNotFoundError as e:
-            log.debug(str(e))
+            logger.debug(str(e))
             return 0, 404
         except Exception as e:
-            log.error(str(e))
+            logger.error(str(e))
             return 0, 500
