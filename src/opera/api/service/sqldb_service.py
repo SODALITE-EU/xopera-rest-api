@@ -172,7 +172,37 @@ class OfflineStorage(Database):
         """
         Checks if, according to records in git_log table blueprint (version) exists
         """
-        pass
+        blueprint_path = self.git_log_path / str(blueprint_id)
+        # first log is the most recent
+        logs = sorted([json.load(logfile.open('r')) for logfile in blueprint_path.glob('*')], key=lambda x: x['timestamp'], reverse=True)
+
+        # check blueprint has not been deleted
+        if not logs:
+            # blueprint has never existed
+            logger.debug(f"Blueprint {blueprint_id} has never existed")
+            return False
+        last_version_id, last_job = logs[0]['version_id'], logs[0]['job']
+        if last_version_id is None and last_job == "delete":
+            # entire blueprint has been deleted
+            logger.debug(f"Entire blueprint {blueprint_id} has been deleted, does not exist any more")
+            return False
+
+        if version_id:
+            logs_version = [log for log in logs if log['version_id'] == version_id]
+            # check version has not been deleted
+            if not logs_version:
+                # blueprint version has never existed
+                logger.debug(f"Blueprint-version {blueprint_id}/{version_id} has never existed")
+                return False
+
+            last_job = logs_version[0]['job']
+            if last_job == "delete":
+                # blueprint version has been deleted
+                logger.debug(f"Blueprint-version {blueprint_id}/{version_id} has been deleted, does not exist any more")
+                return False
+
+        # all checks have passed, blueprint (version) exists
+        return True
 
     def get_deployment_ids(self, blueprint_id: uuid, version_id: str = None):
         """
@@ -306,7 +336,7 @@ class OfflineStorage(Database):
 
             logger.error(f'Failed to update git log in OfflineStorage database: {str(e)}')
             return False
-        logger.info('Updated git log in OfflineStorage database')
+        logger.debug(f'Updated git log for blueprint-version {blueprint_id}/{version_id}, transaction {job} in OfflineStorage database')
         return True
 
     def get_git_transaction_data(self, blueprint_id, version_id=None, fetch_all=False):
@@ -708,15 +738,3 @@ class PostgreSQL(Database):
         else:
             logger.error('Failed to update {} in PostgreSQL database'.format(Settings.project_domain_table))
         return response
-
-
-if __name__ == '__main__':
-    db = PostgreSQL({
-        'host': 'localhost',
-        'port': "5432",
-        'database': 'postgres',
-        'user': 'postgres',
-        'password': 'password'
-    })
-    a = db.version_exists('d87549a8-d0fe-43d7-801b-ada64d1f2c43', version_id='v4.0')
-    print(a)

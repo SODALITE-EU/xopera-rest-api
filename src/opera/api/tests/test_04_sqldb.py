@@ -11,6 +11,77 @@ import logging
 
 
 # OfflineStorage tests
+class TestOfflineStorageVersionExists:
+
+    def test_blueprint_has_never_existed(self, caplog, sql_db: OfflineStorage):
+        # Test preparation
+        caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
+
+        blueprint_id = uuid.uuid4()
+        assert_that(sql_db.version_exists(blueprint_id)).is_false()
+        assert_that(caplog.text).contains(f"Blueprint {blueprint_id} has never existed")
+
+    def test_blueprint_deleted(self, caplog, sql_db: OfflineStorage):
+        # test set up
+        caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
+        blueprint_id = uuid.uuid4()
+        version_ids = [f'v{i + 1}.0' for i in range(5)]
+        for version_id in version_ids:
+            sql_db.save_git_transaction_data(blueprint_id=blueprint_id, revision_msg='',
+                                             job='update', git_backend='',
+                                             repo_url='', version_id=version_id)
+
+        # 'delete' blueprint
+        sql_db.save_git_transaction_data(blueprint_id=blueprint_id, revision_msg='',
+                                         job='delete', git_backend='',
+                                         repo_url='')
+
+        assert_that(sql_db.version_exists(blueprint_id)).is_false()
+        assert_that(caplog.text).contains(f"Entire blueprint {blueprint_id} has been deleted, does not exist any more")
+
+    def test_version_has_never_existed(self, caplog, sql_db: OfflineStorage):
+        # test set up
+        caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
+        blueprint_id = uuid.uuid4()
+        version_ids = [f'v{i + 1}.0' for i in range(3)]
+        for version_id in version_ids:
+            sql_db.save_git_transaction_data(blueprint_id=blueprint_id, revision_msg='',
+                                             job='update', git_backend='',
+                                             repo_url='', version_id=version_id)
+
+        version_id = 'v5.0'
+        assert_that(sql_db.version_exists(blueprint_id, version_id)).is_false()
+        assert_that(caplog.text).contains(f"Blueprint-version {blueprint_id}/{version_id} has never existed")
+
+    def test_version_deleted(self, caplog, sql_db: OfflineStorage):
+        caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
+        blueprint_id = uuid.uuid4()
+        version_ids = [f'v{i + 1}.0' for i in range(3)]
+        for version_id in version_ids:
+            sql_db.save_git_transaction_data(blueprint_id=blueprint_id, revision_msg='',
+                                             job='update', git_backend='',
+                                             repo_url='', version_id=version_id)
+        # delete second version
+        version_id = version_ids[1]
+        sql_db.save_git_transaction_data(blueprint_id=blueprint_id, revision_msg='',
+                                         job='delete', git_backend='',
+                                         repo_url='', version_id=version_id)
+
+        assert_that(sql_db.version_exists(blueprint_id, version_id)).is_false()
+        assert_that(caplog.text).contains(f"Blueprint-version {blueprint_id}/{version_id} has been deleted, does not "
+                                          f"exist any more")
+
+    def test_version_exists(self, caplog, sql_db: OfflineStorage):
+        blueprint_id = uuid.uuid4()
+        version_ids = [f'v{i + 1}.0' for i in range(5)]
+        for version_id in version_ids:
+            sql_db.save_git_transaction_data(blueprint_id=blueprint_id, revision_msg='',
+                                             job='update', git_backend='',
+                                             repo_url='', version_id=version_id)
+        version_id = version_ids[2]
+        assert_that(sql_db.version_exists(blueprint_id, version_id)).is_true()
+
+
 class TestOfflineStorageDeploymentLog:
     def test_log(self, sql_db: OfflineStorage, generic_invocation: Invocation):
         inv = generic_invocation
