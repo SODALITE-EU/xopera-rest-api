@@ -8,6 +8,9 @@ import psycopg2
 from opera.api.openapi.models import Invocation
 from opera.api.settings import Settings
 from opera.api.util import timestamp_util, file_util
+from opera.api.log import get_logger
+
+logger = get_logger(__name__)
 
 
 def connect(sql_config):
@@ -33,6 +36,12 @@ class Database:
     def disconnect(self):
         """
         closes database connection
+        """
+        pass
+
+    def version_exists(self, blueprint_id: uuid, version_id=None) -> bool:
+        """
+        Checks if, according to records in git_log table blueprint (version) exists
         """
         pass
 
@@ -158,6 +167,12 @@ class OfflineStorage(Database):
 
     def disconnect(self):
         # does not need to do anything
+        pass
+
+    def version_exists(self, blueprint_id: uuid, version_id=None) -> bool:
+        """
+        Checks if, according to records in git_log table blueprint (version) exists
+        """
         pass
 
     def get_deployment_ids(self, blueprint_id: uuid, version_id: str = None):
@@ -403,6 +418,49 @@ class PostgreSQL(Database):
             return False
         dbcur.close()
         self.connection.commit()
+        return True
+
+    def version_exists(self, blueprint_id: uuid, version_id=None) -> bool:
+        """
+        Checks if, according to records in git_log table blueprint (version) exists
+        """
+        # check blueprint has not been deleted
+        dbcur = self.connection.cursor()
+        query = "select version_id,job  from {} " \
+                "where blueprint_id='{}' " \
+                "order by timestamp desc limit 1" \
+                .format(Settings.git_log_table, blueprint_id)
+        dbcur.execute(query)
+        line = dbcur.fetchone()
+        if not line:
+            # blueprint has never existed
+            logger.debug(f"Blueprint {blueprint_id} has never existed")
+            return False
+        last_version_id, last_job = line[0], line[1]
+        if last_version_id is None and last_job == "delete":
+            # entire blueprint has been deleted
+            logger.debug(f"Entire blueprint {blueprint_id} has been deleted, does not exist any more")
+            return False
+
+        if version_id:
+            # check version has not been deleted
+            query = "select job from {} " \
+                    "where blueprint_id='{}' and version_id='{}' " \
+                    "order by timestamp desc limit 1" \
+                    .format(Settings.git_log_table, blueprint_id, version_id)
+            dbcur.execute(query)
+            line = dbcur.fetchone()
+            if not line:
+                # blueprint version has never existed
+                logger.debug(f"Blueprint-version {blueprint_id}/{version_id} has never existed")
+                return False
+            last_job = line[0]
+            if last_job == "delete":
+                # blueprint version has been deleted
+                logger.debug(f"Blueprint-version {blueprint_id}/{version_id} has been deleted, does not exist any more")
+                return False
+
+        # all checks have passed, blueprint (version) exists
         return True
 
     def get_deployment_ids(self, blueprint_id: uuid, version_id: str = None):
@@ -661,5 +719,5 @@ if __name__ == '__main__':
         'user': 'postgres',
         'password': 'password'
     })
-    a = db.blueprint_used_in_deployment('7c3f36d2-089c-403d-9723-a6275b5b69d1')
+    a = db.version_exists('d87549a8-d0fe-43d7-801b-ada64d1f2c43', version_id='v4.0')
     print(a)

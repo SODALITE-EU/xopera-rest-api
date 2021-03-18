@@ -5,11 +5,13 @@ from pathlib import Path
 from assertpy import assert_that
 
 from opera.api.openapi.models import Invocation
-from opera.api.service.sqldb_service import OfflineStorage
+from opera.api.service.sqldb_service import OfflineStorage, PostgreSQL
 from opera.api.util import file_util, timestamp_util
+import logging
 
 
-class TestDeploymentLog:
+# OfflineStorage tests
+class TestOfflineStorageDeploymentLog:
     def test_log(self, sql_db: OfflineStorage, generic_invocation: Invocation):
         inv = generic_invocation
         inv.deployment_id = str(uuid.uuid4())
@@ -40,7 +42,7 @@ class TestDeploymentLog:
         assert uuid.UUID(last_id) == inv_ids[-1]
 
 
-class TestBlueprintInDeployment:
+class TestOfflineStorageBlueprintInDeployment:
     def test_get_deployment_ids(self, sql_db: OfflineStorage, generic_invocation):
         # save a couple invocations with same blueprint_id
         blueprint_id = uuid.uuid4()
@@ -89,7 +91,7 @@ class TestBlueprintInDeployment:
         assert_that(sql_db.blueprint_used_in_deployment(blueprint_id, version_ids[1])).is_false()
 
 
-class TestSessionData:
+class TestOfflineStorageSessionData:
 
     def test_save_session_data(self, sql_db: OfflineStorage, generic_dir: Path):
         deployment_id = uuid.uuid4()
@@ -122,3 +124,144 @@ class TestSessionData:
         # test function
         sql_db.delete_opera_session_data(deployment_id)
         assert not (sql_db.opera_session_data_path / str(deployment_id)).exists()
+
+
+# PostgreSQL tests
+
+class FakePostgres:
+    def __init__(self, **kwargs):
+        pass
+
+    @staticmethod
+    def cursor():
+        return NoneCursor()
+
+    def commit(self):
+        pass
+
+
+# Class to be redefined with custom fetchone or fetchall function
+class NoneCursor:
+    def __init__(self):
+        self.command = ""
+
+    def execute(self, command):
+        self.command = command
+
+    def fetchone(self):
+        return None
+
+    def fetchall(self):
+        return None
+
+    def close(self):
+        pass
+
+
+class BlueprintDeletedCursor(NoneCursor):
+    def fetchone(self):
+
+        # last db entry for this blueprint is delete transaction for entire blueprint (version_id = None)
+        return None, "delete"
+
+
+class VersionNeverExistedCursor(NoneCursor):
+    def fetchone(self):
+        # Blueprint exist and has not been deleted
+        if "select version_id,job" in self.command:
+            return 'v4.0', 'update'
+        # version not found
+        return None
+
+
+class VersionDeletedCursor(NoneCursor):
+    def fetchone(self):
+        # Blueprint exist and has not been deleted
+        if "select version_id,job" in self.command:
+            return 'v4.0', 'update'
+
+        # job in last db entry for this blueprint version is delete
+        return ["delete"]
+
+
+class VersionExistsCursor(NoneCursor):
+    def fetchone(self):
+        # Blueprint exist and has not been deleted
+        if "select version_id,job" in self.command:
+            return 'a', 'update'
+
+        # job in last db entry for this blueprint version is not delete
+        return ["update"]
+
+
+class TestPostgreSQLVersionExists:
+
+    def test_blueprint_has_never_existed(self, mocker, caplog):
+        # Test preparation
+        caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
+        mocker.patch('psycopg2.connect', new=FakePostgres)
+        db = PostgreSQL({})
+
+        # Testing
+        blueprint_id = uuid.uuid4()
+        version_id = 'v4.0'
+        exists = db.version_exists(blueprint_id, version_id)
+        assert_that(exists).is_false()
+        assert_that(caplog.text).contains(f"Blueprint {blueprint_id} has never existed")
+
+    def test_blueprint_deleted(self, mocker, monkeypatch, caplog):
+        # test set up
+        caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
+        mocker.patch('psycopg2.connect', new=FakePostgres)
+        db = PostgreSQL({})
+        monkeypatch.setattr(db.connection, 'cursor', BlueprintDeletedCursor)
+
+        # Testing
+        blueprint_id = uuid.uuid4()
+        version_id = 'v4.0'
+        exists = db.version_exists(blueprint_id, version_id)
+        assert_that(exists).is_false()
+        assert_that(caplog.text).contains(f"Entire blueprint {blueprint_id} has been deleted, does not exist any more")
+
+    def test_version_has_never_existed(self, mocker, monkeypatch, caplog):
+        # test set up
+        caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
+        mocker.patch('psycopg2.connect', new=FakePostgres)
+        db = PostgreSQL({})
+        monkeypatch.setattr(db.connection, 'cursor', VersionNeverExistedCursor)
+
+        # testing
+        blueprint_id = uuid.uuid4()
+        version_id = 'v4.0'
+        exists = db.version_exists(blueprint_id, version_id)
+        assert_that(exists).is_false()
+        assert_that(caplog.text).contains(f"Blueprint-version {blueprint_id}/{version_id} has never existed")
+
+    def test_version_deleted(self, mocker, monkeypatch, caplog):
+        # test set up
+        caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
+        mocker.patch('psycopg2.connect', new=FakePostgres)
+        db = PostgreSQL({})
+        monkeypatch.setattr(db.connection, 'cursor', VersionDeletedCursor)
+
+        # testing
+        blueprint_id = uuid.uuid4()
+        version_id = 'v4.0'
+        exists = db.version_exists(blueprint_id, version_id)
+        assert_that(exists).is_false()
+        assert_that(caplog.text).contains(f"Blueprint-version {blueprint_id}/{version_id} has been deleted, does not "
+                                          f"exist any more")
+
+    def test_version_exists(self, mocker, monkeypatch, caplog):
+        # test set up
+        caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
+        mocker.patch('psycopg2.connect', new=FakePostgres)
+        db = PostgreSQL({})
+        monkeypatch.setattr(db.connection, 'cursor', VersionExistsCursor)
+
+        # testing
+        blueprint_id = uuid.uuid4()
+        version_id = 'v4.0'
+        exists = db.version_exists(blueprint_id, version_id)
+        assert_that(exists).is_true()
+        assert_that(caplog.text).is_empty()
