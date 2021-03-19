@@ -1,5 +1,4 @@
 import json
-import logging as log
 import os
 import uuid
 
@@ -8,6 +7,9 @@ import psycopg2
 from opera.api.openapi.models import Invocation
 from opera.api.settings import Settings
 from opera.api.util import timestamp_util, file_util
+from opera.api.log import get_logger
+
+logger = get_logger(__name__)
 
 
 def connect(sql_config):
@@ -15,11 +17,11 @@ def connect(sql_config):
         return OfflineStorage()
     try:
         database = PostgreSQL(sql_config)
-        log.info('SQL_database: PostgreSQL')
+        logger.info('SQL_database: PostgreSQL')
     except psycopg2.Error as e:
-        log.error(f"Error while connecting to PostgreSQL: {str(e)}")
+        logger.error(f"Error while connecting to PostgreSQL: {str(e)}")
         database = OfflineStorage()
-        log.info("SQL_database: OfflineStorage")
+        logger.info("SQL_database: OfflineStorage")
 
     return database
 
@@ -33,6 +35,12 @@ class Database:
     def disconnect(self):
         """
         closes database connection
+        """
+        pass
+
+    def version_exists(self, blueprint_id: uuid, version_id=None) -> bool:
+        """
+        Checks if, according to records in git_log table blueprint (version) exists
         """
         pass
 
@@ -159,6 +167,42 @@ class OfflineStorage(Database):
     def disconnect(self):
         # does not need to do anything
         pass
+
+    def version_exists(self, blueprint_id: uuid, version_id=None) -> bool:
+        """
+        Checks if, according to records in git_log table blueprint (version) exists
+        """
+        blueprint_path = self.git_log_path / str(blueprint_id)
+        # first log is the most recent
+        logs = sorted([json.load(logfile.open('r')) for logfile in blueprint_path.glob('*')], key=lambda x: x['timestamp'], reverse=True)
+
+        # check blueprint has not been deleted
+        if not logs:
+            # blueprint has never existed
+            logger.debug(f"Blueprint {blueprint_id} has never existed")
+            return False
+        last_version_id, last_job = logs[0]['version_id'], logs[0]['job']
+        if last_version_id is None and last_job == "delete":
+            # entire blueprint has been deleted
+            logger.debug(f"Entire blueprint {blueprint_id} has been deleted, does not exist any more")
+            return False
+
+        if version_id:
+            logs_version = [log for log in logs if log['version_id'] == version_id]
+            # check version has not been deleted
+            if not logs_version:
+                # blueprint version has never existed
+                logger.debug(f"Blueprint-version {blueprint_id}/{version_id} has never existed")
+                return False
+
+            last_job = logs_version[0]['job']
+            if last_job == "delete":
+                # blueprint version has been deleted
+                logger.debug(f"Blueprint-version {blueprint_id}/{version_id} has been deleted, does not exist any more")
+                return False
+
+        # all checks have passed, blueprint (version) exists
+        return True
 
     def get_deployment_ids(self, blueprint_id: uuid, version_id: str = None):
         """
@@ -290,9 +334,9 @@ class OfflineStorage(Database):
             (location / str(timestamp)).write_text(json.dumps(git_transaction_data, indent=2))
         except Exception as e:
 
-            log.error(f'Failed to update git log in OfflineStorage database: {str(e)}')
+            logger.error(f'Failed to update git log in OfflineStorage database: {str(e)}')
             return False
-        log.info('Updated git log in OfflineStorage database')
+        logger.debug(f'Updated git log for blueprint-version {blueprint_id}/{version_id}, transaction {job} in OfflineStorage database')
         return True
 
     def get_git_transaction_data(self, blueprint_id, version_id=None, fetch_all=False):
@@ -387,7 +431,7 @@ class PostgreSQL(Database):
                         );""".format(Settings.project_domain_table))
 
     def disconnect(self):
-        log.info('disconnecting PostgreSQL database')
+        logger.info('disconnecting PostgreSQL database')
         self.connection.close()
 
     def execute(self, command, replacements=None):
@@ -398,11 +442,54 @@ class PostgreSQL(Database):
             else:
                 dbcur.execute(command)
         except psycopg2.Error as e:
-            log.debug(str(e))
+            logger.debug(str(e))
             dbcur.execute("ROLLBACK")
             return False
         dbcur.close()
         self.connection.commit()
+        return True
+
+    def version_exists(self, blueprint_id: uuid, version_id=None) -> bool:
+        """
+        Checks if, according to records in git_log table blueprint (version) exists
+        """
+        # check blueprint has not been deleted
+        dbcur = self.connection.cursor()
+        query = "select version_id,job  from {} " \
+                "where blueprint_id='{}' " \
+                "order by timestamp desc limit 1" \
+                .format(Settings.git_log_table, blueprint_id)
+        dbcur.execute(query)
+        line = dbcur.fetchone()
+        if not line:
+            # blueprint has never existed
+            logger.debug(f"Blueprint {blueprint_id} has never existed")
+            return False
+        last_version_id, last_job = line[0], line[1]
+        if last_version_id is None and last_job == "delete":
+            # entire blueprint has been deleted
+            logger.debug(f"Entire blueprint {blueprint_id} has been deleted, does not exist any more")
+            return False
+
+        if version_id:
+            # check version has not been deleted
+            query = "select job from {} " \
+                    "where blueprint_id='{}' and version_id='{}' " \
+                    "order by timestamp desc limit 1" \
+                    .format(Settings.git_log_table, blueprint_id, version_id)
+            dbcur.execute(query)
+            line = dbcur.fetchone()
+            if not line:
+                # blueprint version has never existed
+                logger.debug(f"Blueprint-version {blueprint_id}/{version_id} has never existed")
+                return False
+            last_job = line[0]
+            if last_job == "delete":
+                # blueprint version has been deleted
+                logger.debug(f"Blueprint-version {blueprint_id}/{version_id} has been deleted, does not exist any more")
+                return False
+
+        # all checks have passed, blueprint (version) exists
         return True
 
     def get_deployment_ids(self, blueprint_id: uuid, version_id: str = None):
@@ -462,9 +549,9 @@ class PostgreSQL(Database):
                    tree=excluded.tree;"""
             .format(Settings.opera_session_data_table), (str(deployment_id), timestamp, tree_str))
         if response:
-            log.info('Updated dot_opera_data in PostgreSQL database')
+            logger.info('Updated dot_opera_data in PostgreSQL database')
         else:
-            log.error('Failed to update dot_opera_data in PostgreSQL database')
+            logger.error('Failed to update dot_opera_data in PostgreSQL database')
         return response
 
     def get_opera_session_data(self, deployment_id):
@@ -494,9 +581,9 @@ class PostgreSQL(Database):
             "delete from {} where deployment_id = '{}'"
             .format(Settings.opera_session_data_table, str(deployment_id)))
         if response:
-            log.info(f'Deleted opera_session_data for {deployment_id} from PostgreSQL database')
+            logger.info(f'Deleted opera_session_data for {deployment_id} from PostgreSQL database')
         else:
-            log.error(f'Failed to delete opera_session_data for {deployment_id} from PostgreSQL database')
+            logger.error(f'Failed to delete opera_session_data for {deployment_id} from PostgreSQL database')
         return response
 
     def update_deployment_log(self, invocation_id: uuid, inv: Invocation):
@@ -514,9 +601,9 @@ class PostgreSQL(Database):
              str(invocation_id), str(inv.blueprint_id),
              inv.version_id, json.dumps(inv.to_dict(), cls=file_util.UUIDEncoder)))
         if response:
-            log.info('Updated deployment log in PostgreSQL database')
+            logger.info('Updated deployment log in PostgreSQL database')
         else:
-            log.error('Failed to update deployment log in PostgreSQL database')
+            logger.error('Failed to update deployment log in PostgreSQL database')
         return response
 
     def get_deployment_status(self, deployment_id: uuid):
@@ -582,9 +669,9 @@ class PostgreSQL(Database):
             values (%s, %s, %s, %s, %s, %s, %s)""".format(Settings.git_log_table),
             (str(blueprint_id), version_id, revision_msg, job, git_backend, repo_url, commit_sha))
         if response:
-            log.info('Updated git log in PostgreSQL database')
+            logger.info('Updated git log in PostgreSQL database')
         else:
-            log.error('Fail to update git log in PostgreSQL database')
+            logger.error('Fail to update git log in PostgreSQL database')
         return response
 
     def get_git_transaction_data(self, blueprint_id: uuid, version_id: str = None, fetch_all: bool = False):
@@ -647,19 +734,7 @@ class PostgreSQL(Database):
             "insert into {} (blueprint_id, project_domain) values (%s, %s)"
                 .format(Settings.project_domain_table), (str(blueprint_id), project_domain))
         if response:
-            log.info('Updated {} in PostgreSQL database'.format(Settings.project_domain_table))
+            logger.info('Updated {} in PostgreSQL database'.format(Settings.project_domain_table))
         else:
-            log.error('Failed to update {} in PostgreSQL database'.format(Settings.project_domain_table))
+            logger.error('Failed to update {} in PostgreSQL database'.format(Settings.project_domain_table))
         return response
-
-
-if __name__ == '__main__':
-    db = PostgreSQL({
-        'host': 'localhost',
-        'port': "5432",
-        'database': 'postgres',
-        'user': 'postgres',
-        'password': 'password'
-    })
-    a = db.blueprint_used_in_deployment('7c3f36d2-089c-403d-9723-a6275b5b69d1')
-    print(a)

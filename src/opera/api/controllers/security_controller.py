@@ -111,7 +111,7 @@ def check_role_auth_blueprint(func):
             return f"Authorization configuration error", 401
 
         version_id = kwargs.get("version_id")
-        if not CSAR_db.version_exists(blueprint_id, version_id):
+        if not SQL_database.version_exists(blueprint_id, version_id) and not CSAR_db.version_exists(blueprint_id, version_id):
             return f"Did not find blueprint with id: {blueprint_id} and version_id: {version_id or 'any'}", 404
 
         project_domain = SQL_database.get_project_domain(blueprint_id)
@@ -150,7 +150,7 @@ def check_role_auth_deployment(func):
         if not inv:
             return f"Deployment with id: {deployment_id} does not exist", 404
 
-        if not CSAR_db.version_exists(inv.blueprint_id, inv.version_id):
+        if not SQL_database.version_exists(inv.blueprint_id, inv.version_id) and not CSAR_db.version_exists(inv.blueprint_id, inv.version_id):
             return f"Did not find blueprint with id: {inv.blueprint_id} and version_id: {inv.version_id or 'any'}", 404
 
         project_domain = SQL_database.get_project_domain(inv.blueprint_id)
@@ -161,32 +161,3 @@ def check_role_auth_deployment(func):
 
     return wrapper_check_role_auth
 
-# def check_role_auth_deployment_or_blueprint(func):
-#     @functools.wraps(func)
-#     def wrapper_check_role_auth(*args, **kwargs):
-#         deployment_id = kwargs.get("deployment_id")
-#         blueprint_id = kwargs.get("blueprint_id")
-#         if not deployment_id and not blueprint_id:
-#             return f"No tokens provided", 404
-#
-#         elif deployment_id:
-#             inv = SQL_database.get_deployment_status(deployment_id)
-#             if not inv:
-#                 return f"Deployment with id: {deployment_id} does not exist", 404
-#
-#             blueprint_id = inv.blueprint_id
-#             version_id = kwargs.get("version_id", inv.version_id)
-#             if not CSAR_db.version_exists(inv.blueprint_id, inv.version_id):
-#                 return f"Did not find blueprint with id: {inv.blueprint_id} and version_id: {inv.version_id or 'any'}", 404
-#         elif blueprint_id:
-#             version_id = kwargs.get("version_id")
-#             if not CSAR_db.version_exists(blueprint_id, version_id):
-#                 return f"Did not find blueprint with id: {blueprint_id} and version_id: {version_id or 'any'}", 404
-#
-#         project_domain = SQL_database.get_project_domain(blueprint_id)
-#         if project_domain and not check_roles(project_domain):
-#             return f"Unauthorized request for project: {project_domain}", 401
-#
-#         return func(*args, **kwargs)
-#
-#     return wrapper_check_role_auth

@@ -1,5 +1,4 @@
 import grp
-import logging as log
 import os
 import pwd
 import re
@@ -11,6 +10,10 @@ import connexion
 import yaml
 
 from opera.api.settings import Settings
+from opera.api.log import get_logger
+
+
+logger = get_logger(__name__)
 
 
 @contextmanager
@@ -26,20 +29,20 @@ def cwd(path):
 def configure_ssh_keys():
     keys = list(Settings.ssh_keys_location.glob("*xOpera*"))
     if len(keys) != 2:
-        log.error(
+        logger.error(
             "Expected exactly 2 keys (public and private) with xOpera substring in name, found {}".format(len(keys)))
         return
     try:
         private_key = [str(key) for key in keys if ".pubk" not in str(key)][0]
         public_key = [str(key) for key in keys if ".pubk" in str(key)][0]
     except IndexError:
-        log.error(
+        logger.error(
             'Wrong file extension. Public key should have ".pubk" and private key should have ".pk" or no extension '
             'at all')
         return
     public_key_check = private_key.replace(".pk", "") + ".pubk"
     if public_key != public_key_check:
-        log.error(
+        logger.error(
             'No matching private and public key pair. Public key should have ".pubk" and private key should have '
             '".pk" or no extension at all')
         return
@@ -67,7 +70,7 @@ def configure_ssh_keys():
 
     key_pair = private_key_new.split("/")[-1]
     Settings.key_pair = key_pair
-    log.info("key '{}' added".format(Settings.key_pair))
+    logger.info("key '{}' added".format(Settings.key_pair))
 
 
 def init_dir(dir_path: str, clean=False):
