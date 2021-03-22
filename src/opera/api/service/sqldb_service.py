@@ -234,7 +234,7 @@ class OfflineStorage(Database):
                 for file in location.glob('*'):
                     inv = Invocation.from_dict(json.loads(file.read_text()))
                     invs.append(inv)
-                invs.sort(key=lambda x: x.timestamp)
+                invs.sort(key=lambda x: x.timestamp_submission)
                 if invs[-1].version_id == version_id:
                     return True
             return False
@@ -296,7 +296,7 @@ class OfflineStorage(Database):
         for file in location.glob('*'):
             inv = Invocation.from_dict(json.loads(file.read_text()))
             history.append(inv)
-        return sorted(history, key=lambda x: x.timestamp)
+        return sorted(history, key=lambda x: x.timestamp_submission)
 
     def get_last_invocation_id(self, deployment_id: uuid):
         """
@@ -305,7 +305,7 @@ class OfflineStorage(Database):
         location = self.invocation_path / str(deployment_id)
         inv_ids = []
         for file in location.glob('*'):
-            inv_timestamp = Invocation.from_dict(json.loads(file.read_text())).timestamp
+            inv_timestamp = Invocation.from_dict(json.loads(file.read_text())).timestamp_submission
             inv_ids.append((inv_timestamp, file.name))
         inv_ids.sort(key=lambda x: x[0])
         return inv_ids[-1][1]
@@ -549,7 +549,7 @@ class PostgreSQL(Database):
                    tree=excluded.tree;"""
             .format(Settings.opera_session_data_table), (str(deployment_id), timestamp, tree_str))
         if response:
-            logger.info('Updated dot_opera_data in PostgreSQL database')
+            logger.debug('Updated dot_opera_data in PostgreSQL database')
         else:
             logger.error('Failed to update dot_opera_data in PostgreSQL database')
         return response
@@ -581,14 +581,14 @@ class PostgreSQL(Database):
             "delete from {} where deployment_id = '{}'"
             .format(Settings.opera_session_data_table, str(deployment_id)))
         if response:
-            logger.info(f'Deleted opera_session_data for {deployment_id} from PostgreSQL database')
+            logger.debug(f'Deleted opera_session_data for {deployment_id} from PostgreSQL database')
         else:
             logger.error(f'Failed to delete opera_session_data for {deployment_id} from PostgreSQL database')
         return response
 
     def update_deployment_log(self, invocation_id: uuid, inv: Invocation):
         """
-        updates deployment log with deployment_id, timestamp, invocation_id, _log
+        updates deployment log with deployment_id, timestamp_submission, invocation_id, _log
         """
         response = self.execute(
             """insert into {} (deployment_id, timestamp, invocation_id, blueprint_id, version_id, _log)
@@ -597,11 +597,11 @@ class PostgreSQL(Database):
                    SET timestamp=excluded.timestamp,
                         _log=excluded._log;"""
             .format(Settings.invocation_table),
-            (str(inv.deployment_id), str(inv.timestamp),
+            (str(inv.deployment_id), str(inv.timestamp_submission),
              str(invocation_id), str(inv.blueprint_id),
              inv.version_id, json.dumps(inv.to_dict(), cls=file_util.UUIDEncoder)))
         if response:
-            logger.info('Updated deployment log in PostgreSQL database')
+            logger.debug('Updated deployment log in PostgreSQL database')
         else:
             logger.error('Failed to update deployment log in PostgreSQL database')
         return response
@@ -669,7 +669,7 @@ class PostgreSQL(Database):
             values (%s, %s, %s, %s, %s, %s, %s)""".format(Settings.git_log_table),
             (str(blueprint_id), version_id, revision_msg, job, git_backend, repo_url, commit_sha))
         if response:
-            logger.info('Updated git log in PostgreSQL database')
+            logger.debug('Updated git log in PostgreSQL database')
         else:
             logger.error('Fail to update git log in PostgreSQL database')
         return response
@@ -734,7 +734,7 @@ class PostgreSQL(Database):
             "insert into {} (blueprint_id, project_domain) values (%s, %s)"
                 .format(Settings.project_domain_table), (str(blueprint_id), project_domain))
         if response:
-            logger.info('Updated {} in PostgreSQL database'.format(Settings.project_domain_table))
+            logger.debug('Updated {} in PostgreSQL database'.format(Settings.project_domain_table))
         else:
             logger.error('Failed to update {} in PostgreSQL database'.format(Settings.project_domain_table))
         return response

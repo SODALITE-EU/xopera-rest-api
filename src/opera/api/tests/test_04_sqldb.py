@@ -90,7 +90,7 @@ class TestOfflineStorageDeploymentLog:
         for i in range(5):
             inv_id = uuid.uuid4()
             inv.version_id = f"v1.{i}"
-            inv.timestamp = timestamp_util.datetime_now_to_string()
+            inv.timestamp_submission = timestamp_util.datetime_now_to_string()
             sql_db.update_deployment_log(inv_id, inv)
         history = sql_db.get_deployment_history(inv.deployment_id)
         assert len(history) == 5
@@ -105,7 +105,7 @@ class TestOfflineStorageDeploymentLog:
         inv = generic_invocation
         inv.deployment_id = str(uuid.uuid4())
         for inv_id in inv_ids:
-            inv.timestamp = timestamp_util.datetime_now_to_string()
+            inv.timestamp_submission = timestamp_util.datetime_now_to_string()
             sql_db.update_deployment_log(inv_id, inv)
 
         # test
@@ -143,7 +143,7 @@ class TestOfflineStorageBlueprintInDeployment:
         # random blueprint is not part of deployment
         assert_that(sql_db.blueprint_used_in_deployment(uuid.uuid4())).is_false()
 
-    def test_blueprint_version_in_deployment(self, sql_db: OfflineStorage, generic_invocation):
+    def test_blueprint_version_in_deployment(self, sql_db: OfflineStorage, generic_invocation: Invocation):
         # save a couple invocations with same blueprint_id and deployment_id
         blueprint_id = uuid.uuid4()
         deployment_id = uuid.uuid4()
@@ -153,7 +153,7 @@ class TestOfflineStorageBlueprintInDeployment:
             inv.deployment_id = deployment_id
             inv.version_id = version_id
             inv.blueprint_id = blueprint_id
-            inv.timestamp = timestamp_util.datetime_now_to_string()
+            inv.timestamp_submission = timestamp_util.datetime_now_to_string()
             sql_db.update_deployment_log(uuid.uuid4(), inv)
 
         # Last version is part of deployment, other two are not
