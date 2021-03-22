@@ -43,7 +43,9 @@ class Settings:
     vault_secret_storage_uri = None
     vault_login_uri = None
     apiKey = None
-    introspection_protocols = ["http://", "https://"]
+    connection_protocols = ["http://", "https://"]
+    vault_secret_prefix =  "_get_secret"
+
 
     @staticmethod
     def load_settings():

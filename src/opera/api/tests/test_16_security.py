@@ -26,20 +26,3 @@ class TestSecurity:
         result = security_controller.token_info("ACCESS_TOKEN")
         assert result["scope"][0] == 'email'
 
-    def test_get_token(self, mocker):
-        mock = mocker.MagicMock()
-        mock.headers = {"Authorization": "Bearer TEST_TOKEN"}
-        token = security_controller.get_access_token(mock)
-        assert token == "TEST_TOKEN"
-
-        mock.headers = {}
-        token = security_controller.get_access_token(mock)
-        assert token is None
-
-        mock.headers = {"Authorization": "BearerTEST_TOKEN"}
-        token = security_controller.get_access_token(mock)
-        assert token is None
-
-        mock.headers = {"Authorization": "None TEST_TOKEN"}
-        token = security_controller.get_access_token(mock)
-        assert token is None

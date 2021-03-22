@@ -69,7 +69,8 @@ def post_deploy_continue(deployment_id, workers=1, clean_state=False):
 
     :rtype: Invocation
     """
-    inputs = xopera_util.inputs_file()
+
+    inputs = xopera_util.get_preprocessed_inputs()
 
     inv = SQL_database.get_deployment_status(deployment_id)
 
@@ -95,7 +96,7 @@ def post_deploy_fresh(blueprint_id, version_id=None, workers=1):
 
     :rtype: Invocation
     """
-    inputs = xopera_util.inputs_file()
+    inputs = xopera_util.get_preprocessed_inputs()
 
     deployment_id = None
     result = invocation_service.invoke(OperationType.DEPLOY_FRESH, blueprint_id, version_id, deployment_id,
@@ -120,7 +121,7 @@ def post_diff(deployment_id, blueprint_id, version_id=None):
 
     :rtype: object
     """
-    inputs = xopera_util.inputs_file()
+    inputs = xopera_util.get_preprocessed_inputs()
 
     return InvocationWorkerProcess.diff(deployment_id, blueprint_id, version_id, inputs).outputs(), 200
 
@@ -136,7 +137,7 @@ def post_undeploy(deployment_id, workers=1):
 
     :rtype: Invocation
     """
-    inputs = xopera_util.inputs_file()
+    inputs = xopera_util.get_preprocessed_inputs()
 
     inv = SQL_database.get_deployment_status(deployment_id)
     if inv.state in [InvocationState.PENDING, InvocationState.IN_PROGRESS]:
@@ -166,7 +167,7 @@ def post_update(deployment_id, blueprint_id, version_id=None, workers=1):
 
     :rtype: Invocation
     """
-    inputs = xopera_util.inputs_file()
+    inputs = xopera_util.get_preprocessed_inputs()
 
     inv = SQL_database.get_deployment_status(deployment_id)
     if inv.state in [InvocationState.PENDING, InvocationState.IN_PROGRESS]:

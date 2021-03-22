@@ -212,3 +212,23 @@ def generic_dir():
     for i in range(4):
         (path / Path(f'{i}-new.txt')).touch()
     return path
+
+
+@pytest.fixture
+def inputs_no_secret():
+    inputs = {
+                "frontend-address": "14.15.11.12",
+                "user": "test_user"
+             }
+
+    return inputs
+
+@pytest.fixture
+def inputs_with_secret():
+    inputs = {
+                "frontend-address": "14.15.11.12",
+                "user": "test_user",
+                "_get_secret_ssh": "pds/ssh_key_slurm:pds"
+             }
+
+    return inputs

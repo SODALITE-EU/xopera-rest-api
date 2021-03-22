@@ -106,3 +106,18 @@ class TestXoperaUtil:
         xopera_util.configure_ssh_keys()
         assert (mock_ssh_keys_loc / '192-168-0-1-xOpera').is_file()
         assert (mock_ssh_keys_loc / '192-168-0-1-xOpera.pubk').is_file()
+
+    def test_preprocess_inputs(self, inputs_with_secret, mocker):
+        mocker.patch("opera.api.util.xopera_util.get_secret",
+                        return_value={"ssh_key": "test"})
+        result = xopera_util.preprocess_inputs(inputs_with_secret, "ACCESS_TOKEN")
+        assert len(result) == 3
+        assert result["frontend-address"] == "14.15.11.12"
+        assert result["user"] == "test_user"
+        assert result["ssh_key"] == "test"
+
+    def test_preprocess_inputs_no_secret(self, inputs_no_secret):
+        result = xopera_util.preprocess_inputs(inputs_no_secret, "ACCESS_TOKEN")
+        assert len(result) == 2
+        assert result["frontend-address"] == "14.15.11.12"
+        assert result["user"] == "test_user"

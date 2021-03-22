@@ -243,7 +243,7 @@ def validate_existing(blueprint_id):
 
     :rtype: str
     """
-    inputs = xopera_util.inputs_file()
+    inputs = xopera_util.get_preprocessed_inputs()
 
     exception = InvocationWorkerProcess.validate(blueprint_id, None, inputs)
     blueprint_valid = exception is None
@@ -263,7 +263,7 @@ def validate_existing_version(blueprint_id, version_id):
 
     :rtype: str
     """
-    inputs = xopera_util.inputs_file()
+    inputs = xopera_util.get_preprocessed_inputs()
 
     exception = InvocationWorkerProcess.validate(blueprint_id, version_id, inputs)
     blueprint_valid = exception is None
@@ -277,7 +277,7 @@ def validate_new():
 
     :rtype: str
     """
-    inputs = xopera_util.inputs_file()
+    inputs = xopera_util.get_preprocessed_inputs()
     csar_file = connexion.request.files['CSAR']
 
     exception = InvocationWorkerProcess.validate_new(csar_file, inputs)
