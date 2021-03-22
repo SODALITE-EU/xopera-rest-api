@@ -1155,7 +1155,7 @@ components:
         - deployment_id
         - state
         - operation
-        - timestamp
+        - timestamp_submission
       properties:
         blueprint_id:
           description: Id of blueprint
@@ -1173,9 +1173,18 @@ components:
           $ref: "#/components/schemas/InvocationState"
         operation:
           $ref: "#/components/schemas/OperationType"
-        timestamp:
-          description: An ISO8601 timestamp of the invocation.
+        timestamp_submission:
+          description: An ISO8601 timestamp of submission of invocation.
           type: string
+          format: date-time
+        timestamp_start:
+          description: An ISO8601 timestamp of when orchestration started
+          type: string
+          format: date-time
+        timestamp_end:
+          description: An ISO8601 timestamp of when orchestration ended
+          type: string
+          format: date-time
         inputs:
           description: Inputs provided for invocation.
           type: object

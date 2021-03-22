@@ -46,6 +46,7 @@ class InvocationWorkerProcess(multiprocessing.Process):
 
         while True:
             inv: Invocation = work_queue.get(block=True)
+            inv.timestamp_start = datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
 
             invocation_id = SQL_database.get_last_invocation_id(inv.deployment_id)
             location = InvocationService.deployment_location(inv.deployment_id, inv.blueprint_id)
@@ -88,6 +89,8 @@ class InvocationWorkerProcess(multiprocessing.Process):
             inv.stderr = InvocationWorkerProcess.read_file(InvocationService.stderr_file(inv.deployment_id))
             file_stdout.close()
             file_stderr.close()
+
+            inv.timestamp_end = datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
 
             InvocationService.save_dot_opera_to_db(inv, location)
             InvocationService.save_invocation(invocation_id, inv)
@@ -275,7 +278,7 @@ class InvocationService:
         inv.deployment_id = deployment_id or uuid.uuid4()
         inv.state = InvocationState.PENDING
         inv.operation = operation_type
-        inv.timestamp = now.isoformat()
+        inv.timestamp_submission = now.isoformat()
         inv.inputs = inputs
         inv.instance_state = None
         inv.outputs = None
