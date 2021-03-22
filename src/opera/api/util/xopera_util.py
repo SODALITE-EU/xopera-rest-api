@@ -11,6 +11,7 @@ import yaml
 
 from opera.api.settings import Settings
 from opera.api.log import get_logger
+from opera.api.util.vault_client import get_secret
 
 
 logger = get_logger(__name__)
@@ -86,12 +87,60 @@ def init_data():
     init_dir(Settings.DEPLOYMENT_DIR, clean=True)
 
 
+def get_preprocessed_inputs():
+    raw_inputs = inputs_file()
+    if raw_inputs:
+       return preprocess_inputs(raw_inputs, get_access_token())
+    return None    
+
+
 def inputs_file():
     try:
         file = connexion.request.files['inputs_file']
         return yaml.safe_load(file.read().decode('utf-8'))
     except KeyError:
         return None
+
+
+def preprocess_inputs(inputs, access_token):
+    refined_inputs = inputs.copy()
+
+    for key in inputs:
+        if key.startswith(Settings.vault_secret_prefix):
+            logger.info("Resolving input {0}".format(key))
+            path, role = inputs[key].split(':')
+            if not isinstance(path, str) and not isinstance(role, str):
+                raise ValueError(
+                    "Incorrect input format for secret: {0}".format(
+                        inputs[key]
+                        )
+                    )
+            secret = get_secret(path, role, access_token)
+            if isinstance(secret, dict):
+                refined_inputs.pop(key)
+                refined_inputs.update(secret)
+            else:
+                raise ValueError(
+                    "Incorrect secret: {0} for role {1}".format(
+                        path,
+                        role
+                        )
+                    )
+
+    return refined_inputs
+
+
+def get_access_token():
+    authorization = connexion.request.headers.get("Authorization")
+    if not authorization:
+        return None
+    try:
+        auth_type, token = authorization.split(None, 1)
+    except ValueError:
+        return None
+    if auth_type.lower() != "bearer":
+        return None
+    return token
 
 
 def mask_workdir(location: Path, stacktrace: str, placeholder="$BLUEPRINT_DIR"):

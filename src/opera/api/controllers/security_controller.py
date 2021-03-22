@@ -12,7 +12,7 @@ from opera.api.settings import Settings
 # use connection pool for OAuth tokeninfo
 adapter = requests.adapters.HTTPAdapter(pool_connections=100, pool_maxsize=100)
 session = requests.Session()
-for protocol in Settings.introspection_protocols:
+for protocol in Settings.connection_protocols:
     session.mount(protocol, adapter)
 
 role_regex = r"(?P<domain>\w+)_(?P<type>\w+)_(?P<permissions>\w)"
@@ -88,19 +88,6 @@ def check_roles(project_domain):
                 return True
 
     return False
-
-
-def get_access_token(request):
-    authorization = request.headers.get("Authorization")
-    if not authorization:
-        return None
-    try:
-        auth_type, token = authorization.split(None, 1)
-    except ValueError:
-        return None
-    if auth_type.lower() != "bearer":
-        return None
-    return token
 
 
 def check_role_auth_blueprint(func):
