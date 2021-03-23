@@ -51,15 +51,15 @@ class InvocationWorkerProcess(multiprocessing.Process):
             invocation_id = SQL_database.get_last_invocation_id(inv.deployment_id)
             location = InvocationService.deployment_location(inv.deployment_id, inv.blueprint_id)
 
+            inv.state = InvocationState.IN_PROGRESS
+            InvocationService.save_invocation(invocation_id, inv)
+
             # stdout&err
             file_stdout = open(InvocationService.stdout_file(inv.deployment_id), "w")
             file_stderr = open(InvocationService.stderr_file(inv.deployment_id), "w")
 
             os.dup2(file_stdout.fileno(), 1)
             os.dup2(file_stderr.fileno(), 2)
-
-            inv.state = InvocationState.IN_PROGRESS
-            InvocationService.save_invocation(invocation_id, inv)
 
             try:
                 if inv.operation == OperationType.DEPLOY_FRESH:
