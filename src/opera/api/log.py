@@ -1,5 +1,6 @@
 import logging as base_logging
 import os
+import sys
 
 
 def _get_level_from_envvar(default=base_logging.INFO) -> int:
@@ -25,7 +26,7 @@ def get_logger(module_name: str) -> base_logging.Logger:
     result = base_logging.getLogger(module_name)
     result.setLevel(global_log_level)
 
-    console_handler = base_logging.StreamHandler()
+    console_handler = base_logging.StreamHandler(sys.stdout)
     console_handler.setLevel(global_log_level)
 
     formatter = base_logging.Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s")
