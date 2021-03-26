@@ -1215,6 +1215,12 @@ components:
         clean_state:
           description: Clean previous state and start over
           type: boolean
+        total_nodes:
+          type: integer
+          description: Total number of nodes to change
+        current_nodes:
+          type: integer
+          description: Current number of nodes already changed
     InvocationState:
       type: string
       enum:

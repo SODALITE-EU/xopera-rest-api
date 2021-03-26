@@ -27,7 +27,7 @@ from opera.api.cli import CSAR_db, SQL_database
 from opera.api.log import get_logger
 from opera.api.openapi.models import Invocation, InvocationState, OperationType
 from opera.api.settings import Settings
-from opera.api.util import xopera_util, file_util
+from opera.api.util import xopera_util, file_util, progress as progress_util
 
 logger = get_logger(__name__)
 
