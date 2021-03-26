@@ -2,7 +2,7 @@
 opera==0.6.4
 
 # openstack
-openstacksdk==0.54.0
+openstacksdk==0.52.0
 
 # k8s
 openshift==0.12.0
