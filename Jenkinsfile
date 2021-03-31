@@ -48,6 +48,8 @@ pipeline {
        OS_IDENTITY_API_VERSION = "3"
        OS_REGION_NAME = "RegionOne"
        OS_AUTH_PLUGIN = "password"
+       // ANSIBLE SETTINGS
+       ANSIBLE_TIMEOUT = "60"
 
        // ROOT X.509 CERTIFICATES
        ca_crt_file = credentials('xopera-ca-crt')
