@@ -61,6 +61,12 @@ class InvocationWorkerProcess(multiprocessing.Process):
             os.dup2(file_stdout.fileno(), 1)
             os.dup2(file_stderr.fileno(), 2)
 
+            # workdir preparation
+
+            # TODO get total number of nodes
+
+            # orchestration
+
             try:
                 if inv.operation == OperationType.DEPLOY_FRESH:
                     outputs = InvocationWorkerProcess._deploy_fresh(location, inv)
@@ -145,8 +151,6 @@ class InvocationWorkerProcess(multiprocessing.Process):
 
         storage_old, location_old, storage_new, location_new = InvocationWorkerProcess.prepare_two_workdirs(
             inv.deployment_id, inv.blueprint_id, inv.version_id, inv.inputs, location)
-
-        assert location_new == str(location)
 
         with xopera_util.cwd(location_new):
             instance_diff = opera_diff_instances(storage_old, location_old,
