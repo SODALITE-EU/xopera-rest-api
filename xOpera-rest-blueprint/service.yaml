@@ -214,7 +214,7 @@ topology_template:
       properties:
         alias: xopera-rest-api
         docker_network_name:  { get_property: [ SELF, network, name ] }
-        image_name: xopera-rest-api
+        image_name: xopera-rest-api:latest
         restart_policy: always
         volumes:
           - /var/run/docker.sock:/var/run/docker.sock
