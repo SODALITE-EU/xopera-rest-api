@@ -33,6 +33,9 @@ xopera_env:
   OIDC_INTROSPECTION_ENDPOINT: ${oidc_endpoint}
   OIDC_CLIENT_SECRET: ${oidc_secret}
   AUTH_API_KEY: ${auth_api_key}
+  # VAULT
+  VAULT_SECRET_URI: ${vault_url}/v1/
+  VAULT_LOGIN_URI: ${vault_url}/v1/auth/jwt/login
   # XOPERA GIT SETTINGS
   XOPERA_GIT_TYPE: ${git_type}
   XOPERA_GIT_URL: ${git_server_url}
