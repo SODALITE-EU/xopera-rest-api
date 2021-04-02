@@ -317,6 +317,8 @@ class InvocationService:
             if inv.state == InvocationState.IN_PROGRESS:
                 inv.stdout = InvocationWorkerProcess.read_file(cls.stdout_file(inv.deployment_id))
                 inv.stderr = InvocationWorkerProcess.read_file(cls.stderr_file(inv.deployment_id))
+                location = InvocationService.deployment_location(inv.deployment_id, inv.blueprint_id)
+                inv.instance_state = InvocationService.get_instance_state(location)
             return inv
 
         except BaseException as e:
