@@ -21,6 +21,9 @@ class Settings:
     INVOCATION_DIR = f"{API_WORKDIR}/invocations"
     DEPLOYMENT_DIR = f"{API_WORKDIR}/deployment_dir"
 
+    # maximum number of invocations at the same time
+    invocation_service_workers = 10
+
     # sql_database config
     sql_config = None
     invocation_table = 'invocation'
@@ -44,7 +47,7 @@ class Settings:
     vault_login_uri = None
     apiKey = None
     connection_protocols = ["http://", "https://"]
-    vault_secret_prefix =  "_get_secret"
+    vault_secret_prefix = "_get_secret"
 
 
     @staticmethod
@@ -77,6 +80,8 @@ class Settings:
         Settings.oidc_client_secret = os.getenv("OIDC_CLIENT_SECRET", "")
         Settings.apiKey = os.getenv("AUTH_API_KEY", "")
 
+        Settings.invocation_service_workers = int(os.getenv("INVOCATION_SERVICE_WORKERS", '10'))
+
         Settings.vault_secret_storage_uri = os.getenv("VAULT_SECRET_URI", "http://localhost:8200/v1/")
         Settings.vault_login_uri = os.getenv("VAULT_LOGIN_URI", "http://localhost:8200/v1/auth/jwt/login")
 
@@ -87,6 +92,11 @@ class Settings:
         __debug_git_config['mock_workdir'] = str(__debug_git_config['mock_workdir'])
 
         logger.debug(json.dumps({
+            "oidc_endpoint": Settings.oidc_introspection_endpoint_uri,
+            "oidc_client_id": Settings.oidc_client_id,
+            "oidc_client_secret": Settings.oidc_client_secret,
+            "auth_api_key": Settings.apiKey,
+            "invocation_service_workers": Settings.invocation_service_workers,
             "sql_config": Settings.sql_config,
             "git_config": __debug_git_config
         }, indent=2))

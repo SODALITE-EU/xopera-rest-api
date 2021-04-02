@@ -7,9 +7,10 @@ from opera.api.openapi.models import InvocationState
 from opera.api.openapi.models import OperationType, Invocation
 from opera.api.openapi.models.deployment_exists import DeploymentExists
 from opera.api.util import xopera_util
+from opera.api.settings import Settings
 
 logger = get_logger(__name__)
-invocation_service = InvocationService()
+invocation_service = InvocationService(workers_num=Settings.invocation_service_workers)
 
 
 def deployment_exists(blueprint_id, version_id=None, inputs_file=None):
