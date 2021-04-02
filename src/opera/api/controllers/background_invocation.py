@@ -253,6 +253,13 @@ class InvocationWorkerProcess:
 class InvocationService:
 
     def __init__(self, workers_num=10):
+        """
+        Initializes InvocationService
+
+        It creates work_queue for invocations and workers_pool with [workers_num] workers
+        Args:
+            workers_num: number of workers
+        """
         self.work_queue: multiprocessing.Queue = multiprocessing.Queue()
         self.workers_pool = multiprocessing.Pool(workers_num, InvocationWorkerProcess.run_internal, (self.work_queue, ))
 
