@@ -28,6 +28,7 @@ pipeline {
        // XOPERA SETTINGS
        xopera_debug = "false"
        xopera_log_level = "debug"
+       invocation_service_workers = '10'
        // OIDC secrets
        oidc_endpoint = credentials('oidc-endpoint')
        oidc_secret = credentials('oidc-secret')

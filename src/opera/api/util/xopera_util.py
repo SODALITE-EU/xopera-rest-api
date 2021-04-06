@@ -90,7 +90,7 @@ def init_data():
 def get_preprocessed_inputs():
     raw_inputs = inputs_file()
     if raw_inputs:
-       return preprocess_inputs(raw_inputs, get_access_token())
+        return preprocess_inputs(raw_inputs, get_access_token())
     return None    
 
 

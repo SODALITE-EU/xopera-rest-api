@@ -32,17 +32,10 @@ from opera.api.util import xopera_util, file_util
 logger = get_logger(__name__)
 
 
-class InvocationWorkerProcess(multiprocessing.Process):
-
-    def __init__(self, work_queue: multiprocessing.Queue):
-        super(InvocationWorkerProcess, self).__init__(
-            group=None, target=self._run_internal, name="Invocation-Worker", args=(),
-            kwargs={
-                "work_queue": work_queue,
-            }, daemon=None)
+class InvocationWorkerProcess:
 
     @staticmethod
-    def _run_internal(work_queue: multiprocessing.Queue):
+    def run_internal(work_queue: multiprocessing.Queue):
 
         while True:
             inv: Invocation = work_queue.get(block=True)
@@ -259,10 +252,16 @@ class InvocationWorkerProcess(multiprocessing.Process):
 
 class InvocationService:
 
-    def __init__(self):
+    def __init__(self, workers_num=10):
+        """
+        Initializes InvocationService
+
+        It creates work_queue for invocations and workers_pool with [workers_num] workers
+        Args:
+            workers_num: number of workers
+        """
         self.work_queue: multiprocessing.Queue = multiprocessing.Queue()
-        self.worker = InvocationWorkerProcess(self.work_queue)
-        self.worker.start()
+        self.workers_pool = multiprocessing.Pool(workers_num, InvocationWorkerProcess.run_internal, (self.work_queue, ))
 
     def invoke(self, operation_type: OperationType, blueprint_id: uuid, version_id: uuid,
                deployment_id: uuid, workers: int, inputs: dict,
