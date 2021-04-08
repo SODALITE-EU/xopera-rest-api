@@ -92,9 +92,16 @@ class Settings:
         __debug_git_config['mock_workdir'] = str(__debug_git_config['mock_workdir'])
 
         logger.debug(json.dumps({
-            "oidc_endpoint": Settings.oidc_introspection_endpoint_uri,
-            "oidc_client_id": Settings.oidc_client_id,
-            "oidc_client_secret": Settings.oidc_client_secret,
+            "oicd_config": {
+                "introspection_endpoint": Settings.oidc_introspection_endpoint_uri,
+                "client_id": Settings.oidc_client_id,
+                "client_secret": Settings.oidc_client_secret,
+            },
+            "vault_config": {
+                "secret_storage_uri": Settings.vault_secret_storage_uri,
+                "login_uri": Settings.vault_login_uri,
+                "secret_prefix": Settings.vault_secret_prefix
+            },
             "auth_api_key": Settings.apiKey,
             "invocation_service_workers": Settings.invocation_service_workers,
             "sql_config": Settings.sql_config,
