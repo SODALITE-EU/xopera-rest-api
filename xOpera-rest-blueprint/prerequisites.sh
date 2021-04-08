@@ -46,7 +46,7 @@ ansible-galaxy install geerlingguy.repo-epel --force
 echo
 echo "Cloning modules"
 rm -r -f modules/
-git clone -b 3.1.1 https://github.com/SODALITE-EU/iac-modules.git modules/
+git clone -b 3.4.1 https://github.com/SODALITE-EU/iac-modules.git modules/
 
 echo "Please enter email for SODALITE certificate: "
 read EMAIL_INPUT
