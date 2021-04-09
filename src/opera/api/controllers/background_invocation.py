@@ -19,6 +19,7 @@ from opera.commands.update import update as opera_update
 from opera.commands.validate import validate_service_template as opera_validate
 from opera.compare.instance_comparer import InstanceComparer as opera_InstanceComparer
 from opera.compare.template_comparer import TemplateComparer as opera_TemplateComparer
+from opera.error import ParseError
 from opera.storage import Storage
 
 from opera.api.blueprint_converters.blueprint2CSAR import entry_definitions
@@ -71,8 +72,12 @@ class InvocationWorkerProcess:
             except BaseException as e:
                 if isinstance(e, RuntimeError):
                     raise e
+                elif isinstance(e, ParseError):
+                    inv.exception = "{}: {}: {}\n\n{}".format(e.__class__.__name__, e.loc, str(e),
+                                                              traceback.format_exc())
+                else:
+                    inv.exception = "{}: {}\n\n{}".format(e.__class__.__name__, str(e), traceback.format_exc())
                 inv.state = InvocationState.FAILED
-                inv.exception = "{}: {}\n\n{}".format(e.__class__.__name__, str(e), traceback.format_exc())
 
             inv.instance_state = InvocationService.get_instance_state(location)
 
