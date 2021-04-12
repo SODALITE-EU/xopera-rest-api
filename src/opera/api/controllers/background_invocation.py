@@ -19,6 +19,7 @@ from opera.commands.update import update as opera_update
 from opera.commands.validate import validate_service_template as opera_validate
 from opera.compare.instance_comparer import InstanceComparer as opera_InstanceComparer
 from opera.compare.template_comparer import TemplateComparer as opera_TemplateComparer
+from opera.error import ParseError
 from opera.storage import Storage
 
 from opera.api.blueprint_converters.blueprint2CSAR import entry_definitions
@@ -68,29 +69,37 @@ class InvocationWorkerProcess:
 
                 inv.state = InvocationState.SUCCESS
                 inv.outputs = outputs or None
+            except RuntimeError as e:
+                inv.state = InvocationState.FAILED
+                inv.exception = 'Runtime exception on xopera-rest-api'
+                raise e
+            except ParseError as e:
+                inv.state = InvocationState.FAILED
+                inv.exception = "{}: {}: {}\n\n{}".format(e.__class__.__name__, e.loc, str(e),
+                                                          traceback.format_exc())
             except BaseException as e:
-                if isinstance(e, RuntimeError):
-                    raise e
                 inv.state = InvocationState.FAILED
                 inv.exception = "{}: {}\n\n{}".format(e.__class__.__name__, str(e), traceback.format_exc())
 
-            inv.instance_state = InvocationService.get_instance_state(location)
+            finally:
 
-            sys.stdout.flush()
-            sys.stderr.flush()
-            inv.stdout = InvocationWorkerProcess.read_file(InvocationService.stdout_file(inv.deployment_id))
-            inv.stderr = InvocationWorkerProcess.read_file(InvocationService.stderr_file(inv.deployment_id))
-            file_stdout.close()
-            file_stderr.close()
+                inv.instance_state = InvocationService.get_instance_state(location)
 
-            inv.timestamp_end = datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
+                sys.stdout.flush()
+                sys.stderr.flush()
+                inv.stdout = InvocationWorkerProcess.read_file(InvocationService.stdout_file(inv.deployment_id))
+                inv.stderr = InvocationWorkerProcess.read_file(InvocationService.stderr_file(inv.deployment_id))
+                file_stdout.close()
+                file_stderr.close()
 
-            InvocationService.save_dot_opera_to_db(inv, location)
-            InvocationService.save_invocation(invocation_id, inv)
+                inv.timestamp_end = datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
 
-            # clean
-            shutil.rmtree(location)
-            shutil.rmtree(InvocationService.stdstream_dir(inv.deployment_id))
+                InvocationService.save_dot_opera_to_db(inv, location)
+                InvocationService.save_invocation(invocation_id, inv)
+
+                # clean
+                shutil.rmtree(location)
+                shutil.rmtree(InvocationService.stdstream_dir(inv.deployment_id))
 
     @staticmethod
     def _deploy_fresh(location: Path, inv: Invocation):
