@@ -69,15 +69,17 @@ class InvocationWorkerProcess:
 
                 inv.state = InvocationState.SUCCESS
                 inv.outputs = outputs or None
-            except BaseException as e:
-                if isinstance(e, RuntimeError):
-                    raise e
-                elif isinstance(e, ParseError):
-                    inv.exception = "{}: {}: {}\n\n{}".format(e.__class__.__name__, e.loc, str(e),
-                                                              traceback.format_exc())
-                else:
-                    inv.exception = "{}: {}\n\n{}".format(e.__class__.__name__, str(e), traceback.format_exc())
+            except RuntimeError as e:
                 inv.state = InvocationState.FAILED
+                raise e
+            except ParseError as e:
+                inv.state = InvocationState.FAILED
+                inv.exception = "{}: {}: {}\n\n{}".format(e.__class__.__name__, e.loc, str(e),
+                                                          traceback.format_exc())
+            except BaseException as e:
+                inv.state = InvocationState.FAILED
+                inv.exception = "{}: {}\n\n{}".format(e.__class__.__name__, str(e), traceback.format_exc())
+                
 
             inv.instance_state = InvocationService.get_instance_state(location)
 
