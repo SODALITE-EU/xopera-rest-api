@@ -187,9 +187,24 @@ class InvocationWorkerProcess:
         ##############################################################
         # TODO remove when fixed
         #  Due to bug in xOpera, copy old TOSCA to new workdir with random name
+        #  we also have to copy all the other files in TOSCA blueprint to new workdir
         new_filename = str(uuid.uuid4())
         shutil.copyfile(str(location_old / entry_definitions(location_old)), str(location_new / new_filename))
         storage_old.write(str(new_filename), "root_file")
+
+        def copytree(src, dst, symlinks=False, ignore=None):
+            for item in os.listdir(src):
+                s = os.path.join(src, item)
+                d = os.path.join(dst, item)
+                if os.path.isdir(s):
+                    if not os.path.exists(d):
+                        os.mkdir(d)
+                    copytree(s, d, symlinks, ignore)
+                else:
+                    if not os.path.exists(d):
+                        shutil.copy2(s, d)
+
+        copytree(location_old, location_new)
 
         ############################################################################
 
