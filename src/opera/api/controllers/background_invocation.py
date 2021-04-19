@@ -198,7 +198,7 @@ class InvocationWorkerProcess:
             for item in os.listdir(src):
                 s = os.path.join(src, item)
                 d = os.path.join(dst, item)
-                if os.path.isdir(s):
+                if os.path.isdir(s) and Path(s).name != '.opera':
                     if not os.path.exists(d):
                         os.mkdir(d)
                     copytree(s, d, symlinks, ignore)
