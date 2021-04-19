@@ -173,7 +173,9 @@ class InvocationWorkerProcess:
         location_new = location or InvocationService.deployment_location(str(uuid.uuid4()), str(uuid.uuid4()))
 
         # old Deployed instance
-        inv_old = SQL_database.get_deployment_status(deployment_id)
+        # TODO Next line should use SQL_database.get_deployment_status(deployment_id), had to be changed since
+        #  old blueprint_id is part of second to last invocation, last is already current
+        inv_old = SQL_database.get_last_completed_invocation(deployment_id)
         CSAR_db.get_revision(inv_old.blueprint_id, location_old, inv_old.version_id)
         InvocationService.get_dot_opera_from_db(deployment_id, location_old)
         storage_old = Storage.create(str(location_old / '.opera'))
@@ -187,9 +189,24 @@ class InvocationWorkerProcess:
         ##############################################################
         # TODO remove when fixed
         #  Due to bug in xOpera, copy old TOSCA to new workdir with random name
+        #  we also have to copy all the other files in TOSCA blueprint to new workdir
         new_filename = str(uuid.uuid4())
         shutil.copyfile(str(location_old / entry_definitions(location_old)), str(location_new / new_filename))
         storage_old.write(str(new_filename), "root_file")
+
+        def copytree(src, dst, symlinks=False, ignore=None):
+            for item in os.listdir(src):
+                s = os.path.join(src, item)
+                d = os.path.join(dst, item)
+                if os.path.isdir(s) and Path(s).name != '.opera':
+                    if not os.path.exists(d):
+                        os.mkdir(d)
+                    copytree(s, d, symlinks, ignore)
+                else:
+                    if not os.path.exists(d):
+                        shutil.copy2(s, d)
+
+        copytree(location_old, location_new)
 
         ############################################################################
 
