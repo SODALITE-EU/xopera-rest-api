@@ -4,7 +4,7 @@ import uuid
 
 import psycopg2
 
-from opera.api.openapi.models import Invocation
+from opera.api.openapi.models import Invocation, InvocationState
 from opera.api.settings import Settings
 from opera.api.util import timestamp_util, file_util
 from opera.api.log import get_logger
@@ -85,6 +85,11 @@ class Database:
         """
         Get last deployment log
         """
+        pass
+
+    # TODO Implemented due to update's need for one before last invocation
+    #   remove when solved properly
+    def get_last_completed_invocation(self, deployment_id: uuid):
         pass
 
     def get_deployment_history(self, deployment_id: uuid):
@@ -286,6 +291,15 @@ class OfflineStorage(Database):
         if len(history) == 0:
             return None
         return history[-1]
+
+    # TODO Implemented due to update's need for one before last invocation
+    #   remove when solved properly
+    def get_last_completed_invocation(self, deployment_id: uuid):
+        history = self.get_deployment_history(deployment_id)
+        if len(history) == 0:
+            return None
+        history_completed = [x for x in history if x.state in (InvocationState.SUCCESS, InvocationState.FAILED)]
+        return history_completed[-1]
 
     def get_deployment_history(self, deployment_id: uuid):
         """
@@ -624,6 +638,15 @@ class PostgreSQL(Database):
         dbcur.close()
 
         return inv
+
+    # TODO Implemented due to update's need for one before last invocation
+    #   remove when solved properly
+    def get_last_completed_invocation(self, deployment_id: uuid):
+        history = self.get_deployment_history(deployment_id)
+        if len(history) == 0:
+            return None
+        history_completed = [x for x in history if x.state in (InvocationState.SUCCESS, InvocationState.FAILED)]
+        return history_completed[-1]
 
     def get_deployment_history(self, deployment_id: uuid):
         """
