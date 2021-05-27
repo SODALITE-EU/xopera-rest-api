@@ -17,6 +17,10 @@ tags:
   description: SSH key management
 - name: blueprint
   description: Blueprint management
+- name: blueprint-meta
+  description: Blueprint metadata management
+- name: validation
+  description: Blueprint validation
 - name: deployment
   description: Interaction with Deployed instance
 paths:
@@ -55,6 +59,12 @@ paths:
         description: Optional comment on submission
         schema:
           type: string
+      - name: name
+        in: query
+        description: Blueprint name
+        schema:
+          type: string
+          default:
       - name: project_domain
         in: query
         description: Optional project domain this blueprint belongs to
@@ -261,6 +271,236 @@ paths:
               schema:
                 type: string
 
+  /blueprint/{blueprint_id}/meta:
+    get:
+      summary: "Get blueprint's metadata"
+      security:
+        - apiKey: [ ]
+        - oauth2: [ email ]
+      tags:
+        - blueprint-meta
+      operationId: get_blueprint_meta
+      parameters:
+        - name: blueprint_id
+          in: path
+          description: Id of blueprint
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: Metadata returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Blueprint'
+        401:
+          description: Unauthorized request for this blueprint
+          content:
+            application/json:
+              schema:
+                type: string
+        404:
+          description: Blueprint not found
+          content:
+            application/json:
+              schema:
+                type: string
+        500:
+          description: DB or REST API error
+          content:
+            application/json:
+              schema:
+                type: string
+
+  /blueprint/{blueprint_id}/version/{version_id}/meta:
+    get:
+      summary: "Get blueprint version's metadata"
+      security:
+        - apiKey: [ ]
+        - oauth2: [ email ]
+      tags:
+        - blueprint-meta
+      operationId: get_blueprint_version_meta
+      parameters:
+        - name: blueprint_id
+          in: path
+          description: Id of blueprint
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: version_id
+          in: path
+          description: Id of blueprint version
+          required: true
+          schema:
+            type: string
+            pattern: '^v(0|[1-9][0-9]*).(0|[1-9][0-9]*)$'
+      responses:
+        200:
+          description: Metadata returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Blueprint'
+        401:
+          description: Unauthorized request for this blueprint
+          content:
+            application/json:
+              schema:
+                type: string
+        404:
+          description: Blueprint not found
+          content:
+            application/json:
+              schema:
+                type: string
+        500:
+          description: DB or REST API error
+          content:
+            application/json:
+              schema:
+                type: string
+
+  /blueprint/{blueprint_id}/name:
+    get:
+      summary: "Get blueprint name"
+      security:
+        - apiKey: [ ]
+        - oauth2: [ email ]
+      tags:
+        - blueprint-meta
+      operationId: get_blueprint_name
+      parameters:
+        - name: blueprint_id
+          in: path
+          description: Id of blueprint
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: Name returned
+          content:
+            application/json:
+              schema:
+                type: string
+        401:
+          description: Unauthorized request for this blueprint
+          content:
+            application/json:
+              schema:
+                type: string
+        404:
+          description: Blueprint not found
+          content:
+            application/json:
+              schema:
+                type: string
+        500:
+          description: DB or REST API error
+          content:
+            application/json:
+              schema:
+                type: string
+    post:
+      summary: "Change blueprint name"
+      security:
+        - apiKey: [ ]
+        - oauth2: [ email ]
+      tags:
+        - blueprint-meta
+      operationId: post_blueprint_name
+      parameters:
+        - name: blueprint_id
+          in: path
+          description: Id of blueprint
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: name
+          in: query
+          description: Desired blueprint name
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Name changed
+          content:
+            application/json:
+              schema:
+                type: string
+        401:
+          description: Unauthorized request for this blueprint
+          content:
+            application/json:
+              schema:
+                type: string
+        404:
+          description: Blueprint not found
+          content:
+            application/json:
+              schema:
+                type: string
+        500:
+          description: DB or REST API error
+          content:
+            application/json:
+              schema:
+                type: string
+
+  /blueprint/{blueprint_id}/deployments:
+    get:
+      summary: "Get deployments for current blueprint"
+      security:
+        - apiKey: [ ]
+        - oauth2: [ email ]
+      tags:
+        - blueprint-meta
+      operationId: get_blueprint_deployments
+      parameters:
+        - name: blueprint_id
+          in: path
+          description: Id of blueprint
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: Deployments returned
+          content:
+            application/json:
+              schema:
+                type: array
+                description: List of deployments from current blueprint
+                items:
+                  $ref: '#/components/schemas/Deployment'
+        401:
+          description: Unauthorized request for this blueprint
+          content:
+            application/json:
+              schema:
+                type: string
+        404:
+          description: Blueprint not found
+          content:
+            application/json:
+              schema:
+                type: string
+        500:
+          description: DB or REST API error
+          content:
+            application/json:
+              schema:
+                type: string
+
+
   /blueprint/{blueprint_id}/user:
     get:
       summary: "List users with access."
@@ -409,7 +649,7 @@ paths:
         - apiKey: []
         - oauth2: [email]
       tags:
-      - blueprint
+      - validation
       operationId: validate_existing
       description: Validates TOSCA service template
       parameters:
@@ -458,7 +698,7 @@ paths:
         - apiKey: [ ]
         - oauth2: [ email ]
       tags:
-        - blueprint
+        - validation
       operationId: validate_existing_version
       description: Validates TOSCA service template
       parameters:
@@ -514,7 +754,7 @@ paths:
         - apiKey: []
         - oauth2: [email]
       tags:
-      - blueprint
+      - validation
       operationId: validate_new
       description: Validates TOSCA service template
       requestBody:
@@ -562,7 +802,7 @@ paths:
         - apiKey: []
         - oauth2: [email]
       tags:
-      - blueprint
+      - blueprint-meta
       operationId: get_git_log
       parameters:
       - name: blueprint_id
@@ -1084,6 +1324,9 @@ components:
           type: string
           pattern: '^v(0|[1-9][0-9]*).(0|[1-9][0-9]*)$'
           description: Id of blueprint version
+        name:
+          type: string
+          description: Name of the blueprint
         url:
           type: string
           format: uri
@@ -1100,6 +1343,11 @@ components:
         commit_sha:
           type: string
           description: SHA-1 checksum of commit
+        deployments:
+          type: array
+          description: List of deployments from current blueprint
+          items:
+            $ref: '#/components/schemas/Deployment'
 
     GitLog:
       required:
@@ -1139,13 +1387,38 @@ components:
           description: Id of version
           pattern: '^v(0|[1-9][0-9]*).(0|[1-9][0-9]*)$'
 
-    DeploymentExists:
+#    DeploymentExists:
+#      type: object
+#      properties:
+#        exists:
+#          type: boolean
+#        checksum:
+#          type: string
+
+    Deployment:
       type: object
+      required:
+        - deployment_id
+        - state
+        - operation
+        - timestamp
       properties:
-        exists:
-          type: boolean
-        checksum:
+        deployment_id:
+          description: Id of deployment
           type: string
+          format: uuid
+        state:
+          description: State of last invocation
+          $ref: "#/components/schemas/InvocationState"
+        operation:
+          description: Type of last invocation
+          $ref: "#/components/schemas/OperationType"
+        timestamp:
+          description: An ISO8601 timestamp of when last job ended
+          type: string
+          format: date-time
+
+
 
     Invocation:
       description: An invocation of the deployment.
