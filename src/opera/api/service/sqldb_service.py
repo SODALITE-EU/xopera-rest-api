@@ -1,10 +1,11 @@
 import json
 import os
 import uuid
+import shutil
 
 import psycopg2
 
-from opera.api.openapi.models import Invocation, InvocationState
+from opera.api.openapi.models import Invocation, InvocationState, Blueprint
 from opera.api.settings import Settings
 from opera.api.util import timestamp_util, file_util
 from opera.api.log import get_logger
@@ -130,9 +131,21 @@ class Database:
         """
         pass
 
-    def save_project_domain(self, blueprint_id: uuid, project_domain: str):
+    def get_blueprint_name(self, blueprint_id: uuid):
         """
-        returns list of all version tags for blueprint
+        Returns human-readable name for blueprint
+        """
+        pass
+
+    def save_blueprint_meta(self, blueprint_meta: Blueprint):
+        """
+        saves metadata of blueprint version
+        """
+        pass
+
+    def delete_blueprint_meta(self, blueprint_id: uuid, version_id: str = None):
+        """
+        deletes blueprint meta of one or all versions
         """
         pass
 
@@ -143,14 +156,14 @@ class OfflineStorage(Database):
         self.db_type = 'OfflineStorage'
         self.db_path = Settings.offline_storage.absolute()
         self.invocation_path = self.db_path / Settings.invocation_table
+        self.blueprint_path = self.db_path / Settings.blueprint_table
         self.git_log_path = self.db_path / Settings.git_log_table
         self.opera_session_data_path = self.db_path / Settings.opera_session_data_table
-        self.project_domain_path = self.db_path / Settings.project_domain_table
 
         os.makedirs(self.invocation_path, exist_ok=True)
+        os.makedirs(self.blueprint_path, exist_ok=True)
         os.makedirs(self.git_log_path, exist_ok=True)
         os.makedirs(self.opera_session_data_path, exist_ok=True)
-        os.makedirs(self.project_domain_path, exist_ok=True)
 
     @staticmethod
     def file_write(path, content, name=None):
@@ -383,21 +396,60 @@ class OfflineStorage(Database):
         """
         returns project domain for blueprint
         """
-        try:
-            domain_data = json.loads(self.file_read(str(self.project_domain_path), blueprint_id))
-            return {k: (v if v != 'None' else None) for k, v in domain_data.items()}
-        except FileNotFoundError:
-            return None
+        for location in (self.blueprint_path / str(blueprint_id)).glob('*'):
+            domain_data = json.loads(location.read_text())
+            blueprint_meta = Blueprint.from_dict(domain_data)
+            return blueprint_meta.project_domain
+        return None
 
-    def save_project_domain(self, blueprint_id: uuid, project_domain: str):
+    def get_blueprint_name(self, blueprint_id: uuid):
         """
-        Saves project domain for blueprint
+        Returns human-readable name for blueprint
         """
-        data = {
-            "blueprint_id": str(blueprint_id),
-            "project_domain": project_domain
-        }
-        self.file_write(str(self.project_domain_path), name=blueprint_id, content=json.dumps(data))
+        for location in (self.blueprint_path / str(blueprint_id)).glob('*'):
+            domain_data = json.loads(location.read_text())
+            blueprint_meta = Blueprint.from_dict(domain_data)
+            return blueprint_meta.name
+
+        return None
+
+    def save_blueprint_meta(self, blueprint_meta: Blueprint):
+        """
+        saves metadata of blueprint version
+        """
+        blueprint_id = blueprint_meta.blueprint_id
+        try:
+            timestamp = timestamp_util.datetime_now_to_string()
+            blueprint_meta.timestamp = timestamp
+            location = self.blueprint_path / str(blueprint_id)
+            if not location.exists():
+                os.makedirs(location)
+            (location / str(timestamp)).write_text(json.dumps(blueprint_meta.to_dict(), cls=file_util.UUIDEncoder))
+        except Exception as e:
+
+            logger.error(f'Fail to update blueprint meta for {blueprint_id=} in OfflineStorage database: {str(e)}')
+            return False
+        logger.debug(f'Updated blueprint meta for {blueprint_id=} in OfflineStorage database')
+        return True
+
+    def delete_blueprint_meta(self, blueprint_id: uuid, version_id: str = None):
+        """
+        deletes blueprint meta of one or all versions
+        """
+        if not version_id:
+            shutil.rmtree((self.blueprint_path / str(blueprint_id)), ignore_errors=True)
+            logger.debug(f'Deleted blueprint metadata for entire {blueprint_id=} in OfflineStorage database')
+            return True
+
+        for location in (self.blueprint_path / str(blueprint_id)).glob('*'):
+            domain_data = json.loads(location.read_text())
+            blueprint_meta = Blueprint.from_dict(domain_data)
+            if version_id == blueprint_meta.version_id:
+                location.unlink()
+                logger.debug(f'Deleted blueprint metadata for {blueprint_id=} and {version_id=} in OfflineStorage database')
+                return True
+        logger.error(f'Failed to delete blueprint metadata for {blueprint_id=} in OfflineStorage database: FileNotFound')
+        return False
 
 
 class PostgreSQL(Database):
@@ -415,6 +467,17 @@ class PostgreSQL(Database):
                         _log text,  
                         primary key (invocation_id)
                         );""".format(Settings.invocation_table))
+        self.execute("""
+                        create table if not exists {} (
+                        blueprint_id varchar (36),
+                        version_id varchar(36),
+                        name varchar(250),
+                        project_domain varchar(250),
+                        url text,
+                        timestamp timestamp default current_timestamp, 
+                        commit_sha text,
+                        primary key (timestamp)
+                        );""".format(Settings.blueprint_table))
 
         self.execute("""
                         create table if not exists {} (
@@ -436,13 +499,6 @@ class PostgreSQL(Database):
                         tree text,
                         primary key (deployment_id)
                         );""".format(Settings.opera_session_data_table))
-
-        self.execute("""
-                        create table if not exists {} (
-                        blueprint_id varchar (36),
-                        project_domain varchar(250),
-                        primary key (blueprint_id)
-                        );""".format(Settings.project_domain_table))
 
     def disconnect(self):
         logger.info('disconnecting PostgreSQL database')
@@ -563,9 +619,9 @@ class PostgreSQL(Database):
                    tree=excluded.tree;"""
             .format(Settings.opera_session_data_table), (str(deployment_id), timestamp, tree_str))
         if response:
-            logger.debug('Updated dot_opera_data in PostgreSQL database')
+            logger.debug(f'Updated dot_opera_data for {deployment_id=} in PostgreSQL database')
         else:
-            logger.error('Failed to update dot_opera_data in PostgreSQL database')
+            logger.error(f'Failed to update dot_opera_data for {deployment_id=} in PostgreSQL database')
         return response
 
     def get_opera_session_data(self, deployment_id):
@@ -595,9 +651,9 @@ class PostgreSQL(Database):
             "delete from {} where deployment_id = '{}'"
             .format(Settings.opera_session_data_table, str(deployment_id)))
         if response:
-            logger.debug(f'Deleted opera_session_data for {deployment_id} from PostgreSQL database')
+            logger.debug(f'Deleted opera_session_data for {deployment_id=} from PostgreSQL database')
         else:
-            logger.error(f'Failed to delete opera_session_data for {deployment_id} from PostgreSQL database')
+            logger.error(f'Failed to delete opera_session_data for {deployment_id=} from PostgreSQL database')
         return response
 
     def update_deployment_log(self, invocation_id: uuid, inv: Invocation):
@@ -614,10 +670,12 @@ class PostgreSQL(Database):
             (str(inv.deployment_id), str(inv.timestamp_submission),
              str(invocation_id), str(inv.blueprint_id),
              inv.version_id, json.dumps(inv.to_dict(), cls=file_util.UUIDEncoder)))
+        deployment_id = inv.deployment_id
         if response:
-            logger.debug('Updated deployment log in PostgreSQL database')
+            logger.debug(f'Updated deployment log for {deployment_id=} and {invocation_id=} in PostgreSQL database')
         else:
-            logger.error('Failed to update deployment log in PostgreSQL database')
+            logger.error(f'Failed to update deployment log for {deployment_id=} and {invocation_id=} '
+                         f'in PostgreSQL database')
         return response
 
     def get_deployment_status(self, deployment_id: uuid):
@@ -692,9 +750,9 @@ class PostgreSQL(Database):
             values (%s, %s, %s, %s, %s, %s, %s)""".format(Settings.git_log_table),
             (str(blueprint_id), version_id, revision_msg, job, git_backend, repo_url, commit_sha))
         if response:
-            logger.debug('Updated git log in PostgreSQL database')
+            logger.debug(f'Updated git log for {blueprint_id=} and {version_id=} in PostgreSQL database')
         else:
-            logger.error('Fail to update git log in PostgreSQL database')
+            logger.error(f'Fail to update git log {blueprint_id=} and {version_id=} in PostgreSQL database')
         return response
 
     def get_git_transaction_data(self, blueprint_id: uuid, version_id: str = None, fetch_all: bool = False):
@@ -740,7 +798,7 @@ class PostgreSQL(Database):
         """
         dbcur = self.connection.cursor()
         query = """select blueprint_id, project_domain from {} where blueprint_id = '{}';""".format(
-            Settings.project_domain_table, blueprint_id)
+            Settings.blueprint_table, blueprint_id)
         dbcur.execute(query)
         line = dbcur.fetchone()
         if not line:
@@ -749,15 +807,58 @@ class PostgreSQL(Database):
         dbcur.close()
         return project_domain
 
-    def save_project_domain(self, blueprint_id: uuid, project_domain: str):
+    def get_blueprint_name(self, blueprint_id: uuid):
         """
-        Saves project domain for blueprint
+        Returns human-readable name for blueprint
         """
-        response = self.execute(
-            "insert into {} (blueprint_id, project_domain) values (%s, %s)"
-                .format(Settings.project_domain_table), (str(blueprint_id), project_domain))
-        if response:
-            logger.debug('Updated {} in PostgreSQL database'.format(Settings.project_domain_table))
+        dbcur = self.connection.cursor()
+        query = """select blueprint_id, name from {} where blueprint_id = '{}';""".format(
+            Settings.blueprint_table, blueprint_id)
+        dbcur.execute(query)
+        line = dbcur.fetchone()
+        if not line:
+            return None
+        name = line[1]
+        dbcur.close()
+        return name
+
+    def save_blueprint_meta(self, blueprint_meta: Blueprint):
+        """
+        saves metadata of blueprint version
+        """
+        success = self.execute(
+            """insert into {} (blueprint_id, version_id, name, project_domain, url, commit_sha) 
+            values (%s, %s, %s, %s, %s, %s)""".format(Settings.blueprint_table),
+            (str(blueprint_meta.blueprint_id), blueprint_meta.version_id, blueprint_meta.name,
+             blueprint_meta.project_domain, blueprint_meta.url, blueprint_meta.commit_sha))
+        blueprint_id = blueprint_meta.blueprint_id
+        if success:
+            logger.debug(f'Updated blueprint meta for {blueprint_id=} in PostgreSQL database')
         else:
-            logger.error('Failed to update {} in PostgreSQL database'.format(Settings.project_domain_table))
-        return response
+            logger.error(f'Fail to update blueprint meta for {blueprint_id=} in PostgreSQL database')
+        return success
+
+    def delete_blueprint_meta(self, blueprint_id: uuid, version_id: str = None):
+        """
+        deletes blueprint meta of one or all versions
+        """
+        if version_id:
+            success = self.execute(
+                "delete from {} where blueprint_id = '{}' and version_id = '{}'"
+                .format(Settings.blueprint_table, str(blueprint_id), version_id))
+
+        else:
+            success = self.execute(
+                "delete from {} where blueprint_id = '{}'"
+                .format(Settings.blueprint_table, str(blueprint_id)))
+
+        str_version_id = f'and {version_id=} ' if version_id else ''
+
+        if success:
+            logger.debug(
+                f'Deleted blueprint metadata for {blueprint_id=} {str_version_id}from PostgreSQL database')
+        else:
+            logger.error(
+                f'Failed to delete blueprint metadata for {blueprint_id=} {str_version_id}from PostgreSQL database')
+
+        return success

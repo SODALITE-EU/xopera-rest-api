@@ -1,7 +1,7 @@
 from opera.api.cli import SQL_database
 from opera.api.controllers import security_controller
 from opera.api.log import get_logger
-from opera.api.openapi.models import Blueprint, GitLog
+from opera.api.openapi.models import Blueprint, GitLog, Deployment
 
 logger = get_logger(__name__)
 

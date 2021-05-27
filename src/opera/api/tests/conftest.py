@@ -10,7 +10,7 @@ import pytest
 from opera.api.cli import test
 from opera.api.gitCsarDB import GitCsarDB
 from opera.api.gitCsarDB.connectors import MockConnector
-from opera.api.openapi.models.invocation import Invocation, InvocationState, OperationType
+from opera.api.openapi.models import Invocation, InvocationState, OperationType, Blueprint
 from opera.api.service import sqldb_service
 from opera.api.settings import Settings
 from opera.api.util import timestamp_util, xopera_util
@@ -42,6 +42,18 @@ def change_API_WORKDIR(new_workdir: str):
     Settings.DEPLOYMENT_DIR = f"{Settings.API_WORKDIR}/deployment_dir"
     Settings.offline_storage = Path(Settings.API_WORKDIR) / 'storage'
     Settings.workdir = Path(Settings.API_WORKDIR) / "git_db/mockConnector"
+
+
+@pytest.fixture()
+def generic_blueprint_meta():
+    blueprint_meta = Blueprint()
+    blueprint_meta.blueprint_id = str(uuid.uuid4())
+    blueprint_meta.version_id = 'v1.0'
+    blueprint_meta.name = 'name'
+    blueprint_meta.project_domain = 'project_domain'
+    blueprint_meta.url = 'https://github.com/torvalds/linux'
+    blueprint_meta.commit_sha = 'd7c5303fbc8ac874ae3e597a5a0d3707dc0230b4'
+    return blueprint_meta
 
 
 @pytest.fixture()

@@ -27,7 +27,7 @@ class TestPostNew:
         assert_that(resp.json).is_not_none().contains("Invalid CSAR")
 
     def test_db_fail(self, client, csar_empty, mocker):
-        mocker.patch('opera.api.service.sqldb_service.OfflineStorage.save_project_domain', return_value=False)
+        mocker.patch('opera.api.service.sqldb_service.OfflineStorage.save_blueprint_meta', return_value=False)
         mocker.patch('opera.api.controllers.security_controller.check_roles', return_value=True)
         mocker.patch('opera.api.service.csardb_service.GitDB.add_revision', return_value=({'blueprint_id': 'a'}, None))
         domain = '42'
@@ -37,6 +37,7 @@ class TestPostNew:
 
     def test_success(self, client, csar_1):
         resp = client.post("/blueprint", data=csar_1)
+        print(resp.json)
         assert_that(resp.status_code).is_equal_to(201)
         assert_that(resp.json).is_not_none().contains_only('blueprint_id', 'url',
                                                            'version_id', 'users', 'commit_sha', 'timestamp')

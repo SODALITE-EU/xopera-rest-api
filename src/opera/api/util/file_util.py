@@ -2,6 +2,7 @@ import json
 import pathlib
 import shutil
 from uuid import UUID
+from datetime import datetime
 
 
 def dir_to_json(dir_path: pathlib.Path) -> dict:
@@ -29,4 +30,7 @@ class UUIDEncoder(json.JSONEncoder):
         if isinstance(obj, UUID):
             # if the obj is uuid, we simply return the value of uuid
             return str(obj)
+        if isinstance(obj, datetime):
+            return datetime_to_str(obj)
         return json.JSONEncoder.default(self, obj)
+
