@@ -1,6 +1,6 @@
 openapi: 3.0.1
 info:
-  version: 2.4.0
+  version: 2.4.1
   title: xOpera REST API
   contact:
     email: mihael.trajbaric@xlab.si
