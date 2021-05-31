@@ -137,6 +137,12 @@ class Database:
         """
         pass
 
+    def get_blueprint_meta(self, blueprint_id: uuid, version_id: str = None):
+        """
+        returns blueprint (version's) metadata
+        """
+        pass
+
     def save_blueprint_meta(self, blueprint_meta: Blueprint):
         """
         saves metadata of blueprint version

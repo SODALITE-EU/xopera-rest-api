@@ -32,6 +32,7 @@ def get_blueprint_meta(blueprint_id):  # noqa: E501
     return 'do some magic!'
 
 
+@security_controller.check_role_auth_blueprint
 def get_blueprint_name(blueprint_id):  # noqa: E501
     """Get blueprint name
 
@@ -42,9 +43,11 @@ def get_blueprint_name(blueprint_id):  # noqa: E501
 
     :rtype: str
     """
-    return 'do some magic!'
+    name = SQL_database.get_blueprint_name(blueprint_id)
+    return name, 200
 
 
+@security_controller.check_role_auth_blueprint
 def get_blueprint_version_meta(blueprint_id, version_id):  # noqa: E501
     """Get blueprint version&#39;s metadata
 

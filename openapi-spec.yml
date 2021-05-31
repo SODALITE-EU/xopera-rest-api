@@ -61,10 +61,9 @@ paths:
           type: string
       - name: name
         in: query
-        description: Blueprint name
+        description: Optional human-readable blueprint name
         schema:
           type: string
-          default:
       - name: project_domain
         in: query
         description: Optional project domain this blueprint belongs to
@@ -1327,6 +1326,9 @@ components:
         name:
           type: string
           description: Name of the blueprint
+        project_domain:
+          type: string
+          description: Domain name of the blueprint
         url:
           type: string
           format: uri
