@@ -3,7 +3,9 @@ pipeline {
        environment {
        // OPENSTACK SETTINGS
        ssh_key_name = "jenkins-opera"
-       image_name = "centos7"
+       image_name = "ubuntu"
+       username = "ubuntu"
+       OPERA_SSH_USER = "ubuntu"
        network_name = "orchestrator-network"
        security_groups = "default,sodalite-remote-access,sodalite-rest,sodalite-uc"
        flavor_name = "m1.medium"
@@ -187,15 +189,16 @@ pipeline {
             }
             steps {
                 sh """#!/bin/bash
+                    rm -rf venv-deploy
                     python3 -m venv venv-deploy
                     . venv-deploy/bin/activate
                     python3 -m pip install --upgrade pip
                     python3 -m pip install opera[openstack]==0.6.4 docker
-                    ansible-galaxy install geerlingguy.pip,2.0.0 --force
-                    ansible-galaxy install geerlingguy.docker,3.0.0 --force
+                    ansible-galaxy install geerlingguy.pip,2.1.0 --force
+                    ansible-galaxy install geerlingguy.docker,3.1.2 --force
                     ansible-galaxy install geerlingguy.repo-epel,3.0.0 --force
                     rm -r -f xOpera-rest-blueprint/modules/
-                    git clone -b 3.4.1 https://github.com/SODALITE-EU/iac-modules.git xOpera-rest-blueprint/modules/
+                    git clone -b ssh_config https://github.com/SODALITE-EU/iac-modules.git xOpera-rest-blueprint/modules/
                     cp ${ca_crt_file} xOpera-rest-blueprint/modules/docker/artifacts/ca.crt
                     cp ${ca_crt_file} xOpera-rest-blueprint/modules/misc/tls/artifacts/ca.crt
                     cp ${ca_key_file} xOpera-rest-blueprint/modules/docker/artifacts/ca.key

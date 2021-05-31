@@ -62,6 +62,8 @@ topology_template:
       type: map
     ssh_config:
       type: map
+    username:
+      type: string
 #    identity_file:
 #      type: string
 
@@ -107,7 +109,7 @@ topology_template:
 
 #        ssh_config:
 #          IdentityFile:   { get_input: identity_file }    # doesn't work due to https://github.com/xlab-si/xopera-opera/issues/102
-        username: centos
+        username:         { get_input: username }
       requirements:  
         - protected_by: security-rules-sodalite 
 
