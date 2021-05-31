@@ -3,9 +3,9 @@ pipeline {
        environment {
        // OPENSTACK SETTINGS
        ssh_key_name = "jenkins-opera"
-       image_name = "ubuntu"
-       username = "ubuntu"
-       OPERA_SSH_USER = "ubuntu"
+       image_name = "centos7"
+       username = "centos"
+       OPERA_SSH_USER = "centos"
        network_name = "orchestrator-network"
        security_groups = "default,sodalite-remote-access,sodalite-rest,sodalite-uc"
        flavor_name = "m1.medium"
