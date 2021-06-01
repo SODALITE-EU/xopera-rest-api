@@ -11,7 +11,6 @@ from opera.api.cli import test
 from opera.api.gitCsarDB import GitCsarDB
 from opera.api.gitCsarDB.connectors import MockConnector
 from opera.api.openapi.models import Invocation, InvocationState, OperationType, Blueprint
-from opera.api.service import sqldb_service
 from opera.api.settings import Settings
 from opera.api.util import timestamp_util, xopera_util
 
@@ -74,9 +73,9 @@ def patch_auth_wrapper(mocker, generic_invocation: Invocation):
     inv = generic_invocation
     inv.state = InvocationState.SUCCESS
     mocker.patch('opera.api.service.csardb_service.GitDB.version_exists', return_value=True)
-    mocker.patch('opera.api.service.sqldb_service.OfflineStorage.get_deployment_status',
+    mocker.patch('opera.api.service.sqldb_service.Database.get_deployment_status',
                  return_value=inv)
-    mocker.patch('opera.api.service.sqldb_service.OfflineStorage.get_project_domain', return_value=None)
+    mocker.patch('opera.api.service.sqldb_service.Database.get_project_domain', return_value=None)
 
 
 @pytest.fixture()
@@ -196,11 +195,6 @@ def workdir_path():
 @pytest.fixture
 def db():
     return GitCsarDB(connector=MockConnector(workdir=workdir_path()))
-
-
-@pytest.fixture(scope="session")
-def sql_db():
-    return sqldb_service.OfflineStorage()
 
 
 @pytest.fixture

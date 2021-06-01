@@ -117,7 +117,7 @@ class TestStatus:
 class TestHistory:
 
     def test_not_found(self, client, mocker, patch_auth_wrapper):
-        mocker.patch('opera.api.service.sqldb_service.OfflineStorage.get_deployment_history', return_value=[])
+        mocker.patch('opera.api.service.sqldb_service.Database.get_deployment_history', return_value=[])
         deployment_id = uuid.uuid4()
         resp = client.get(f"/deployment/{deployment_id}/history")
         assert resp.status_code == 404
@@ -128,7 +128,7 @@ class TestHistory:
         inv.deployment_id = uuid.uuid4()
 
         mock_log_data = mocker.MagicMock(name='invoke', return_value=[inv])
-        mocker.patch('opera.api.service.sqldb_service.OfflineStorage.get_deployment_history', new=mock_log_data)
+        mocker.patch('opera.api.service.sqldb_service.Database.get_deployment_history', new=mock_log_data)
 
         resp = client.get(f"/deployment/{inv.deployment_id}/history")
         assert resp.status_code == 200
@@ -149,7 +149,7 @@ class TestDeployContinue:
     def test_still_running(self, client, mocker, generic_invocation: Invocation, patch_auth_wrapper):
         inv = generic_invocation
         inv.state = InvocationState.IN_PROGRESS
-        mocker.patch('opera.api.service.sqldb_service.OfflineStorage.get_deployment_status', return_value=inv)
+        mocker.patch('opera.api.service.sqldb_service.Database.get_deployment_status', return_value=inv)
 
         deployment_id = uuid.uuid4()
         resp = client.post(f"/deployment/{deployment_id}/deploy_continue")
@@ -209,7 +209,7 @@ class TestUpdate:
     def test_still_running(self, client, mocker, generic_invocation: Invocation, patch_auth_wrapper):
         inv = generic_invocation
         inv.state = InvocationState.IN_PROGRESS
-        mocker.patch('opera.api.service.sqldb_service.OfflineStorage.get_deployment_status', return_value=inv)
+        mocker.patch('opera.api.service.sqldb_service.Database.get_deployment_status', return_value=inv)
 
         resp = client.post(f"/deployment/{inv.deployment_id}/update"
                            f"?blueprint_id={inv.blueprint_id}"
@@ -244,7 +244,7 @@ class TestUndeploy:
     def test_still_running(self, client, mocker, generic_invocation: Invocation, patch_auth_wrapper):
         inv = generic_invocation
         inv.state = InvocationState.IN_PROGRESS
-        mocker.patch('opera.api.service.sqldb_service.OfflineStorage.get_deployment_status', return_value=inv)
+        mocker.patch('opera.api.service.sqldb_service.Database.get_deployment_status', return_value=inv)
 
         resp = client.post(f"/deployment/{inv.deployment_id}/undeploy")
         assert resp.status_code == 403

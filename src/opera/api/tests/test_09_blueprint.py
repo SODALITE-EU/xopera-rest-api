@@ -27,7 +27,7 @@ class TestPostNew:
         assert_that(resp.json).is_not_none().contains("Invalid CSAR")
 
     def test_db_fail(self, client, csar_empty, mocker):
-        mocker.patch('opera.api.service.sqldb_service.OfflineStorage.save_blueprint_meta', return_value=False)
+        mocker.patch('opera.api.service.sqldb_service.Database.save_blueprint_meta', return_value=False)
         mocker.patch('opera.api.controllers.security_controller.check_roles', return_value=True)
         mocker.patch('opera.api.service.csardb_service.GitDB.add_revision', return_value=({'blueprint_id': 'a'}, None))
         domain = '42'
@@ -35,9 +35,21 @@ class TestPostNew:
         assert_that(resp.status_code).is_equal_to(500)
         assert_that(resp.json).contains('Failed to save project data')
 
-    def test_success(self, client, csar_1):
+    def test_success(self, client, csar_1, mocker):
+        mocker.patch('opera.api.service.sqldb_service.Database.save_blueprint_meta', return_value=True)
+        mocker.patch('opera.api.service.sqldb_service.Database.save_git_transaction_data')
+        mocker.patch('opera.api.controllers.security_controller.check_roles', return_value=True)
+        mocker.patch('opera.api.service.csardb_service.GitDB.add_revision', return_value=(
+            {
+                'message': "Revision saved to GitDB",
+                'blueprint_id': uuid.uuid4(),
+                'url': 'https://google.com',
+                'commit_sha': 'commit_sha',
+                'version_id': 'v1.0',
+                'users': ['xopera'],
+                'timestamp': timestamp_util.datetime_now_to_string()
+            }, None))
         resp = client.post("/blueprint", data=csar_1)
-        print(resp.json)
         assert_that(resp.status_code).is_equal_to(201)
         assert_that(resp.json).is_not_none().contains_only('blueprint_id', 'url',
                                                            'version_id', 'users', 'commit_sha', 'timestamp')
@@ -60,28 +72,38 @@ class TestPostMultipleVersions:
         blueprint_id = uuid.uuid4()
         mocker.patch('opera.api.service.csardb_service.GitDB.version_exists', return_value=True)
         mocker.patch('opera.api.controllers.security_controller.check_roles', return_value=False)
-        mocker.patch('opera.api.service.sqldb_service.OfflineStorage.get_project_domain', return_value='foo')
+        mocker.patch('opera.api.service.sqldb_service.Database.get_project_domain', return_value='foo')
 
         resp = client.post(f"/blueprint/{blueprint_id}", data=csar_1)
         assert_that(resp.status_code).is_equal_to(401)
         assert_that(resp.json).is_not_none().contains("Unauthorized request")
 
-    def test_emtpy_request(self, client, csar_empty, csar_1):
-        # prepare blueprint
-        resp = client.post("/blueprint", data=csar_1)
-        assert_that(resp.status_code).is_equal_to(201)
-        token = resp.json['blueprint_id']
-
-        resp = client.post("/blueprint/{}".format(token), data=csar_empty, content_type='multipart/form-data')
+    def test_emtpy_request(self, client, csar_empty, mocker):
+        mocker.patch('opera.api.service.csardb_service.GitDB.version_exists', return_value=True)
+        mocker.patch('opera.api.service.csardb_service.GitDB.add_revision', return_value=(
+            None, "Invalid CSAR: something missing"))
+        resp = client.post(f"/blueprint/{uuid.uuid4()}", data=csar_empty, content_type='multipart/form-data')
+        print(resp.json)
         assert_that(resp.status_code).is_equal_to(406)
         assert_that(resp.json).is_not_none().contains("Invalid CSAR")
 
-    def test_success(self, client, csar_1, csar_2):
-        # prepare first blueprint
-        resp1 = client.post("/blueprint", data=csar_1)
-        blueprint_id = resp1.json['blueprint_id']
+    def test_success(self, client, csar_1, mocker):
+        mocker.patch('opera.api.service.sqldb_service.Database.save_blueprint_meta', return_value=True)
+        mocker.patch('opera.api.service.sqldb_service.Database.save_git_transaction_data')
+        mocker.patch('opera.api.service.csardb_service.GitDB.version_exists', return_value=True)
+        mocker.patch('opera.api.service.csardb_service.GitDB.add_revision', return_value=(
+            {
+                'message': "Revision saved to GitDB",
+                'blueprint_id': uuid.uuid4(),
+                'url': 'https://google.com',
+                'commit_sha': 'commit_sha',
+                'version_id': 'v2.0',
+                'users': ['xopera'],
+                'timestamp': timestamp_util.datetime_now_to_string()
+            }, None))
+
         # test new version
-        resp2 = client.post(f"/blueprint/{blueprint_id}", data=csar_2)
+        resp2 = client.post(f"/blueprint/{uuid.uuid4()}", data=csar_1)
         assert_that(resp2.status_code).is_equal_to(201)
         assert_that(resp2.json).is_not_none().contains_only('blueprint_id', 'url', 'version_id',
                                                             'users', 'commit_sha', 'timestamp')
@@ -95,16 +117,19 @@ class TestDelete:
         assert_that(resp.status_code).is_equal_to(404)
         assert_that(resp.json).is_not_none().contains("Did not find blueprint")
 
-    def test_json_keys_success(self, client, csar_1):
-        resp = client.post("/blueprint", data=csar_1)
-        blueprint_id = resp.json['blueprint_id']
+    def test_json_keys_success(self, client, mocker, patch_auth_wrapper):
+        mocker.patch('opera.api.service.sqldb_service.Database.blueprint_used_in_deployment', return_value=False)
+        mocker.patch('opera.api.service.csardb_service.GitDB.get_repo_url', return_value=['url', None])
+        mocker.patch('opera.api.service.csardb_service.GitDB.delete_blueprint', return_value=[1, 200])
+        mocker.patch('opera.api.service.sqldb_service.Database.delete_blueprint_meta')
+        mocker.patch('opera.api.service.sqldb_service.Database.save_git_transaction_data')
 
-        resp = client.delete(f"/blueprint/{blueprint_id}")
+        resp = client.delete(f"/blueprint/{uuid.uuid4()}")
         assert_that(resp.status_code).is_equal_to(200)
         assert_that(resp.json).is_not_none().contains_only('blueprint_id', 'timestamp', 'url')
 
     def test_delete_before_undeploy(self, mocker, client, patch_auth_wrapper):
-        mocker.patch('opera.api.service.sqldb_service.OfflineStorage.blueprint_used_in_deployment', return_value=True)
+        mocker.patch('opera.api.service.sqldb_service.Database.blueprint_used_in_deployment', return_value=True)
 
         # try to delete
         blueprint_id = uuid.uuid4()
@@ -114,7 +139,7 @@ class TestDelete:
 
     def test_force_delete(self, mocker, client, patch_auth_wrapper):
         repo_url = 'https://url/to/repo.git'
-        mocker.patch('opera.api.service.sqldb_service.OfflineStorage.blueprint_used_in_deployment', return_value=True)
+        mocker.patch('opera.api.service.sqldb_service.Database.blueprint_used_in_deployment', return_value=True)
         mocker.patch('opera.api.service.csardb_service.GitDB.get_repo_url', return_value=[repo_url, None])
         mocker.patch('opera.api.service.csardb_service.GitDB.delete_blueprint', return_value=[1, 200])
 
@@ -156,7 +181,7 @@ class TestDeleteVersion:
         assert resp.json['version_id'] == version_id
 
     def test_delete_before_undeploy(self, mocker, client, patch_auth_wrapper):
-        mocker.patch('opera.api.service.sqldb_service.OfflineStorage.blueprint_used_in_deployment', return_value=True)
+        mocker.patch('opera.api.service.sqldb_service.Database.blueprint_used_in_deployment', return_value=True)
 
         # try to delete
         blueprint_id = uuid.uuid4()
@@ -167,7 +192,7 @@ class TestDeleteVersion:
 
     def test_force_delete(self, mocker, client, patch_auth_wrapper):
         repo_url = 'https://url/to/repo.git'
-        mocker.patch('opera.api.service.sqldb_service.OfflineStorage.blueprint_used_in_deployment', return_value=True)
+        mocker.patch('opera.api.service.sqldb_service.Database.blueprint_used_in_deployment', return_value=True)
         mocker.patch('opera.api.service.csardb_service.GitDB.get_repo_url', return_value=[repo_url, None])
         mocker.patch('opera.api.service.csardb_service.GitDB.delete_blueprint', return_value=[1, 200])
 
@@ -231,21 +256,17 @@ class TestUser:
         assert_that(resp.status_code).is_equal_to(500)
         assert_that(resp.json).contains('Could not add user')
 
-    def test_add_user_success(self, client, csar_1):
-        # upload local blueprint
-        resp = client.post(f"/blueprint", data=csar_1)
-        blueprint_token = resp.json['blueprint_id']
-        resp = client.get(f"/blueprint/{blueprint_token}/user")
-
-        assert_that(resp.json).is_empty()
+    def test_add_user_success(self, client, mocker, patch_auth_wrapper):
+        mocker.patch('opera.api.service.csardb_service.GitDB.add_member_to_blueprint', return_value=[True, None])
+        mocker.patch('opera.api.service.csardb_service.GitDB.get_blueprint_user_list', return_value=[['foo'], None])
 
         username = 'foo'
-        resp = client.post(f"/blueprint/{blueprint_token}/user/{username}")
+        resp = client.post(f"/blueprint/{uuid.uuid4()}/user/{username}")
         # since this is MockConnector, message should be 'user foo added'
         assert_that(resp.json).is_equal_to('User foo added')
         assert_that(resp.status_code).is_equal_to(200)
 
-        resp = client.get(f"/blueprint/{blueprint_token}/user")
+        resp = client.get(f"/blueprint/{uuid.uuid4()}/user")
         assert_that(resp.json).is_not_empty().contains_only('foo')
 
     def test_delete_users_git_error(self, client, mocker, patch_auth_wrapper):
@@ -258,19 +279,14 @@ class TestUser:
         assert_that(resp.status_code).is_equal_to(500)
         assert_that(resp.json).contains('Could not delete user')
 
-    def test_delete_user_success(self, client, csar_1, patch_auth_wrapper):
-        # upload local blueprint
-        resp = client.post(f"/blueprint", data=csar_1)
-        blueprint_token = resp.json['blueprint_id']
+    def test_delete_user_success(self, client, mocker, patch_auth_wrapper):
         username = 'foo'
-        client.post(f"/blueprint/{blueprint_token}/user/{username}")
-        resp = client.get(f"/blueprint/{blueprint_token}/user")
-        assert_that(resp.json).contains_only('foo')
+        mocker.patch('opera.api.service.csardb_service.GitDB.delete_blueprint_user', return_value=[True, None])
 
-        resp = client.delete(f"/blueprint/{blueprint_token}/user/{username}")
-        assert_that(resp.json).is_equal_to('User foo deleted')
+        resp = client.delete(f"/blueprint/{uuid.uuid4()}/user/{username}")
+        assert_that(resp.json).is_equal_to(f'User {username} deleted')
         assert_that(resp.status_code).is_equal_to(200)
-        resp = client.get(f"/blueprint/{blueprint_token}/user")
+        resp = client.get(f"/blueprint/{uuid.uuid4()}/user")
         assert_that(resp.json).is_empty()
 
 
@@ -380,7 +396,7 @@ class TestValidateNew:
 class TestGitHistory:
 
     def test_not_found(self, client, mocker, patch_auth_wrapper):
-        mocker.patch('opera.api.service.sqldb_service.OfflineStorage.get_git_transaction_data', return_value=None)
+        mocker.patch('opera.api.service.sqldb_service.Database.get_git_transaction_data', return_value=None)
         blueprint_id = uuid.uuid4()
         resp = client.get(f"/blueprint/{blueprint_id}/git_history")
         assert resp.status_code == 400
@@ -400,7 +416,8 @@ class TestGitHistory:
             timestamp=timestamp_util.datetime_now_to_string(),
             version_id='v1.0'
         )
-        mocker.patch('opera.api.service.sqldb_service.OfflineStorage.get_git_transaction_data', return_value=[git_data.to_dict()])
+        mocker.patch('opera.api.service.sqldb_service.Database.get_git_transaction_data',
+                     return_value=[git_data.to_dict()])
         blueprint_id = uuid.uuid4()
         resp = client.get(f"/blueprint/{blueprint_id}/git_history")
         assert resp.status_code == 200
@@ -417,7 +434,7 @@ class TestGitHistory:
             version_id='v1.0'
         )
         mock_git_data = mocker.MagicMock(name='invoke', return_value=[git_data.to_dict()])
-        mocker.patch('opera.api.service.sqldb_service.OfflineStorage.get_git_transaction_data', new=mock_git_data)
+        mocker.patch('opera.api.service.sqldb_service.Database.get_git_transaction_data', new=mock_git_data)
 
         resp = client.get(f"/blueprint/{git_data.blueprint_id}/git_history")
         assert resp.status_code == 200
