@@ -30,7 +30,5 @@ class UUIDEncoder(json.JSONEncoder):
         if isinstance(obj, UUID):
             # if the obj is uuid, we simply return the value of uuid
             return str(obj)
-        if isinstance(obj, datetime):
-            return datetime_to_str(obj)
         return json.JSONEncoder.default(self, obj)
 

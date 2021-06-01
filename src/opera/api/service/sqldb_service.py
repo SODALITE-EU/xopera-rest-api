@@ -137,6 +137,12 @@ class Database:
         """
         pass
 
+    def update_blueprint_name(self, blueprint_id: uuid, name: str):
+        """
+        updates blueprint name
+        """
+        pass
+
     def get_blueprint_meta(self, blueprint_id: uuid, version_id: str = None):
         """
         returns blueprint (version's) metadata
@@ -152,6 +158,12 @@ class Database:
     def delete_blueprint_meta(self, blueprint_id: uuid, version_id: str = None):
         """
         deletes blueprint meta of one or all versions
+        """
+        pass
+
+    def get_deployments_for_blueprint(self, blueprint_id: uuid):
+        """
+        Returns [Deployment] for every deployment, created from blueprint
         """
         pass
 
@@ -419,6 +431,18 @@ class OfflineStorage(Database):
 
         return None
 
+    def update_blueprint_name(self, blueprint_id: uuid, name: str):
+        """
+        updates blueprint name
+        """
+        pass
+
+    def get_blueprint_meta(self, blueprint_id: uuid, version_id: str = None):
+        """
+        returns blueprint (version's) metadata
+        """
+        pass
+
     def save_blueprint_meta(self, blueprint_meta: Blueprint):
         """
         saves metadata of blueprint version
@@ -457,6 +481,12 @@ class OfflineStorage(Database):
         logger.error(f'Failed to delete blueprint metadata for {blueprint_id=} in OfflineStorage database: FileNotFound')
         return False
 
+    def get_deployments_for_blueprint(self, blueprint_id: uuid):
+        """
+        Returns [Deployment] for every deployment, created from blueprint
+        """
+        pass
+
 
 class PostgreSQL(Database):
     def __init__(self, settings):
@@ -468,7 +498,9 @@ class PostgreSQL(Database):
                         invocation_id varchar (36), 
                         deployment_id varchar (36),
                         blueprint_id varchar (36),
-                        version_id varchar(36), 
+                        version_id varchar(36),
+                        state varchar(36),
+                        operation varchar(36),
                         timestamp timestamp, 
                         _log text,  
                         primary key (invocation_id)
@@ -667,15 +699,18 @@ class PostgreSQL(Database):
         updates deployment log with deployment_id, timestamp_submission, invocation_id, _log
         """
         response = self.execute(
-            """insert into {} (deployment_id, timestamp, invocation_id, blueprint_id, version_id, _log)
-               values (%s, %s, %s, %s, %s, %s)
+            """insert into {} (deployment_id, timestamp, invocation_id, blueprint_id, version_id, state, operation, _log)
+               values (%s, %s, %s, %s, %s, %s, %s, %s)
                ON CONFLICT (invocation_id) DO UPDATE
                    SET timestamp=excluded.timestamp,
+                       state=excluded.state,
+                       operation=excluded.operation,
                         _log=excluded._log;"""
             .format(Settings.invocation_table),
             (str(inv.deployment_id), str(inv.timestamp_submission),
              str(invocation_id), str(inv.blueprint_id),
-             inv.version_id, json.dumps(inv.to_dict(), cls=file_util.UUIDEncoder)))
+             inv.version_id, inv.state, inv.operation,
+             json.dumps(inv.to_dict(), cls=file_util.UUIDEncoder)))
         deployment_id = inv.deployment_id
         if response:
             logger.debug(f'Updated deployment log for {deployment_id=} and {invocation_id=} in PostgreSQL database')
@@ -828,6 +863,48 @@ class PostgreSQL(Database):
         dbcur.close()
         return name
 
+    def update_blueprint_name(self, blueprint_id: uuid, name: str):
+        """
+        updates blueprint name
+        """
+        success = self.execute(
+            """update {}
+                set name = '{}'
+                where blueprint_id = '{}'""".format(Settings.blueprint_table, name, str(blueprint_id)))
+        if success:
+            logger.debug(f'Updated blueprint {name=} for {blueprint_id=} in PostgreSQL database')
+        else:
+            logger.error(f'Fail to update blueprint {name=} for {blueprint_id=} in PostgreSQL database')
+        return success
+
+    def get_blueprint_meta(self, blueprint_id: uuid, version_id: str = None):
+        """
+        returns blueprint (version's) metadata
+        """
+        dbcur = self.connection.cursor()
+        version_str = f"and version_id = '{version_id}'" if version_id else ''
+        query = """select * from {}
+                    where blueprint_id = '{}'
+                    {}
+                    order by timestamp desc limit 1;""".format(
+            Settings.blueprint_table, blueprint_id, version_str)
+        dbcur.execute(query)
+        line = dbcur.fetchone()
+        dbcur.close()
+        if not line:
+            return None
+        blueprint_meta = {
+                'blueprint_id': line[0],
+                'version_id': line[1],
+                'name': line[2],
+                'project_domain': line[3],
+                'url': line[4],
+                'timestamp': timestamp_util.datetime_to_str(line[5]),
+                'commit_sha': line[6],
+                'deployments': self.get_deployments_for_blueprint(blueprint_id) or None
+            }
+        return blueprint_meta
+
     def save_blueprint_meta(self, blueprint_meta: Blueprint):
         """
         saves metadata of blueprint version
@@ -868,3 +945,30 @@ class PostgreSQL(Database):
                 f'Failed to delete blueprint metadata for {blueprint_id=} {str_version_id}from PostgreSQL database')
 
         return success
+
+    def get_deployments_for_blueprint(self, blueprint_id: uuid):
+        """
+        Returns [Deployment] for every deployment, created from blueprint
+        """
+        dbcur = self.connection.cursor()
+        query = """select distinct on (deployment_id) deployment_id, state, operation, timestamp 
+                   from {}
+                   where deployment_id in (
+                        select deployment_id
+                        from {}
+                        where blueprint_id = '{}'
+                   )
+                   order by deployment_id, timestamp desc;"""\
+            .format(Settings.invocation_table, Settings.invocation_table, blueprint_id)
+        dbcur.execute(query)
+        lines = dbcur.fetchall()
+        blueprint_list = [
+            {
+                'deployment_id': line[0],
+                'state': line[1],
+                'operation': line[2],
+                'timestamp': timestamp_util.datetime_to_str(line[3])
+            } for line in lines
+        ]
+        dbcur.close()
+        return blueprint_list

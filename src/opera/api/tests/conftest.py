@@ -45,7 +45,7 @@ def change_API_WORKDIR(new_workdir: str):
 
 
 @pytest.fixture()
-def generic_blueprint_meta():
+def generic_blueprint_meta() -> Blueprint:
     blueprint_meta = Blueprint()
     blueprint_meta.blueprint_id = str(uuid.uuid4())
     blueprint_meta.version_id = 'v1.0'
@@ -53,6 +53,7 @@ def generic_blueprint_meta():
     blueprint_meta.project_domain = 'project_domain'
     blueprint_meta.url = 'https://github.com/torvalds/linux'
     blueprint_meta.commit_sha = 'd7c5303fbc8ac874ae3e597a5a0d3707dc0230b4'
+    blueprint_meta.timestamp = timestamp_util.datetime_now_to_string()
     return blueprint_meta
 
 

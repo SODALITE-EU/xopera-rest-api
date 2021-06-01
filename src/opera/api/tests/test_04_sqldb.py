@@ -2,6 +2,7 @@ import json
 import uuid
 from pathlib import Path
 import os
+import datetime
 
 from assertpy import assert_that
 import psycopg2
@@ -9,6 +10,7 @@ import psycopg2
 from opera.api.openapi.models import Invocation, Blueprint
 from opera.api.service.sqldb_service import OfflineStorage, PostgreSQL
 from opera.api.util import file_util, timestamp_util
+from opera.api.tests.conftest import generic_blueprint_meta
 import logging
 
 
@@ -199,7 +201,7 @@ class TestOfflineStorageSessionData:
         assert not (sql_db.opera_session_data_path / str(deployment_id)).exists()
 
 
-class TestOfflineStorageLBlueprintMeta:
+class TestOfflineStorageBlueprintMeta:
 
     def test_save_blueprint_meta(self, caplog, sql_db: OfflineStorage, generic_blueprint_meta):
         caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
@@ -219,7 +221,7 @@ class TestOfflineStorageLBlueprintMeta:
     def test_save_blueprint_meta_exception(self, mocker, caplog, sql_db: OfflineStorage, generic_blueprint_meta):
         # test set up
         caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
-        mocker.patch('opera.api.util.timestamp_util.datetime_to_str', side_effect=Exception('mocked error'))
+        mocker.patch('opera.api.util.timestamp_util.datetime_now_to_string', side_effect=Exception('mocked error'))
 
         blueprint_meta: Blueprint = generic_blueprint_meta
         sql_db.save_blueprint_meta(blueprint_meta)
@@ -410,12 +412,22 @@ class VersionExistsCursor(NoneCursor):
 class GetBlueprintMeta(NoneCursor):
     @classmethod
     def fetchone(cls):
-        # Blueprint exist and has not been deleted
         if "select blueprint_id, name" in cls.command:
             return 'a', 'name'
 
         if "select blueprint_id, project_domain" in cls.command:
             return 'a', 'project_domain'
+
+        if "select *" in cls.command:
+            blueprint_meta = TestPostgreSQLBlueprintMeta.blueprint_meta
+            return [blueprint_meta.blueprint_id, blueprint_meta.version_id, blueprint_meta.name,
+                    blueprint_meta.project_domain, blueprint_meta.url, blueprint_meta.timestamp,
+                    blueprint_meta.commit_sha]
+
+    @classmethod
+    def fetchall(cls):
+        # used to get deployments
+        return []
 
 
 class TestPostgreSQLVersionExists:
@@ -526,6 +538,37 @@ class TestPostgreSQLBlueprintMeta:
 
         assert_that(caplog.text).contains("Fail to update blueprint meta", str(blueprint_meta.blueprint_id))
 
+    blueprint_meta = Blueprint(
+        blueprint_id=str(uuid.uuid4()),
+        version_id='v1.0',
+        name='a',
+        project_domain='some_domain',
+        url='www.google.com',
+        timestamp=datetime.datetime.now(),
+        commit_sha='d955c23e2771639202f52db9d40c633f6f732e55'
+    )
+
+    def test_get_blueprint_meta(self, mocker, monkeypatch, caplog):
+        # test set up
+        caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
+        mocker.patch('psycopg2.connect', new=FakePostgres)
+        db = PostgreSQL({})
+        monkeypatch.setattr(db.connection, 'cursor', GetBlueprintMeta)
+
+        # test
+        blueprint_meta: Blueprint = self.blueprint_meta
+        assert_that(Blueprint.from_dict(db.get_blueprint_meta(blueprint_meta.blueprint_id))).is_equal_to(blueprint_meta)
+
+    def test_get_project_blueprint_meta_missing(self, mocker, caplog, generic_blueprint_meta):
+        # test set up
+        caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
+        mocker.patch('psycopg2.connect', new=FakePostgres)
+        db = PostgreSQL({})
+
+        # test
+        blueprint_meta: Blueprint = generic_blueprint_meta
+        assert db.get_blueprint_meta(blueprint_meta.blueprint_id) is None
+
     def test_get_project_domain(self, mocker, monkeypatch, caplog, generic_blueprint_meta):
         # test set up
         caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
@@ -557,6 +600,34 @@ class TestPostgreSQLBlueprintMeta:
         # test
         blueprint_meta: Blueprint = generic_blueprint_meta
         assert db.get_blueprint_name(blueprint_meta.blueprint_id) == blueprint_meta.name
+
+    def test_save_blueprint_name(self, mocker, monkeypatch, caplog, generic_blueprint_meta):
+        # test set up
+        caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
+        mocker.patch('psycopg2.connect', new=FakePostgres)
+        db = PostgreSQL({})
+        monkeypatch.setattr(db.connection, 'cursor', InspectCommandCursor)
+
+        # test
+        blueprint_meta: Blueprint = generic_blueprint_meta
+        new_name = 'new_name'
+        db.update_blueprint_name(blueprint_meta.blueprint_id, new_name)
+        command = db.connection.cursor().get_command()
+        assert_that(command).contains(blueprint_meta.name, new_name)
+        assert_that(caplog.text).contains("Updated blueprint name", new_name, str(blueprint_meta.blueprint_id))
+
+    def test_save_blueprint_name_exception(self, mocker, monkeypatch, caplog, generic_blueprint_meta):
+        # test set up
+        caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
+        mocker.patch('psycopg2.connect', new=FakePostgres)
+        db = PostgreSQL({})
+        monkeypatch.setattr(db.connection, 'cursor', PsycopgErrorCursor)
+
+        blueprint_meta: Blueprint = generic_blueprint_meta
+        new_name = 'new_name'
+        db.update_blueprint_name(blueprint_meta.blueprint_id, new_name)
+
+        assert_that(caplog.text).contains("Fail to update blueprint name", new_name, str(blueprint_meta.blueprint_id))
 
     def test_get_blueprint_name_missing(self, mocker, caplog, generic_blueprint_meta):
         # test set up

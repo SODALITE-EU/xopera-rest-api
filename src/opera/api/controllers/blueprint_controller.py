@@ -3,7 +3,7 @@ import connexion
 from opera.api.cli import CSAR_db, SQL_database
 from opera.api.controllers import security_controller
 from opera.api.log import get_logger
-from opera.api.openapi.models import Blueprint, GitLog
+from opera.api.openapi.models import Blueprint
 from opera.api.settings import Settings
 from opera.api.util import timestamp_util
 
