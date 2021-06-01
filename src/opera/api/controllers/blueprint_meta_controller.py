@@ -21,8 +21,6 @@ def get_blueprint_meta(blueprint_id):  # noqa: E501
     if not data:
         return "Blueprint meta not found", 404
     data['users'] = CSAR_db.get_blueprint_user_list(blueprint_id)[0]
-    import json
-    logger.debug(json.dumps(data, indent=2))
     return Blueprint.from_dict(data), 200
 
 
@@ -42,6 +40,7 @@ def get_blueprint_version_meta(blueprint_id, version_id):  # noqa: E501
     data = SQL_database.get_blueprint_meta(blueprint_id, version_id)
     if not data:
         return "Blueprint meta not found", 404
+    data['users'] = CSAR_db.get_blueprint_user_list(blueprint_id)[0]
     return Blueprint.from_dict(data), 200
 
 
@@ -58,7 +57,7 @@ def get_blueprint_name(blueprint_id):  # noqa: E501
     """
     name = SQL_database.get_blueprint_name(blueprint_id)
     if not name:
-        return "Blueprint meta not found", 404
+        return "Blueprint name not found", 404
     return name, 200
 
 

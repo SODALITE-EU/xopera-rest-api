@@ -10,7 +10,7 @@ import pytest
 from opera.api.cli import test
 from opera.api.gitCsarDB import GitCsarDB
 from opera.api.gitCsarDB.connectors import MockConnector
-from opera.api.openapi.models import Invocation, InvocationState, OperationType, Blueprint
+from opera.api.openapi.models import Invocation, InvocationState, OperationType, Blueprint, Deployment
 from opera.api.settings import Settings
 from opera.api.util import timestamp_util, xopera_util
 
@@ -54,6 +54,16 @@ def generic_blueprint_meta() -> Blueprint:
     blueprint_meta.commit_sha = 'd7c5303fbc8ac874ae3e597a5a0d3707dc0230b4'
     blueprint_meta.timestamp = timestamp_util.datetime_now_to_string()
     return blueprint_meta
+
+
+@pytest.fixture()
+def generic_deployment() -> Deployment:
+    dep = Deployment()
+    dep.deployment_id = str(uuid.uuid4())
+    dep.state = InvocationState.SUCCESS
+    dep.operation = OperationType.DEPLOY_FRESH
+    dep.timestamp = timestamp_util.datetime_now_to_string()
+    return dep
 
 
 @pytest.fixture()
