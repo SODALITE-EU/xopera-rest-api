@@ -10,8 +10,7 @@ import pytest
 from opera.api.cli import test
 from opera.api.gitCsarDB import GitCsarDB
 from opera.api.gitCsarDB.connectors import MockConnector
-from opera.api.openapi.models.invocation import Invocation, InvocationState, OperationType
-from opera.api.service import sqldb_service
+from opera.api.openapi.models import Invocation, InvocationState, OperationType, Blueprint, Deployment
 from opera.api.settings import Settings
 from opera.api.util import timestamp_util, xopera_util
 
@@ -45,6 +44,29 @@ def change_API_WORKDIR(new_workdir: str):
 
 
 @pytest.fixture()
+def generic_blueprint_meta() -> Blueprint:
+    blueprint_meta = Blueprint()
+    blueprint_meta.blueprint_id = str(uuid.uuid4())
+    blueprint_meta.version_id = 'v1.0'
+    blueprint_meta.name = 'name'
+    blueprint_meta.project_domain = 'project_domain'
+    blueprint_meta.url = 'https://github.com/torvalds/linux'
+    blueprint_meta.commit_sha = 'd7c5303fbc8ac874ae3e597a5a0d3707dc0230b4'
+    blueprint_meta.timestamp = timestamp_util.datetime_now_to_string()
+    return blueprint_meta
+
+
+@pytest.fixture()
+def generic_deployment() -> Deployment:
+    dep = Deployment()
+    dep.deployment_id = str(uuid.uuid4())
+    dep.state = InvocationState.SUCCESS
+    dep.operation = OperationType.DEPLOY_FRESH
+    dep.timestamp = timestamp_util.datetime_now_to_string()
+    return dep
+
+
+@pytest.fixture()
 def generic_invocation():
     inv = Invocation()
     inv.state = InvocationState.PENDING
@@ -61,9 +83,9 @@ def patch_auth_wrapper(mocker, generic_invocation: Invocation):
     inv = generic_invocation
     inv.state = InvocationState.SUCCESS
     mocker.patch('opera.api.service.csardb_service.GitDB.version_exists', return_value=True)
-    mocker.patch('opera.api.service.sqldb_service.OfflineStorage.get_deployment_status',
+    mocker.patch('opera.api.service.sqldb_service.Database.get_deployment_status',
                  return_value=inv)
-    mocker.patch('opera.api.service.sqldb_service.OfflineStorage.get_project_domain', return_value=None)
+    mocker.patch('opera.api.service.sqldb_service.Database.get_project_domain', return_value=None)
 
 
 @pytest.fixture()
@@ -183,11 +205,6 @@ def workdir_path():
 @pytest.fixture
 def db():
     return GitCsarDB(connector=MockConnector(workdir=workdir_path()))
-
-
-@pytest.fixture(scope="session")
-def sql_db():
-    return sqldb_service.OfflineStorage()
 
 
 @pytest.fixture

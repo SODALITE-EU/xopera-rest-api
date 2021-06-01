@@ -5,7 +5,7 @@ from opera.api.controllers.background_invocation import InvocationWorkerProcess
 from opera.api.log import get_logger
 from opera.api.openapi.models import InvocationState
 from opera.api.openapi.models import OperationType, Invocation
-from opera.api.openapi.models.deployment_exists import DeploymentExists
+# from opera.api.openapi.models.deployment_exists import DeploymentExists
 from opera.api.util import xopera_util
 from opera.api.settings import Settings
 
@@ -13,20 +13,20 @@ logger = get_logger(__name__)
 invocation_service = InvocationService(workers_num=Settings.invocation_service_workers)
 
 
-def deployment_exists(blueprint_id, version_id=None, inputs_file=None):
-    """Check if deployment exists
-
-    :param blueprint_id: Id of blueprint
-    :type blueprint_id: 
-    :param version_id: Id of blueprint version
-    :type version_id: str
-    :param inputs_file: File with inputs TOSCA blueprint
-    :type inputs_file: str
-
-    :rtype: DeploymentExists
-    """
-    # TODO implement
-    return 'Not implemented'
+# def deployment_exists(blueprint_id, version_id=None, inputs_file=None):
+#     """Check if deployment exists
+#
+#     :param blueprint_id: Id of blueprint
+#     :type blueprint_id:
+#     :param version_id: Id of blueprint version
+#     :type version_id: str
+#     :param inputs_file: File with inputs TOSCA blueprint
+#     :type inputs_file: str
+#
+#     :rtype: DeploymentExists
+#     """
+#     # TODO implement
+#     return 'Not implemented'
 
 
 @security_controller.check_role_auth_deployment

@@ -27,9 +27,9 @@ class Settings:
     # sql_database config
     sql_config = None
     invocation_table = 'invocation'
+    blueprint_table = 'blueprint'
     git_log_table = 'git_log'
     opera_session_data_table = 'opera_session_data'
-    project_domain_table = 'project_domain'
 
     # OfflineStorage database (alternative to sql_database) config
     USE_OFFLINE_STORAGE = False
