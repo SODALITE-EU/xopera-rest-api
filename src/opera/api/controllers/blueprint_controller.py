@@ -178,7 +178,7 @@ def post_blueprint(blueprint_id, revision_msg=None):
     blueprint_meta.project_domain = SQL_database.get_project_domain(blueprint_id)
 
     if not SQL_database.save_blueprint_meta(blueprint_meta):
-        return f"Failed to save project data for {blueprint_id=}", 500
+        return f"Failed to save project data for blueprint_id={blueprint_id}", 500
 
     SQL_database.save_git_transaction_data(blueprint_id=result['blueprint_id'],
                                            version_id=result['version_id'],
@@ -221,7 +221,7 @@ def post_new_blueprint(revision_msg=None, name=None, project_domain=None):
 
     if not SQL_database.save_blueprint_meta(blueprint_meta):
         blueprint_id = blueprint_meta.blueprint_id
-        return f"Failed to save project data for {blueprint_id=}", 500
+        return f"Failed to save project data for blueprint_id={blueprint_id}", 500
 
     SQL_database.save_git_transaction_data(blueprint_id=result['blueprint_id'],
                                            version_id=result['version_id'],

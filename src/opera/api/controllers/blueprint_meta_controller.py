@@ -75,7 +75,7 @@ def post_blueprint_name(blueprint_id, name):  # noqa: E501
     :rtype: str
     """
     if not SQL_database.update_blueprint_name(blueprint_id, name):
-        return f"Failed to save project data for {blueprint_id=}", 500
+        return f"Failed to save project data for blueprint_id={blueprint_id}", 500
     return "Successfully changed name", 201
 
 

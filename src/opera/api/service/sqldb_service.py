@@ -1,14 +1,12 @@
 import json
-import os
 import uuid
-import shutil
 
 import psycopg2
 
+from opera.api.log import get_logger
 from opera.api.openapi.models import Invocation, InvocationState, Blueprint
 from opera.api.settings import Settings
 from opera.api.util import timestamp_util, file_util
-from opera.api.log import get_logger
 
 logger = get_logger(__name__)
 
@@ -335,9 +333,9 @@ class PostgreSQL(Database):
                    tree=excluded.tree;"""
                 .format(Settings.opera_session_data_table), (str(deployment_id), timestamp, tree_str))
         if response:
-            logger.debug(f'Updated dot_opera_data for {deployment_id=} in PostgreSQL database')
+            logger.debug(f'Updated dot_opera_data for deployment_id={deployment_id} in PostgreSQL database')
         else:
-            logger.error(f'Failed to update dot_opera_data for {deployment_id=} in PostgreSQL database')
+            logger.error(f'Failed to update dot_opera_data for deployment_id={deployment_id} in PostgreSQL database')
         return response
 
     def get_opera_session_data(self, deployment_id):
@@ -367,9 +365,10 @@ class PostgreSQL(Database):
             "delete from {} where deployment_id = '{}'"
                 .format(Settings.opera_session_data_table, str(deployment_id)))
         if response:
-            logger.debug(f'Deleted opera_session_data for {deployment_id=} from PostgreSQL database')
+            logger.debug(f'Deleted opera_session_data for deployment_id={deployment_id} from PostgreSQL database')
         else:
-            logger.error(f'Failed to delete opera_session_data for {deployment_id=} from PostgreSQL database')
+            logger.error(
+                f'Failed to delete opera_session_data for deployment_id={deployment_id} from PostgreSQL database')
         return response
 
     def update_deployment_log(self, invocation_id: uuid, inv: Invocation):
@@ -391,10 +390,12 @@ class PostgreSQL(Database):
              json.dumps(inv.to_dict(), cls=file_util.UUIDEncoder)))
         deployment_id = inv.deployment_id
         if response:
-            logger.debug(f'Updated deployment log for {deployment_id=} and {invocation_id=} in PostgreSQL database')
+            logger.debug(
+                f'Updated deployment log for deployment_id={deployment_id} and invocation_id={invocation_id} in PostgreSQL database')
         else:
-            logger.error(f'Failed to update deployment log for {deployment_id=} and {invocation_id=} '
-                         f'in PostgreSQL database')
+            logger.error(
+                f'Failed to update deployment log for deployment_id={deployment_id} and invocation_id={invocation_id} '
+                f'in PostgreSQL database')
         return response
 
     def get_deployment_status(self, deployment_id: uuid):
@@ -469,9 +470,11 @@ class PostgreSQL(Database):
             values (%s, %s, %s, %s, %s, %s, %s)""".format(Settings.git_log_table),
             (str(blueprint_id), version_id, revision_msg, job, git_backend, repo_url, commit_sha))
         if response:
-            logger.debug(f'Updated git log for {blueprint_id=} and {version_id=} in PostgreSQL database')
+            logger.debug(
+                f'Updated git log for blueprint_id={blueprint_id} and version_id={version_id} in PostgreSQL database')
         else:
-            logger.error(f'Fail to update git log {blueprint_id=} and {version_id=} in PostgreSQL database')
+            logger.error(
+                f'Fail to update git log blueprint_id={blueprint_id} and version_id={version_id} in PostgreSQL database')
         return response
 
     def get_git_transaction_data(self, blueprint_id: uuid, version_id: str = None, fetch_all: bool = False):
@@ -550,9 +553,9 @@ class PostgreSQL(Database):
                 set name = '{}'
                 where blueprint_id = '{}'""".format(Settings.blueprint_table, name, str(blueprint_id)))
         if success:
-            logger.debug(f'Updated blueprint {name=} for {blueprint_id=} in PostgreSQL database')
+            logger.debug(f'Updated blueprint name={name} for blueprint_id={blueprint_id} in PostgreSQL database')
         else:
-            logger.error(f'Fail to update blueprint {name=} for {blueprint_id=} in PostgreSQL database')
+            logger.error(f'Fail to update blueprint name={name} for blueprint_id={blueprint_id} in PostgreSQL database')
         return success
 
     def get_blueprint_meta(self, blueprint_id: uuid, version_id: str = None):
@@ -594,9 +597,9 @@ class PostgreSQL(Database):
              blueprint_meta.project_domain, blueprint_meta.url, blueprint_meta.commit_sha))
         blueprint_id = blueprint_meta.blueprint_id
         if success:
-            logger.debug(f'Updated blueprint meta for {blueprint_id=} in PostgreSQL database')
+            logger.debug(f'Updated blueprint meta for blueprint_id={blueprint_id} in PostgreSQL database')
         else:
-            logger.error(f'Fail to update blueprint meta for {blueprint_id=} in PostgreSQL database')
+            logger.error(f'Fail to update blueprint meta for blueprint_id={blueprint_id} in PostgreSQL database')
         return success
 
     def delete_blueprint_meta(self, blueprint_id: uuid, version_id: str = None):
@@ -613,14 +616,14 @@ class PostgreSQL(Database):
                 "delete from {} where blueprint_id = '{}'"
                     .format(Settings.blueprint_table, str(blueprint_id)))
 
-        str_version_id = f'and {version_id=} ' if version_id else ''
+        str_version_id = f'and version_id={version_id} ' if version_id else ''
 
         if success:
             logger.debug(
-                f'Deleted blueprint metadata for {blueprint_id=} {str_version_id}from PostgreSQL database')
+                f'Deleted blueprint metadata for blueprint_id={blueprint_id} {str_version_id}from PostgreSQL database')
         else:
             logger.error(
-                f'Failed to delete blueprint metadata for {blueprint_id=} {str_version_id}from PostgreSQL database')
+                f'Failed to delete blueprint metadata for blueprint_id={blueprint_id} {str_version_id}from PostgreSQL database')
 
         return success
 
