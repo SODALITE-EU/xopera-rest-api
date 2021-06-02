@@ -89,9 +89,13 @@ Service Archive (CSAR)](https://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-Y
 xOpera REST API leverages GIT server (it supports Github and Gitlab at the moment) for storing CSARs. 
 #### Upload a new blueprint
 A new blueprint can be uploaded with POST to `/blueprint`. `CSAR` must be a valid TOSCA CSAR archive (in zip format). 
-Optionally, user can add `revision_msg`, or specify `project_domain` for blueprint. If successful, response in form 
-of Blueprint schema will include `blueprint_id` and `version_id`, which can later be used for accessing 
-blueprint (version).
+Optionally, user can add several other parameters:
+- `revision_msg` --> commit message for git
+- `name` --> human-readable blueprint_name
+- `project_domain` --> domain of blueprint
+ 
+If successful, response in form of Blueprint schema that will include `blueprint_id` and `version_id`, which can later
+ be used for accessing blueprint (version).
 
 #### Upload a new blueprint version
 A new version can be added to existing blueprint with POST to `/blueprint/{blueprint_id}`. `CSAR` must be a valid TOSCA
@@ -118,6 +122,57 @@ be assigned developer access and will be able to modify blueprint.
 #### Remove user from blueprint
 Git user can be removed with POST to `/blueprint/{blueprint_id}/user/{user_id}`.
 
+### Blueprint metadata management
+#### Obtain blueprint metadata
+Blueprint metadata from the most recent version of blueprint can be obtained with GET 
+to `/blueprint/{blueprint_id}/meta`. Metadata consist of:
+- `blueprint_id`
+- `version_id`
+- `name`
+- `project_domain`
+- `timestamp`
+- `url`
+- `commit_sha`
+- `users`
+- `deployments`
+
+#### Obtain blueprint metadata from specific version
+Blueprint metadata from specific version of blueprint can be obtained with GET to 
+`/blueprint/{blueprint_id}/version/{version_id}/meta`. Endpoint returns the same fields as `/blueprint/{blueprint_id}/meta`.
+Note that some parameters are blueprint-version-specific (every version can have its own values) and some are not
+ (every version of single blueprint has the same values).
+
+Version-specific metadata: 
+- `version_id`
+- `timestamp`
+- `commit_sha`
+
+#### Obtain blueprint name
+Although blueprint name is part of [blueprint meta](#obtain-blueprint-metadata) it can also be obtained via dedicated 
+endpoint with GET to `/blueprint/{blueprint_id}/name`.
+
+#### Updating blueprint name
+Blueprint name is usually set upon blueprint creation (POST to `/blueprint`), but it can also be changed later, with 
+POST to `/blueprint/{blueprint_id}/name`.
+
+### Obtaining list of deployments
+List of deployments, created from current blueprint can be obtained with GET to `/blueprint/{blueprint_id}/deployments`.
+Every list item consist of:
+- `deployment_id`
+- `state`
+- `operation`
+- `timestamp`
+
+List of deployments is part of blueprint metadata and can also be obtained via 
+[metadata endpoint](#obtain-blueprint-metadata).
+
+#### Get history of blueprint changes
+History of changes, made by xOpera REST API to git repository with blueprint, can be obtained with GET to
+`/blueprint/{blueprint_id}/git_history`. Changes can be either `update` (addition of blueprint version) or `delete` 
+(deletion of blueprint or blueprint version).
+
+### Blueprint validation
+
 #### Validate blueprint
 Blueprint from database can be validated with PUT to `/blueprint/{blueprint_id}/validate`. Optionally, file with inputs
 can be added. If blueprint has multiple versions, the last will be validated.
@@ -130,17 +185,14 @@ Optionally, file with inputs can be added.
 Any blueprint in The TOSCA Cloud Service Archive (CSAR) form can be validate with PUT to `/blueprint/validate`.
 After validation, blueprint will be discarded.
 
-#### Get history of blueprint changes
-History of changes, made by xOpera REST API to git repository with blueprint, can be obtained with GET to
-`/blueprint/{blueprint_id}/git_history`. Changes can be either `update` (addition of blueprint version) or `delete` 
-(deletion of blueprint or blueprint version).
-
 ### Deployment management
 Deployment is xOpera REST API's internal representation of current instance state, deployed on cloud platform
 
+<!---
 #### Check deployment exists (not implemented)
 If deployment, instantiated from blueprint with inputs already exists, can be checked with PUT to `/deployment/exists`.
 If `version_id` is not specified, last version is used. Inputs are optional, depending on blueprint.
+-->
 
 #### Initialize and deploy
 To initialize deployment with first deploy, user can POST to `/deployment/deploy`. If `version_id` is not specified, 

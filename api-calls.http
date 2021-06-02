@@ -74,6 +74,49 @@ DELETE http://localhost:8080/blueprint/854cc717-fd02-4c51-a35d-7223f9fc8423/user
 accept: application/json
 X-API-Key: test
 
+### Get blueprint meta (last blueprint version)
+
+# curl -X GET "http://localhost:8080/blueprint/854cc717-fd02-4c51-a35d-7223f9fc8423/meta" -H  "accept: application/json" -H  "X-API-Key: test"
+GET http://localhost:8080/blueprint/854cc717-fd02-4c51-a35d-7223f9fc8423/meta
+accept: application/json
+X-API-Key: test
+
+### Get blueprint meta of specific version
+
+# curl -X GET "http://localhost:8080/blueprint/854cc717-fd02-4c51-a35d-7223f9fc8423/version/v2.0/meta" -H  "accept: application/json" -H  "X-API-Key: test"
+GET http://localhost:8080/blueprint/854cc717-fd02-4c51-a35d-7223f9fc8423/version/v2.0/meta
+accept: application/json
+X-API-Key: test
+
+### Get blueprint name
+
+# curl -X GET "http://localhost:8080/blueprint/854cc717-fd02-4c51-a35d-7223f9fc8423/name" -H  "accept: application/json" -H  "X-API-Key: test"
+GET http://localhost:8080/blueprint/854cc717-fd02-4c51-a35d-7223f9fc8423/name
+accept: application/json
+X-API-Key: test
+
+### Update blueprint name
+
+# curl -X POST "http://localhost:8080/blueprint/854cc717-fd02-4c51-a35d-7223f9fc8423/name?name=name" -H  "accept: application/json" -H  "X-API-Key: test" -d ""
+POST http://localhost:8080/blueprint/854cc717-fd02-4c51-a35d-7223f9fc8423/name?name=name
+accept: application/json
+X-API-Key: test
+Content-Type: application/x-www-form-urlencoded
+
+### Get list of deployments, created from blueprint
+
+# curl -X GET "http://localhost:8080/blueprint/854cc717-fd02-4c51-a35d-7223f9fc8423/deployments" -H  "accept: application/json" -H  "X-API-Key: test"
+GET http://localhost:8080/blueprint/854cc717-fd02-4c51-a35d-7223f9fc8423/deployments
+accept: application/json
+X-API-Key: test
+
+### retrieve history of transactions (update, delete) to repository with blueprint
+
+# curl -X GET "http://localhost:8080/blueprint/854cc717-fd02-4c51-a35d-7223f9fc8423/git_history" -H  "accept: application/json" -H  "X-API-Key: test"
+GET http://localhost:8080/blueprint/854cc717-fd02-4c51-a35d-7223f9fc8423/git_history
+accept: application/json
+X-API-Key: test
+
 ### validate last version of existing blueprint
 
 # curl -X PUT "http://localhost:8080/blueprint/854cc717-fd02-4c51-a35d-7223f9fc8423/validate" -H  "accept: application/json" -H  "X-API-Key: test" -H  "Content-Type: multipart/form-data" -F "inputs_file=@inputs.yaml;type=application/x-yaml"
@@ -119,13 +162,6 @@ Content-Disposition: form-data; name="inputs_file"; filename="inputs.yaml"
 
 < inputs.yaml
 --WebAppBoundary--
-
-### retrieve history of transactions (update, delete) to repository with blueprint
-
-# curl -X GET "http://localhost:8080/blueprint/854cc717-fd02-4c51-a35d-7223f9fc8423/git_history" -H  "accept: application/json" -H  "X-API-Key: test"
-GET http://localhost:8080/blueprint/854cc717-fd02-4c51-a35d-7223f9fc8423/git_history
-accept: application/json
-X-API-Key: test
 
 ###
 # /deployment endpoint
