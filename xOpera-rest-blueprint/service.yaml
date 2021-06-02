@@ -11,6 +11,7 @@ imports:
   - modules/misc/ssh/types.yaml
   - modules/misc/tls/types.yaml
   - library/config/types.yaml
+  - library/util/types.yaml
 
 topology_template:
 
@@ -160,14 +161,6 @@ topology_template:
       requirements:
         - host: sodalite-vm
 
-    openapi-volume:
-      type: sodalite.nodes.DockerVolume
-      properties:
-        name: xopera-openapi
-        recreate: always
-      requirements:
-        - host: sodalite-vm
-
     tls-certs:
       type: sodalite.nodes.TLS.Certificate
       properties:
@@ -190,6 +183,14 @@ topology_template:
       requirements:
         - host: sodalite-vm
         - dependency: tls-certs
+
+    ui-api-spec:
+      type: sodalite.nodes.util.File
+      properties:
+        path: /home/xopera/openapi-spec.yml
+        url: https://raw.githubusercontent.com/SODALITE-EU/xopera-rest-api/master/openapi-spec.yml
+      requirements:
+        - host: sodalite-vm
 
     postgres:
       type: sodalite.nodes.DockerizedComponent
@@ -221,7 +222,6 @@ topology_template:
         volumes:
           - /var/run/docker.sock:/var/run/docker.sock
           - /root/.ssh/:/root/.ssh/
-          - xopera-openapi:/app/
         labels:
           traefik.enable: "true"
           traefik.http.services.api.loadbalancer.server.port: "8080"
@@ -240,7 +240,6 @@ topology_template:
         - dependency: docker-registry-certificate
         - dependency: openstack-keys
         - dependency: postgres
-        - dependency: openapi-volume
 
     ui:
       type: sodalite.nodes.DockerizedComponent
@@ -250,7 +249,7 @@ topology_template:
         image_name: swaggerapi/swagger-ui:v3.37.0
         restart_policy: always
         volumes:
-          - xopera-openapi:/openapi:ro
+          - /home/xopera/openapi-spec.yml:/openapi/openapi-spec.yml:ro
         env:
           SWAGGER_JSON: /openapi/openapi-spec.yml
         labels:
@@ -271,7 +270,7 @@ topology_template:
         - registry: docker-public-registry
         - network: docker-network
         - dependency: api
-        - dependency: openapi-volume
+        - dependency: ui-api-spec
 
 
     proxy:

@@ -1,0 +1,6 @@
+- hosts: all
+  tasks:
+    - name: Delete file
+      file:
+        state: "{{ absent }}"
+        path: "{{ dest }}"

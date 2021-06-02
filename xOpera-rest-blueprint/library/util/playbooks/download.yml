@@ -1,0 +1,12 @@
+- hosts: all
+  become: yes
+  tasks:
+    - name: Create dir
+      file:
+        state: directory
+        path: "{{ path | dirname }}"
+
+    - name: Download file
+      get_url:
+        url: "{{ url }}"
+        dest: "{{ path }}"

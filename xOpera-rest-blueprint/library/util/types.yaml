@@ -1,0 +1,29 @@
+tosca_definitions_version: tosca_simple_yaml_1_3
+
+
+node_types:
+  sodalite.nodes.util.File:
+    derived_from: tosca.nodes.SoftwareComponent
+    properties:
+      url:
+        description: Url from where to download file
+        type: string
+      path:
+        description: Destination for file
+        type: string
+
+    interfaces:
+      Standard:
+        type: tosca.interfaces.node.lifecycle.Standard
+        operations:
+          create:
+            inputs:
+              url: { type: string, default: { get_property: [ SELF, url ] } }
+              path: { type: string, default: { get_property: [ SELF, path ] } }
+            implementation:
+              primary: playbooks/download.yml
+          delete:
+            inputs:
+              path: { type: string, default: { get_property: [ SELF, path ] } }
+            implementation:
+              primary: playbooks/delete.yml
