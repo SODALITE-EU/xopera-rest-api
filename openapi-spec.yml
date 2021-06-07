@@ -59,9 +59,19 @@ paths:
         description: Optional comment on submission
         schema:
           type: string
-      - name: name
+      - name: blueprint_name
         in: query
         description: Optional human-readable blueprint name
+        schema:
+          type: string
+      - name: aadm_id
+        in: query
+        description: End-to-end debugging id
+        schema:
+          type: string
+      - name: username
+        in: query
+        description: End-to-end debugging id
         schema:
           type: string
       - name: project_domain
@@ -820,7 +830,7 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/GitLog'
-        400:
+        404:
           description: Log file not found
           content:
             application/json:
@@ -909,6 +919,11 @@ paths:
         schema:
           type: string
           pattern: '^v(0|[1-9][0-9]*).(0|[1-9][0-9]*)$'
+      - name: deployment_label
+        in: query
+        description: Human-readable deployment label
+        schema:
+          type: string
       - name: workers
         in: query
         description: Number of workers
@@ -1323,9 +1338,15 @@ components:
           type: string
           pattern: '^v(0|[1-9][0-9]*).(0|[1-9][0-9]*)$'
           description: Id of blueprint version
-        name:
+        blueprint_name:
           type: string
           description: Name of the blueprint
+        aadm_id:
+          type: string
+          description: End-to-end debugging id
+        username:
+          type: string
+          description: Username of user, that created blueprint
         project_domain:
           type: string
           description: Domain name of the blueprint
@@ -1337,19 +1358,9 @@ components:
           type: string
           description: timestamp of database entry
           format: date-time
-        users:
-          type: array
-          description: List of users with access to git repository
-          items:
-            type: string
         commit_sha:
           type: string
           description: SHA-1 checksum of commit
-        deployments:
-          type: array
-          description: List of deployments from current blueprint
-          items:
-            $ref: '#/components/schemas/Deployment'
 
     GitLog:
       required:
@@ -1409,6 +1420,9 @@ components:
           description: Id of deployment
           type: string
           format: uuid
+        deployment_label:
+          type: string
+          description: Human-readable deployment name
         state:
           description: State of last invocation
           $ref: "#/components/schemas/InvocationState"
@@ -1444,6 +1458,9 @@ components:
           description: Id of deployment
           type: string
           format: uuid
+        deployment_label:
+          description: Human-readable deployment name
+          type: string
         state:
           $ref: "#/components/schemas/InvocationState"
         operation:

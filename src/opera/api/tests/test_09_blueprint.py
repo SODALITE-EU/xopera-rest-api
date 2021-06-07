@@ -49,10 +49,16 @@ class TestPostNew:
                 'users': ['xopera'],
                 'timestamp': timestamp_util.datetime_now_to_string()
             }, None))
-        resp = client.post("/blueprint", data=csar_1)
+        revision_msg = 'Another blueprint'
+        name = 'Test blueprint'
+        aadm_id = str(uuid.uuid4())
+        username = 'mihaTrajbaric'
+        project_domain = 'SODALITE'
+        resp = client.post(f"/blueprint?revision_msg={revision_msg}&blueprint_name={name}&aadm_id={aadm_id}"
+                           f"&username={username}&project_domain={project_domain}", data=csar_1)
         assert_that(resp.status_code).is_equal_to(201)
-        assert_that(resp.json).is_not_none().contains_only('blueprint_id', 'url',
-                                                           'version_id', 'users', 'commit_sha', 'timestamp')
+        assert_that(resp.json).is_not_none().contains_only('blueprint_id', 'version_id', 'blueprint_name', 'aadm_id', 'url',
+                                                           'project_domain', 'username', 'commit_sha', 'timestamp')
         uuid.UUID(resp.get_json()['blueprint_id'])
 
         assert_that(resp.get_json()['version_id']).is_equal_to('v1.0')
@@ -106,7 +112,7 @@ class TestPostMultipleVersions:
         resp2 = client.post(f"/blueprint/{uuid.uuid4()}", data=csar_1)
         assert_that(resp2.status_code).is_equal_to(201)
         assert_that(resp2.json).is_not_none().contains_only('blueprint_id', 'url', 'version_id',
-                                                            'users', 'commit_sha', 'timestamp')
+                                                            'commit_sha', 'timestamp')
         assert_that(resp2.json['version_id']).is_equal_to('v2.0')
 
 

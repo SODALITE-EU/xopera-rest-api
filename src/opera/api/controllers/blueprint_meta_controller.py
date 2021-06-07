@@ -20,7 +20,6 @@ def get_blueprint_meta(blueprint_id):  # noqa: E501
     data = SQL_database.get_blueprint_meta(blueprint_id)
     if not data:
         return "Blueprint meta not found", 404
-    data['users'] = CSAR_db.get_blueprint_user_list(blueprint_id)[0]
     return Blueprint.from_dict(data), 200
 
 
@@ -40,7 +39,6 @@ def get_blueprint_version_meta(blueprint_id, version_id):  # noqa: E501
     data = SQL_database.get_blueprint_meta(blueprint_id, version_id)
     if not data:
         return "Blueprint meta not found", 404
-    data['users'] = CSAR_db.get_blueprint_user_list(blueprint_id)[0]
     return Blueprint.from_dict(data), 200
 
 
@@ -92,7 +90,7 @@ def get_blueprint_deployments(blueprint_id):  # noqa: E501
     """
     data = SQL_database.get_deployments_for_blueprint(blueprint_id)
     if not data:
-        return "Deployments not found", 400
+        return "Deployments not found", 404
     return [Deployment.from_dict(item) for item in data], 200
 
 
@@ -107,7 +105,7 @@ def get_git_log(blueprint_id):
     """
     data = SQL_database.get_git_transaction_data(blueprint_id, fetch_all=True)
     if not data:
-        return "Log not found", 400
+        return "Log not found", 404
     return [GitLog.from_dict(item) for item in data], 200
 
 

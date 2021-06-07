@@ -10,22 +10,90 @@ from opera.api.util import timestamp_util
 logger = get_logger(__name__)
 
 
+def post_new_blueprint(revision_msg=None, blueprint_name=None, aadm_id=None, username=None, project_domain=None):  # noqa: E501
+    """Add new blueprint.
+
+    :param revision_msg: Optional comment on submission
+    :type revision_msg: str
+    :param blueprint_name: Optional human-readable blueprint name
+    :type blueprint_name: str
+    :param aadm_id: End-to-end debugging id
+    :type aadm_id: str
+    :param username: End-to-end debugging id
+    :type username: str
+    :param project_domain: Optional project domain this blueprint belongs to
+    :type project_domain: str
+
+    :rtype: Blueprint
+    """
+    # check roles
+    if project_domain and not security_controller.check_roles(project_domain):
+        return f"Unauthorized request for project: {project_domain}", 401
+
+    file = connexion.request.files['CSAR']
+
+    result, response = CSAR_db.add_revision(CSAR=file, revision_msg=revision_msg)
+
+    if result is None:
+        return f"Invalid CSAR: {response}", 406
+
+    blueprint_meta = Blueprint.from_dict(result)
+
+    blueprint_meta.blueprint_name = blueprint_name
+    blueprint_meta.project_domain = project_domain
+    blueprint_meta.aadm_id = aadm_id
+    blueprint_meta.username = username
+
+    if not SQL_database.save_blueprint_meta(blueprint_meta):
+        blueprint_id = blueprint_meta.blueprint_id
+        return f"Failed to save project data for blueprint_id={blueprint_id}", 500
+
+    SQL_database.save_git_transaction_data(blueprint_id=result['blueprint_id'],
+                                           version_id=result['version_id'],
+                                           revision_msg=f"Saved new blueprint: {revision_msg}",
+                                           job='update',
+                                           git_backend=str(CSAR_db.connection.git_connector),
+                                           repo_url=result['url'],
+                                           commit_sha=result['commit_sha'])
+
+    return blueprint_meta, 201
+
+
 @security_controller.check_role_auth_blueprint
-def delete_git_user(blueprint_id, user_id):
-    """Delete user.
+def post_blueprint(blueprint_id, revision_msg=None):
+    """Add new version to existing blueprint.
 
     :param blueprint_id: Id of blueprint
-    :type blueprint_id: 
-    :param user_id: user_id to be removed from repository with blueprint
-    :type user_id: str
+    :type blueprint_id:
+    :param revision_msg: Optional comment on submission
+    :type revision_msg: str
 
-    :rtype: str
+    :rtype: Blueprint
     """
-    success, error_msg = CSAR_db.delete_blueprint_user(blueprint_id=blueprint_id, username=user_id)
-    if success:
-        return f"User {user_id} deleted", 200
+    file = connexion.request.files['CSAR']
 
-    return f"Could not delete user {user_id} from repository with blueprint_id '{blueprint_id}': {error_msg}", 500
+    result, response = CSAR_db.add_revision(CSAR=file, revision_msg=revision_msg, blueprint_id=blueprint_id)
+
+    if result is None:
+        return f"Invalid CSAR: {response}", 406
+
+    blueprint_meta = Blueprint.from_dict(result)
+
+    blueprint_meta.name = SQL_database.get_blueprint_name(blueprint_id)
+    blueprint_meta.project_domain = SQL_database.get_project_domain(blueprint_id)
+
+    if not SQL_database.save_blueprint_meta(blueprint_meta):
+        return f"Failed to save project data for blueprint_id={blueprint_id}", 500
+
+    SQL_database.save_git_transaction_data(blueprint_id=result['blueprint_id'],
+                                           version_id=result['version_id'],
+                                           revision_msg=f"Updated blueprint: {revision_msg}",
+                                           job='update',
+                                           git_backend=str(CSAR_db.connection.git_connector),
+                                           repo_url=result['url'],
+                                           commit_sha=result['commit_sha'])
+
+    return blueprint_meta, 201
 
 
 @security_controller.check_role_auth_blueprint
@@ -155,81 +223,18 @@ def post_git_user(blueprint_id, user_id):
 
 
 @security_controller.check_role_auth_blueprint
-def post_blueprint(blueprint_id, revision_msg=None):
-    """Add new version to existing blueprint.
+def delete_git_user(blueprint_id, user_id):
+    """Delete user.
 
     :param blueprint_id: Id of blueprint
     :type blueprint_id:
-    :param revision_msg: Optional comment on submission
-    :type revision_msg: str
+    :param user_id: user_id to be removed from repository with blueprint
+    :type user_id: str
 
-    :rtype: Blueprint
+    :rtype: str
     """
-    file = connexion.request.files['CSAR']
+    success, error_msg = CSAR_db.delete_blueprint_user(blueprint_id=blueprint_id, username=user_id)
+    if success:
+        return f"User {user_id} deleted", 200
 
-    result, response = CSAR_db.add_revision(CSAR=file, revision_msg=revision_msg, blueprint_id=blueprint_id)
-
-    if result is None:
-        return f"Invalid CSAR: {response}", 406
-
-    blueprint_meta = Blueprint.from_dict(result)
-
-    blueprint_meta.name = SQL_database.get_blueprint_name(blueprint_id)
-    blueprint_meta.project_domain = SQL_database.get_project_domain(blueprint_id)
-
-    if not SQL_database.save_blueprint_meta(blueprint_meta):
-        return f"Failed to save project data for blueprint_id={blueprint_id}", 500
-
-    SQL_database.save_git_transaction_data(blueprint_id=result['blueprint_id'],
-                                           version_id=result['version_id'],
-                                           revision_msg=f"Updated blueprint: {revision_msg}",
-                                           job='update',
-                                           git_backend=str(CSAR_db.connection.git_connector),
-                                           repo_url=result['url'],
-                                           commit_sha=result['commit_sha'])
-
-    return blueprint_meta, 201
-
-
-def post_new_blueprint(revision_msg=None, name=None, project_domain=None):
-    """Add new blueprint.
-
-    :param revision_msg: Optional comment on submission
-    :type revision_msg: str
-    :param name: Optional human-readable blueprint name
-    :type name: str
-    :param project_domain: Optional project domain this blueprint belongs to
-    :type project_domain: str
-
-    :rtype: Blueprint
-    """
-    # check roles
-    if project_domain and not security_controller.check_roles(project_domain):
-        return f"Unauthorized request for project: {project_domain}", 401
-
-    file = connexion.request.files['CSAR']
-
-    result, response = CSAR_db.add_revision(CSAR=file, revision_msg=revision_msg)
-
-    if result is None:
-        return f"Invalid CSAR: {response}", 406
-
-    blueprint_meta = Blueprint.from_dict(result)
-
-    blueprint_meta.name = name
-    blueprint_meta.project_domain = project_domain
-
-    if not SQL_database.save_blueprint_meta(blueprint_meta):
-        blueprint_id = blueprint_meta.blueprint_id
-        return f"Failed to save project data for blueprint_id={blueprint_id}", 500
-
-    SQL_database.save_git_transaction_data(blueprint_id=result['blueprint_id'],
-                                           version_id=result['version_id'],
-                                           revision_msg=f"Saved new blueprint: {revision_msg}",
-                                           job='update',
-                                           git_backend=str(CSAR_db.connection.git_connector),
-                                           repo_url=result['url'],
-                                           commit_sha=result['commit_sha'])
-
-    return blueprint_meta, 201
-
+    return f"Could not delete user {user_id} from repository with blueprint_id '{blueprint_id}': {error_msg}", 500

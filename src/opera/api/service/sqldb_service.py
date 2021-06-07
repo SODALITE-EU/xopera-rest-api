@@ -173,6 +173,7 @@ class PostgreSQL(Database):
                         create table if not exists {} (
                         invocation_id varchar (36), 
                         deployment_id varchar (36),
+                        deployment_label varchar(250),
                         blueprint_id varchar (36),
                         version_id varchar(36),
                         state varchar(36),
@@ -185,7 +186,9 @@ class PostgreSQL(Database):
                         create table if not exists {} (
                         blueprint_id varchar (36),
                         version_id varchar(36),
-                        name varchar(250),
+                        blueprint_name varchar(250),
+                        aadm_id varchar(36),
+                        username varchar(250),
                         project_domain varchar(250),
                         url text,
                         timestamp timestamp default current_timestamp, 
@@ -376,18 +379,17 @@ class PostgreSQL(Database):
         updates deployment log with deployment_id, timestamp_submission, invocation_id, _log
         """
         response = self.execute(
-            """insert into {} (deployment_id, timestamp, invocation_id, blueprint_id, version_id, state, operation, _log)
-               values (%s, %s, %s, %s, %s, %s, %s, %s)
+            """insert into {} (deployment_id, deployment_label, timestamp, invocation_id, 
+                              blueprint_id, version_id, state, operation, _log)
+               values (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                ON CONFLICT (invocation_id) DO UPDATE
                    SET timestamp=excluded.timestamp,
                        state=excluded.state,
                        operation=excluded.operation,
                         _log=excluded._log;"""
-                .format(Settings.invocation_table),
-            (str(inv.deployment_id), str(inv.timestamp_submission),
-             str(invocation_id), str(inv.blueprint_id),
-             inv.version_id, inv.state, inv.operation,
-             json.dumps(inv.to_dict(), cls=file_util.UUIDEncoder)))
+            .format(Settings.invocation_table),
+            (str(inv.deployment_id), inv.deployment_label, str(inv.timestamp_submission),str(invocation_id), str(inv.blueprint_id),
+             inv.version_id, inv.state, inv.operation, json.dumps(inv.to_dict(), cls=file_util.UUIDEncoder)))
         deployment_id = inv.deployment_id
         if response:
             logger.debug(
@@ -534,7 +536,7 @@ class PostgreSQL(Database):
         Returns human-readable name for blueprint
         """
         dbcur = self.connection.cursor()
-        query = """select blueprint_id, name from {} where blueprint_id = '{}';""".format(
+        query = """select blueprint_id, blueprint_name from {} where blueprint_id = '{}';""".format(
             Settings.blueprint_table, blueprint_id)
         dbcur.execute(query)
         line = dbcur.fetchone()
@@ -550,7 +552,7 @@ class PostgreSQL(Database):
         """
         success = self.execute(
             """update {}
-                set name = '{}'
+                set blueprint_name = '{}'
                 where blueprint_id = '{}'""".format(Settings.blueprint_table, name, str(blueprint_id)))
         if success:
             logger.debug(f'Updated blueprint name={name} for blueprint_id={blueprint_id} in PostgreSQL database')
@@ -564,7 +566,8 @@ class PostgreSQL(Database):
         """
         dbcur = self.connection.cursor()
         version_str = f"and version_id = '{version_id}'" if version_id else ''
-        query = """select * from {}
+        query = """select blueprint_id, version_id, blueprint_name, aadm_id, username, 
+                   project_domain, url, timestamp, commit_sha from {}
                     where blueprint_id = '{}'
                     {}
                     order by timestamp desc limit 1;""".format(
@@ -577,12 +580,13 @@ class PostgreSQL(Database):
         blueprint_meta = {
             'blueprint_id': line[0],
             'version_id': line[1],
-            'name': line[2],
-            'project_domain': line[3],
-            'url': line[4],
-            'timestamp': timestamp_util.datetime_to_str(line[5]),
-            'commit_sha': line[6],
-            'deployments': self.get_deployments_for_blueprint(blueprint_id) or None
+            'blueprint_name': line[2],
+            'aadm_id': line[3],
+            'username': line[4],
+            'project_domain': line[5],
+            'url': line[6],
+            'timestamp': timestamp_util.datetime_to_str(line[7]),
+            'commit_sha': line[8]
         }
         return blueprint_meta
 
@@ -591,9 +595,10 @@ class PostgreSQL(Database):
         saves metadata of blueprint version
         """
         success = self.execute(
-            """insert into {} (blueprint_id, version_id, name, project_domain, url, commit_sha) 
-            values (%s, %s, %s, %s, %s, %s)""".format(Settings.blueprint_table),
-            (str(blueprint_meta.blueprint_id), blueprint_meta.version_id, blueprint_meta.name,
+            """insert into {} (blueprint_id, version_id, blueprint_name, aadm_id, username, project_domain, url, commit_sha) 
+            values (%s, %s, %s, %s, %s, %s, %s, %s)""".format(Settings.blueprint_table),
+            (str(blueprint_meta.blueprint_id), blueprint_meta.version_id, blueprint_meta.blueprint_name,
+             blueprint_meta.aadm_id, blueprint_meta.username,
              blueprint_meta.project_domain, blueprint_meta.url, blueprint_meta.commit_sha))
         blueprint_id = blueprint_meta.blueprint_id
         if success:
@@ -609,12 +614,12 @@ class PostgreSQL(Database):
         if version_id:
             success = self.execute(
                 "delete from {} where blueprint_id = '{}' and version_id = '{}'"
-                    .format(Settings.blueprint_table, str(blueprint_id), version_id))
+                .format(Settings.blueprint_table, str(blueprint_id), version_id))
 
         else:
             success = self.execute(
                 "delete from {} where blueprint_id = '{}'"
-                    .format(Settings.blueprint_table, str(blueprint_id)))
+                .format(Settings.blueprint_table, str(blueprint_id)))
 
         str_version_id = f'and version_id={version_id} ' if version_id else ''
 
@@ -632,7 +637,7 @@ class PostgreSQL(Database):
         Returns [Deployment] for every deployment, created from blueprint
         """
         dbcur = self.connection.cursor()
-        query = """select distinct on (deployment_id) deployment_id, state, operation, timestamp 
+        query = """select distinct on (deployment_id) deployment_id, state, operation, timestamp, deployment_label 
                    from {}
                    where deployment_id in (
                         select deployment_id
@@ -648,7 +653,8 @@ class PostgreSQL(Database):
                 'deployment_id': line[0],
                 'state': line[1],
                 'operation': line[2],
-                'timestamp': timestamp_util.datetime_to_str(line[3])
+                'timestamp': timestamp_util.datetime_to_str(line[3]),
+                'deployment_label': line[4]
             } for line in lines
         ]
         dbcur.close()

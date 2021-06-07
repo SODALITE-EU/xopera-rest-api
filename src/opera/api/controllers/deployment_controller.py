@@ -78,20 +78,29 @@ def post_deploy_continue(deployment_id, workers=1, clean_state=False):
     if inv.state in [InvocationState.PENDING, InvocationState.IN_PROGRESS]:
         return f"Previous operation on this deployment still running", 403
 
-    result = invocation_service.invoke(OperationType.DEPLOY_CONTINUE, inv.blueprint_id, inv.version_id, deployment_id,
-                                       workers, inputs, clean_state)
+    result = invocation_service.invoke(
+        operation_type=OperationType.DEPLOY_CONTINUE,
+        blueprint_id=inv.blueprint_id,
+        version_id=inv.version_id,
+        deployment_id=deployment_id,
+        workers=workers,
+        inputs=inputs,
+        clean_state=clean_state
+    )
     logger.info(f"Deploying '{inv.blueprint_id}', version_id: {inv.version_id}")
     return result, 202
 
 
 @security_controller.check_role_auth_blueprint
-def post_deploy_fresh(blueprint_id, version_id=None, workers=1):
+def post_deploy_fresh(blueprint_id, version_id=None, deployment_label=None, workers=None):  # noqa: E501
     """Initialize deployment and deploy
 
     :param blueprint_id: Id of blueprint
-    :type blueprint_id: 
+    :type blueprint_id:
     :param version_id: version_tag to deploy
     :type version_id: str
+    :param deployment_label: Human-readable deployment label
+    :type deployment_label: str
     :param workers: Number of workers
     :type workers: int
 
@@ -99,9 +108,14 @@ def post_deploy_fresh(blueprint_id, version_id=None, workers=1):
     """
     inputs = xopera_util.get_preprocessed_inputs()
 
-    deployment_id = None
-    result = invocation_service.invoke(OperationType.DEPLOY_FRESH, blueprint_id, version_id, deployment_id,
-                                       workers, inputs)
+    result = invocation_service.invoke(
+        operation_type=OperationType.DEPLOY_FRESH,
+        blueprint_id=blueprint_id,
+        version_id=version_id,
+        deployment_label=deployment_label,
+        workers=workers,
+        inputs=inputs
+    )
     logger.info(f"Deploying '{blueprint_id}', version_id: {version_id}")
     return result, 202
 
@@ -144,8 +158,14 @@ def post_undeploy(deployment_id, workers=1):
     if inv.state in [InvocationState.PENDING, InvocationState.IN_PROGRESS]:
         return f"Previous operation on this deployment still running", 403
 
-    result = invocation_service.invoke(OperationType.UNDEPLOY, inv.blueprint_id, inv.version_id, deployment_id, workers,
-                                       inputs)
+    result = invocation_service.invoke(
+        operation_type=OperationType.UNDEPLOY,
+        blueprint_id=inv.blueprint_id,
+        version_id=inv.version_id,
+        deployment_id=deployment_id,
+        workers=workers,
+        inputs=inputs
+    )
     logger.info(f"Undeploying '{deployment_id}'")
     return result, 202
 
@@ -174,7 +194,13 @@ def post_update(deployment_id, blueprint_id, version_id=None, workers=1):
     if inv.state in [InvocationState.PENDING, InvocationState.IN_PROGRESS]:
         return f"Previous operation on this deployment still running", 403
 
-    result = invocation_service.invoke(OperationType.UPDATE, blueprint_id, version_id, deployment_id,
-                                       workers, inputs)
+    result = invocation_service.invoke(
+        operation_type=OperationType.UPDATE,
+        blueprint_id=blueprint_id,
+        version_id=version_id,
+        deployment_id=deployment_id,
+        workers=workers,
+        inputs=inputs
+    )
     logger.info(f"Updating '{deployment_id}' with blueprint '{blueprint_id}', version_id: {version_id}")
     return result, 202

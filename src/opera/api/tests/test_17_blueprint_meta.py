@@ -20,17 +20,12 @@ class TestBlueprintMeta:
     @staticmethod
     def test_success(client, mocker, generic_blueprint_meta, patch_auth_wrapper):
         blueprint_meta: Blueprint = generic_blueprint_meta
-        blueprint_meta.deployments = [
-            Deployment(
-                str(uuid.uuid4()), InvocationState.SUCCESS,
-                OperationType.DEPLOY_CONTINUE, timestamp_util.datetime_now_to_string()
-            )]
         mocker.patch('opera.api.service.sqldb_service.Database.get_blueprint_meta', return_value=blueprint_meta.to_dict())
-        mocker.patch('opera.api.service.csardb_service.GitDB.get_blueprint_user_list', return_value=[['foo'], None])
 
         blueprint_id = uuid.uuid4()
         resp = client.get(f"/blueprint/{blueprint_id}/meta")
         assert resp.status_code == 200
+        print(blueprint_meta.to_dict())
         assert_that(resp.json).contains(*[key for key in blueprint_meta.to_dict().keys() if key is not None])
 
 class TestBlueprintVersionMeta:
@@ -105,7 +100,7 @@ class TestGetDeployments:
                      return_value=[deployment.to_dict()])
         resp = client.get(f"/blueprint/{uuid.uuid4()}/deployments")
         assert resp.status_code == 200
-        assert_that(resp.json).is_equal_to([deployment.to_dict()])
+        assert_that(resp.json).is_equal_to([{k: v for k, v in deployment.to_dict().items() if v is not None}])
 
     @staticmethod
     def test_fail(mocker, client, patch_auth_wrapper):
@@ -113,7 +108,7 @@ class TestGetDeployments:
                      return_value=[])
 
         resp = client.get(f"/blueprint/{uuid.uuid4()}/deployments")
-        assert resp.status_code == 400
+        assert resp.status_code == 404
         assert_that(resp.json).contains('not found')
 
 
@@ -123,7 +118,7 @@ class TestGitHistory:
         mocker.patch('opera.api.service.sqldb_service.Database.get_git_transaction_data', return_value=None)
         blueprint_id = uuid.uuid4()
         resp = client.get(f"/blueprint/{blueprint_id}/git_history")
-        assert resp.status_code == 400
+        assert resp.status_code == 404
         assert_that(resp.json).contains('Log not found')
 
     def test_no_blueprint(self, client, mocker):

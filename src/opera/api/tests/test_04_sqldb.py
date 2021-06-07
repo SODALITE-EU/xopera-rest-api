@@ -119,17 +119,17 @@ class VersionExistsCursor(NoneCursor):
 class GetBlueprintMeta(NoneCursor):
     @classmethod
     def fetchone(cls):
-        if "select blueprint_id, name" in cls.command:
+        if "select blueprint_id, blueprint_name" in cls.command:
             return 'a', 'name'
 
         if "select blueprint_id, project_domain" in cls.command:
             return 'a', 'project_domain'
 
-        if "select *" in cls.command:
+        if "select blueprint_id, version_id, blueprint_name, aadm_id" in cls.command:
             blueprint_meta = TestPostgreSQLBlueprintMeta.blueprint_meta
-            return [blueprint_meta.blueprint_id, blueprint_meta.version_id, blueprint_meta.name,
-                    blueprint_meta.project_domain, blueprint_meta.url, blueprint_meta.timestamp,
-                    blueprint_meta.commit_sha]
+            return [blueprint_meta.blueprint_id, blueprint_meta.version_id, blueprint_meta.blueprint_name,
+                    blueprint_meta.aadm_id, blueprint_meta.username, blueprint_meta.project_domain,
+                    blueprint_meta.url, blueprint_meta.timestamp, blueprint_meta.commit_sha]
 
     @classmethod
     def fetchall(cls):
@@ -226,7 +226,9 @@ class TestPostgreSQLBlueprintMeta:
         assert_that(replacements).contains_only(*[
             str(blueprint_meta.blueprint_id),
             blueprint_meta.version_id,
-            blueprint_meta.name,
+            blueprint_meta.blueprint_name,
+            blueprint_meta.aadm_id,
+            blueprint_meta.username,
             blueprint_meta.project_domain,
             blueprint_meta.url,
             blueprint_meta.commit_sha
@@ -248,7 +250,9 @@ class TestPostgreSQLBlueprintMeta:
     blueprint_meta = Blueprint(
         blueprint_id=str(uuid.uuid4()),
         version_id='v1.0',
-        name='a',
+        blueprint_name='a',
+        aadm_id=str(uuid.uuid4()),
+        username='username',
         project_domain='some_domain',
         url='www.google.com',
         timestamp=datetime.datetime.now(),
@@ -306,7 +310,7 @@ class TestPostgreSQLBlueprintMeta:
 
         # test
         blueprint_meta: Blueprint = generic_blueprint_meta
-        assert db.get_blueprint_name(blueprint_meta.blueprint_id) == blueprint_meta.name
+        assert db.get_blueprint_name(blueprint_meta.blueprint_id) == blueprint_meta.blueprint_name
 
     def test_save_blueprint_name(self, mocker, monkeypatch, caplog, generic_blueprint_meta):
         # test set up
@@ -320,7 +324,7 @@ class TestPostgreSQLBlueprintMeta:
         new_name = 'new_name'
         db.update_blueprint_name(blueprint_meta.blueprint_id, new_name)
         command = db.connection.cursor().get_command()
-        assert_that(command).contains(blueprint_meta.name, new_name)
+        assert_that(command).contains(blueprint_meta.blueprint_name, new_name)
         assert_that(caplog.text).contains("Updated blueprint name", new_name, str(blueprint_meta.blueprint_id))
 
     def test_save_blueprint_name_exception(self, mocker, monkeypatch, caplog, generic_blueprint_meta):
