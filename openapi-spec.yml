@@ -118,6 +118,64 @@ paths:
               schema:
                 type: string
 
+    get:
+      summary: "Get blueprints for user or project domain"
+      security:
+        - apiKey: [ ]
+        - oauth2: [ email ]
+      tags:
+        - blueprint
+      operationId: get_blueprints_user_domain
+      parameters:
+        - name: username
+          in: query
+          description: username
+          required: false
+          schema:
+            type: string
+        - name: project_domain
+          in: query
+          description: Project domain
+          required: false
+          schema:
+            type: string
+      responses:
+        200:
+          description: List of blueprints returned
+          content:
+            application/json:
+              schema:
+                type: array
+                description: List of blueprints for current user or project_domain
+                items:
+                  type: string
+                  format: uuid
+        400:
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                type: string
+        401:
+          description: Unauthorized request for this blueprint
+          content:
+            application/json:
+              schema:
+                type: string
+        404:
+          description: User or project domain not found
+          content:
+            application/json:
+              schema:
+                type: string
+        500:
+          description: DB or REST API error
+          content:
+            application/json:
+              schema:
+                type: string
+
+
   /blueprint/{blueprint_id}:
     post:
       summary: "Add new version to existing blueprint."

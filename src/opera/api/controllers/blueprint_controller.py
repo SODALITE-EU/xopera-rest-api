@@ -59,6 +59,29 @@ def post_new_blueprint(revision_msg=None, blueprint_name=None, aadm_id=None, use
     return blueprint_meta, 201
 
 
+def get_blueprints_user_domain(username=None, project_domain=None):
+    """Get blueprints for user or project domain
+
+    :param username: username
+    :type username: str
+    :param project_domain: Project domain
+    :type project_domain: str
+
+    :rtype: List[str]
+    """
+    logger.debug(f"{username=}")
+    logger.debug(f"{project_domain=}")
+    if not username and not project_domain:
+        return "At least on of (user, project_domain) must be present", 400
+
+    data = SQL_database.get_blueprints_by_user_or_project(username=username, project_domain=project_domain)
+
+    if not data:
+        return "Blueprints not found", 404
+
+    return data, 200
+
+
 @security_controller.check_role_auth_blueprint
 def post_blueprint(blueprint_id, revision_msg=None):
     """Add new version to existing blueprint.

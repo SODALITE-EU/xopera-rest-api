@@ -2,6 +2,7 @@ import json
 import uuid
 
 import psycopg2
+from psycopg2 import sql
 
 from opera.api.log import get_logger
 from opera.api.openapi.models import Invocation, InvocationState, Blueprint
@@ -160,6 +161,12 @@ class Database:
     def get_deployments_for_blueprint(self, blueprint_id: uuid):
         """
         Returns [Deployment] for every deployment, created from blueprint
+        """
+        pass
+
+    def get_blueprints_by_user_or_project(self, username: str = None, project_domain: str = None):
+        """
+        Returns [blueprint_id] for every blueprint, that belongs to user or project (or both)
         """
         pass
 
@@ -648,7 +655,7 @@ class PostgreSQL(Database):
             .format(Settings.invocation_table, Settings.invocation_table, blueprint_id)
         dbcur.execute(query)
         lines = dbcur.fetchall()
-        blueprint_list = [
+        deployment_list = [
             {
                 'deployment_id': line[0],
                 'state': line[1],
@@ -658,4 +665,34 @@ class PostgreSQL(Database):
             } for line in lines
         ]
         dbcur.close()
-        return blueprint_list
+        return deployment_list
+
+    def get_blueprints_by_user_or_project(self, username: str = None, project_domain: str = None):
+        """
+        Returns [blueprint_id] for every blueprint, that belongs to user or project (or both)
+        """
+        with self.connection.cursor() as dbcur:
+            if username and not project_domain:
+                stmt = sql.SQL("""select blueprint_id from {blueprint_table}
+                                      where username={username}""").format(
+                    blueprint_table=sql.Identifier(Settings.blueprint_table),
+                    username=sql.Literal(username),
+                )
+            elif not username and project_domain:
+                stmt = sql.SQL("""select blueprint_id from {blueprint_table}
+                                      where project_domain={project_domain}""").format(
+                    blueprint_table=sql.Identifier(Settings.blueprint_table),
+                    project_domain=sql.Literal(project_domain)
+                )
+            else:
+                stmt = sql.SQL("""select blueprint_id from {blueprint_table}
+                                      where username={username} and project_domain={project_domain}""").format(
+                    blueprint_table=sql.Identifier(Settings.blueprint_table),
+                    username=sql.Literal(username),
+                    project_domain=sql.Literal(project_domain)
+                )
+            logger.debug(stmt)
+            dbcur.execute(stmt)
+            lines = dbcur.fetchall()
+            blueprint_ids = [line[0] for line in lines]
+            return blueprint_ids

@@ -33,6 +33,12 @@ class NoneCursor:
     command = ""
     replacements = ""
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
+
     @classmethod
     def execute(cls, command, replacements=None):
         cls.command = command
@@ -50,6 +56,16 @@ class NoneCursor:
     def close(cls):
         pass
 
+    @classmethod
+    def get_command(cls):
+        """This method does not exist in real Cursor object, for testing purposes only"""
+        return cls.command
+
+    @classmethod
+    def get_replacements(cls):
+        """This method does not exist in real Cursor object, for testing purposes only"""
+        return cls.replacements
+
 
 class PsycopgErrorCursor(NoneCursor):
 
@@ -58,18 +74,6 @@ class PsycopgErrorCursor(NoneCursor):
         if command != "ROLLBACK":
             raise psycopg2.Error
         return None
-
-
-# Cursor that adds method to get command
-class InspectCommandCursor(NoneCursor):
-
-    @classmethod
-    def get_command(cls):
-        return cls.command
-
-    @classmethod
-    def get_replacements(cls):
-        return cls.replacements
 
 
 class BlueprintDeletedCursor(NoneCursor):
@@ -135,6 +139,12 @@ class GetBlueprintMeta(NoneCursor):
     def fetchall(cls):
         # used to get deployments
         return []
+
+
+class GetBlueprintCursor(NoneCursor):
+    @classmethod
+    def fetchall(cls):
+        return [[x] for x in TestGetBlueprint.blueprints]
 
 
 class TestPostgreSQLVersionExists:
@@ -217,7 +227,7 @@ class TestPostgreSQLBlueprintMeta:
         caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
         mocker.patch('psycopg2.connect', new=FakePostgres)
         db = PostgreSQL({})
-        monkeypatch.setattr(db.connection, 'cursor', InspectCommandCursor)
+        monkeypatch.setattr(db.connection, 'cursor', NoneCursor)
 
         # testing
         blueprint_meta: Blueprint = generic_blueprint_meta
@@ -317,7 +327,7 @@ class TestPostgreSQLBlueprintMeta:
         caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
         mocker.patch('psycopg2.connect', new=FakePostgres)
         db = PostgreSQL({})
-        monkeypatch.setattr(db.connection, 'cursor', InspectCommandCursor)
+        monkeypatch.setattr(db.connection, 'cursor', NoneCursor)
 
         # test
         blueprint_meta: Blueprint = generic_blueprint_meta
@@ -355,7 +365,7 @@ class TestPostgreSQLBlueprintMeta:
         caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
         mocker.patch('psycopg2.connect', new=FakePostgres)
         db = PostgreSQL({})
-        monkeypatch.setattr(db.connection, 'cursor', InspectCommandCursor)
+        monkeypatch.setattr(db.connection, 'cursor', NoneCursor)
 
         # testing
         blueprint_id = uuid.uuid4()
@@ -369,7 +379,7 @@ class TestPostgreSQLBlueprintMeta:
         caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
         mocker.patch('psycopg2.connect', new=FakePostgres)
         db = PostgreSQL({})
-        monkeypatch.setattr(db.connection, 'cursor', InspectCommandCursor)
+        monkeypatch.setattr(db.connection, 'cursor', NoneCursor)
 
         # testing
         blueprint_id = uuid.uuid4()
@@ -391,4 +401,19 @@ class TestPostgreSQLBlueprintMeta:
         assert not db.delete_blueprint_meta(blueprint_id)
         assert_that(caplog.text).contains("Failed to delete blueprint metadata", str(blueprint_id))
 
+
+class TestGetBlueprint:
+    blueprints = ['91df79b1-d78b-4cac-ae24-4edaf49c5030',
+                  '50905496-e640-4c9d-92f7-0660571b119b',
+                  '13c1f4fa-aef7-4f59-ba0e-fe814143ab9d',
+                  '1aa85976-d66e-4ecb-bfd1-91c08bc90bca']
+
+    def test_success(self, mocker, monkeypatch):
+        # test set up
+        mocker.patch('psycopg2.connect', new=FakePostgres)
+        db = PostgreSQL({})
+        monkeypatch.setattr(db.connection, 'cursor', GetBlueprintCursor)
+
+        # testing
+        assert db.get_blueprints_by_user_or_project('username', 'project_domain') == self.blueprints
 
