@@ -10,7 +10,7 @@ import pytest
 from opera.api.cli import test
 from opera.api.gitCsarDB import GitCsarDB
 from opera.api.gitCsarDB.connectors import MockConnector
-from opera.api.openapi.models import Invocation, InvocationState, OperationType, Blueprint, Deployment
+from opera.api.openapi.models import Invocation, InvocationState, OperationType, BlueprintVersion, Deployment
 from opera.api.settings import Settings
 from opera.api.util import timestamp_util, xopera_util
 
@@ -44,8 +44,8 @@ def change_API_WORKDIR(new_workdir: str):
 
 
 @pytest.fixture()
-def generic_blueprint_meta() -> Blueprint:
-    blueprint_meta = Blueprint()
+def generic_blueprint_meta() -> BlueprintVersion:
+    blueprint_meta = BlueprintVersion()
     blueprint_meta.blueprint_id = str(uuid.uuid4())
     blueprint_meta.version_id = 'v1.0'
     blueprint_meta.blueprint_name = 'name'

@@ -5,7 +5,7 @@ import psycopg2
 from psycopg2 import sql
 
 from opera.api.log import get_logger
-from opera.api.openapi.models import Invocation, InvocationState, Blueprint
+from opera.api.openapi.models import Invocation, InvocationState, BlueprintVersion
 from opera.api.settings import Settings
 from opera.api.util import timestamp_util, file_util
 
@@ -146,7 +146,7 @@ class Database:
         """
         pass
 
-    def save_blueprint_meta(self, blueprint_meta: Blueprint):
+    def save_blueprint_meta(self, blueprint_meta: BlueprintVersion):
         """
         saves metadata of blueprint version
         """
@@ -597,7 +597,7 @@ class PostgreSQL(Database):
         }
         return blueprint_meta
 
-    def save_blueprint_meta(self, blueprint_meta: Blueprint):
+    def save_blueprint_meta(self, blueprint_meta: BlueprintVersion):
         """
         saves metadata of blueprint version
         """
@@ -673,26 +673,34 @@ class PostgreSQL(Database):
         """
         with self.connection.cursor() as dbcur:
             if username and not project_domain:
-                stmt = sql.SQL("""select blueprint_id from {blueprint_table}
+                stmt = sql.SQL("""select distinct on (blueprint_id) blueprint_id, blueprint_name, aadm_id, username, project_domain, timestamp from {blueprint_table}
                                       where username={username}""").format(
                     blueprint_table=sql.Identifier(Settings.blueprint_table),
                     username=sql.Literal(username),
                 )
             elif not username and project_domain:
-                stmt = sql.SQL("""select blueprint_id from {blueprint_table}
+                stmt = sql.SQL("""select distinct on (blueprint_id) blueprint_id, blueprint_name, aadm_id, username, project_domain, timestamp from {blueprint_table}
                                       where project_domain={project_domain}""").format(
                     blueprint_table=sql.Identifier(Settings.blueprint_table),
                     project_domain=sql.Literal(project_domain)
                 )
             else:
-                stmt = sql.SQL("""select blueprint_id from {blueprint_table}
+                stmt = sql.SQL("""select distinct on (blueprint_id) blueprint_id, blueprint_name, aadm_id, username, project_domain, timestamp from {blueprint_table}
                                       where username={username} and project_domain={project_domain}""").format(
                     blueprint_table=sql.Identifier(Settings.blueprint_table),
                     username=sql.Literal(username),
                     project_domain=sql.Literal(project_domain)
                 )
-            logger.debug(stmt)
             dbcur.execute(stmt)
             lines = dbcur.fetchall()
-            blueprint_ids = [line[0] for line in lines]
-            return blueprint_ids
+            blueprint_list = [
+                {
+                    "blueprint_id": line[0],
+                    "blueprint_name": line[1],
+                    "aadm_id": line[2],
+                    "username": line[3],
+                    "project_domain": line[4],
+                    "timestamp": timestamp_util.datetime_to_str(line[5])
+                } for line in lines
+            ]
+            return blueprint_list

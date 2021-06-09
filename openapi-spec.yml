@@ -98,7 +98,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Blueprint'
+                $ref: '#/components/schemas/BlueprintVersion'
         401:
           description: Unauthorized request for this blueprint
           content:
@@ -148,8 +148,7 @@ paths:
                 type: array
                 description: List of blueprints for current user or project_domain
                 items:
-                  type: string
-                  format: uuid
+                  $ref: '#/components/schemas/Blueprint'
         400:
           description: Invalid request
           content:
@@ -217,7 +216,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Blueprint'
+                $ref: '#/components/schemas/BlueprintVersion'
         401:
           description: Unauthorized request for this blueprint
           content:
@@ -263,7 +262,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Blueprint'
+                $ref: '#/components/schemas/BlueprintVersion'
         401:
           description: Unauthorized request for this blueprint
           content:
@@ -318,7 +317,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Blueprint'
+                $ref: '#/components/schemas/BlueprintVersion'
         401:
           description: Unauthorized request for this blueprint
           content:
@@ -361,7 +360,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Blueprint'
+                $ref: '#/components/schemas/BlueprintVersion'
         401:
           description: Unauthorized request for this blueprint
           content:
@@ -411,7 +410,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Blueprint'
+                $ref: '#/components/schemas/BlueprintVersion'
         401:
           description: Unauthorized request for this blueprint
           content:
@@ -1382,6 +1381,33 @@ components:
           type: string
           description: Rest api's public key
     Blueprint:
+      type: object
+      required:
+        - blueprint_id
+        - timestamp
+      properties:
+        blueprint_id:
+          type: string
+          format: uuid
+          description: Id of blueprint
+        blueprint_name:
+          type: string
+          description: Name of the blueprint
+        aadm_id:
+          type: string
+          description: End-to-end debugging id
+        username:
+          type: string
+          description: Username of user, that created blueprint
+        project_domain:
+          type: string
+          description: Domain name of the blueprint
+        timestamp:
+          type: string
+          description: timestamp of database entry
+          format: date-time
+
+    BlueprintVersion:
       required:
         - blueprint_id
         - timestamp

@@ -1,7 +1,7 @@
-from opera.api.cli import SQL_database, CSAR_db
+from opera.api.cli import SQL_database
 from opera.api.controllers import security_controller
 from opera.api.log import get_logger
-from opera.api.openapi.models import Blueprint, GitLog, Deployment
+from opera.api.openapi.models import BlueprintVersion, GitLog, Deployment
 
 logger = get_logger(__name__)
 
@@ -20,7 +20,7 @@ def get_blueprint_meta(blueprint_id):  # noqa: E501
     data = SQL_database.get_blueprint_meta(blueprint_id)
     if not data:
         return "Blueprint meta not found", 404
-    return Blueprint.from_dict(data), 200
+    return BlueprintVersion.from_dict(data), 200
 
 
 @security_controller.check_role_auth_blueprint
@@ -39,7 +39,7 @@ def get_blueprint_version_meta(blueprint_id, version_id):  # noqa: E501
     data = SQL_database.get_blueprint_meta(blueprint_id, version_id)
     if not data:
         return "Blueprint meta not found", 404
-    return Blueprint.from_dict(data), 200
+    return BlueprintVersion.from_dict(data), 200
 
 
 @security_controller.check_role_auth_blueprint

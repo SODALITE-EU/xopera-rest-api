@@ -3,7 +3,6 @@ import uuid
 import validators
 from assertpy import assert_that
 
-from opera.api.openapi.models.git_log import GitLog
 from opera.api.util import timestamp_util
 
 
@@ -92,6 +91,22 @@ class TestPostMultipleVersions:
         print(resp.json)
         assert_that(resp.status_code).is_equal_to(406)
         assert_that(resp.json).is_not_none().contains("Invalid CSAR")
+
+    def test_project_data_saving_error(self, csar_1, client, mocker, patch_auth_wrapper):
+        mocker.patch('opera.api.service.sqldb_service.Database.save_blueprint_meta', return_value=False)
+        mocker.patch('opera.api.service.csardb_service.GitDB.add_revision', return_value=(
+            {
+                'message': "Revision saved to GitDB",
+                'blueprint_id': uuid.uuid4(),
+                'url': 'https://google.com',
+                'commit_sha': 'commit_sha',
+                'version_id': 'v2.0',
+                'users': ['xopera'],
+                'timestamp': timestamp_util.datetime_now_to_string()
+            }, None))
+        resp = client.post(f"/blueprint/{uuid.uuid4()}", data=csar_1)
+        assert_that(resp.status_code).is_equal_to(500)
+        assert_that(resp.json).contains('Failed to save project data')
 
     def test_success(self, client, csar_1, mocker):
         mocker.patch('opera.api.service.sqldb_service.Database.save_blueprint_meta', return_value=True)
@@ -294,3 +309,33 @@ class TestUser:
         assert_that(resp.status_code).is_equal_to(200)
         resp = client.get(f"/blueprint/{uuid.uuid4()}/user")
         assert_that(resp.json).is_empty()
+
+
+class TestGetBlueprintByUserOrDomain:
+
+    def test_missing_params(self, client, mocker, patch_auth_wrapper):
+
+        resp = client.get(f"/blueprint")
+        assert_that(resp.status_code).is_equal_to(400)
+
+    def test_no_blueprint(self, client, mocker, patch_auth_wrapper):
+        mocker.patch('opera.api.service.sqldb_service.Database.get_blueprints_by_user_or_project', return_value=None)
+
+        resp = client.get(f"/blueprint?username=foo")
+        assert_that(resp.status_code).is_equal_to(404)
+        assert_that(resp.json).contains('not found')
+
+    def test_success(self, client, mocker, patch_auth_wrapper):
+        blueprints = [{
+            "blueprint_id": '91df79b1-d78b-4cac-ae24-4edaf49c5030',
+            "blueprint_name": 'TestBlueprint',
+            "aadm_id": 'aadm_id',
+            "username": 'mihaTrajbaric',
+            "project_domain": 'SODALITE',
+            "timestamp": timestamp_util.datetime_now_to_string()
+        }]
+        mocker.patch('opera.api.service.sqldb_service.Database.get_blueprints_by_user_or_project', return_value=blueprints)
+        resp = client.get(f"/blueprint?username=foo")
+        assert_that(resp.status_code).is_equal_to(200)
+        assert_that(len(resp.json)).is_equal_to(1)
+        assert_that(resp.json).is_equal_to(blueprints)

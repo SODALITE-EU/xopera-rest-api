@@ -2,7 +2,7 @@ import uuid
 
 from assertpy import assert_that
 
-from opera.api.openapi.models import GitLog, Blueprint, Deployment, InvocationState, OperationType
+from opera.api.openapi.models import GitLog, BlueprintVersion, Deployment, InvocationState, OperationType
 from opera.api.util import timestamp_util
 
 
@@ -19,7 +19,7 @@ class TestBlueprintMeta:
 
     @staticmethod
     def test_success(client, mocker, generic_blueprint_meta, patch_auth_wrapper):
-        blueprint_meta: Blueprint = generic_blueprint_meta
+        blueprint_meta: BlueprintVersion = generic_blueprint_meta
         mocker.patch('opera.api.service.sqldb_service.Database.get_blueprint_meta', return_value=blueprint_meta.to_dict())
 
         blueprint_id = uuid.uuid4()
@@ -27,6 +27,7 @@ class TestBlueprintMeta:
         assert resp.status_code == 200
         print(blueprint_meta.to_dict())
         assert_that(resp.json).contains(*[key for key in blueprint_meta.to_dict().keys() if key is not None])
+
 
 class TestBlueprintVersionMeta:
 
@@ -40,7 +41,7 @@ class TestBlueprintVersionMeta:
 
     @staticmethod
     def test_success(client, mocker, generic_blueprint_meta, patch_auth_wrapper):
-        blueprint_meta: Blueprint = generic_blueprint_meta
+        blueprint_meta: BlueprintVersion = generic_blueprint_meta
         blueprint_meta.deployments = [
             Deployment(
                 str(uuid.uuid4()), InvocationState.SUCCESS,

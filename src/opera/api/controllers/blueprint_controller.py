@@ -3,14 +3,15 @@ import connexion
 from opera.api.cli import CSAR_db, SQL_database
 from opera.api.controllers import security_controller
 from opera.api.log import get_logger
-from opera.api.openapi.models import Blueprint
+from opera.api.openapi.models import Blueprint, BlueprintVersion
 from opera.api.settings import Settings
 from opera.api.util import timestamp_util
 
 logger = get_logger(__name__)
 
 
-def post_new_blueprint(revision_msg=None, blueprint_name=None, aadm_id=None, username=None, project_domain=None):  # noqa: E501
+def post_new_blueprint(revision_msg=None, blueprint_name=None, aadm_id=None, username=None,
+                       project_domain=None):  # noqa: E501
     """Add new blueprint.
 
     :param revision_msg: Optional comment on submission
@@ -37,7 +38,7 @@ def post_new_blueprint(revision_msg=None, blueprint_name=None, aadm_id=None, use
     if result is None:
         return f"Invalid CSAR: {response}", 406
 
-    blueprint_meta = Blueprint.from_dict(result)
+    blueprint_meta = BlueprintVersion.from_dict(result)
 
     blueprint_meta.blueprint_name = blueprint_name
     blueprint_meta.project_domain = project_domain
@@ -67,7 +68,7 @@ def get_blueprints_user_domain(username=None, project_domain=None):
     :param project_domain: Project domain
     :type project_domain: str
 
-    :rtype: List[str]
+    :rtype: List[Blueprint]
     """
     logger.debug(f"{username=}")
     logger.debug(f"{project_domain=}")
@@ -79,7 +80,7 @@ def get_blueprints_user_domain(username=None, project_domain=None):
     if not data:
         return "Blueprints not found", 404
 
-    return data, 200
+    return [Blueprint.from_dict(datum) for datum in data], 200
 
 
 @security_controller.check_role_auth_blueprint
@@ -100,10 +101,13 @@ def post_blueprint(blueprint_id, revision_msg=None):
     if result is None:
         return f"Invalid CSAR: {response}", 406
 
-    blueprint_meta = Blueprint.from_dict(result)
-
-    blueprint_meta.name = SQL_database.get_blueprint_name(blueprint_id)
-    blueprint_meta.project_domain = SQL_database.get_project_domain(blueprint_id)
+    blueprint_meta = BlueprintVersion.from_dict(result)
+    # copy blueprint params from first revision
+    blueprint_meta_old = BlueprintVersion.from_dict(SQL_database.get_blueprint_meta(blueprint_id, 'v1.0'))
+    blueprint_meta.blueprint_name = blueprint_meta_old.blueprint_name
+    blueprint_meta.project_domain = blueprint_meta_old.project_domain
+    blueprint_meta.aadm_id = blueprint_meta_old.aadm_id
+    blueprint_meta.username = blueprint_meta_old.username
 
     if not SQL_database.save_blueprint_meta(blueprint_meta):
         return f"Failed to save project data for blueprint_id={blueprint_id}", 500
@@ -140,16 +144,15 @@ def delete_blueprint(blueprint_id, force=None):
     logger.debug(f"Rows affected, status_code: {rows_affected} {status_code}")
 
     if status_code == 200:
-
         SQL_database.delete_blueprint_meta(blueprint_id)
         SQL_database.save_git_transaction_data(blueprint_id=blueprint_id,
                                                revision_msg=f"Deleted blueprint",
                                                job='delete',
                                                git_backend=str(CSAR_db.connection.git_connector),
                                                repo_url=repo_url)
-        return Blueprint(blueprint_id=blueprint_id,
-                         url=repo_url,
-                         timestamp=timestamp_util.datetime_now_to_string()), 200
+        return BlueprintVersion(blueprint_id=blueprint_id,
+                                url=repo_url,
+                                timestamp=timestamp_util.datetime_now_to_string()), 200
 
     message = {
         200: 'Successfully removed',
@@ -183,7 +186,6 @@ def delete_blueprint_version(blueprint_id, version_id, force=None):
     logger.debug(f"Rows affected, status_code: {rows_affected} {status_code}")
 
     if status_code == 200:
-
         SQL_database.delete_blueprint_meta(blueprint_id, version_id)
         SQL_database.save_git_transaction_data(blueprint_id=blueprint_id,
                                                version_id=version_id,
@@ -191,10 +193,10 @@ def delete_blueprint_version(blueprint_id, version_id, force=None):
                                                job='delete',
                                                git_backend=str(CSAR_db.connection.git_connector),
                                                repo_url=repo_url)
-        return Blueprint(blueprint_id=blueprint_id,
-                         version_id=version_id,
-                         url=repo_url,
-                         timestamp=timestamp_util.datetime_now_to_string()), 200
+        return BlueprintVersion(blueprint_id=blueprint_id,
+                                version_id=version_id,
+                                url=repo_url,
+                                timestamp=timestamp_util.datetime_now_to_string()), 200
 
     message = {
         200: 'Successfully removed',

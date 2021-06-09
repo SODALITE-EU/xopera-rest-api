@@ -1,17 +1,14 @@
-import json
-import uuid
-from pathlib import Path
-import os
 import datetime
-
-from assertpy import assert_that
-import psycopg2
-
-from opera.api.openapi.models import Invocation, Blueprint
-from opera.api.service.sqldb_service import PostgreSQL
-from opera.api.util import file_util, timestamp_util
-from opera.api.tests.conftest import generic_blueprint_meta
 import logging
+import uuid
+
+import psycopg2
+from assertpy import assert_that
+
+from opera.api.openapi.models import BlueprintVersion
+from opera.api.service.sqldb_service import PostgreSQL
+from opera.api.util import timestamp_util
+
 
 # PostgreSQL tests
 
@@ -144,7 +141,10 @@ class GetBlueprintMeta(NoneCursor):
 class GetBlueprintCursor(NoneCursor):
     @classmethod
     def fetchall(cls):
-        return [[x] for x in TestGetBlueprint.blueprints]
+        blueprints = [{key: (timestamp_util.str_to_datetime(value) if key == 'timestamp' else value)
+                       for key, value in blueprint.items()} for blueprint in TestGetBlueprint.blueprints]
+
+        return [list(x.values()) for x in blueprints]
 
 
 class TestPostgreSQLVersionExists:
@@ -230,7 +230,7 @@ class TestPostgreSQLBlueprintMeta:
         monkeypatch.setattr(db.connection, 'cursor', NoneCursor)
 
         # testing
-        blueprint_meta: Blueprint = generic_blueprint_meta
+        blueprint_meta: BlueprintVersion = generic_blueprint_meta
         db.save_blueprint_meta(blueprint_meta)
         replacements = db.connection.cursor().get_replacements()
         assert_that(replacements).contains_only(*[
@@ -252,12 +252,12 @@ class TestPostgreSQLBlueprintMeta:
         db = PostgreSQL({})
         monkeypatch.setattr(db.connection, 'cursor', PsycopgErrorCursor)
 
-        blueprint_meta: Blueprint = generic_blueprint_meta
+        blueprint_meta: BlueprintVersion = generic_blueprint_meta
         db.save_blueprint_meta(blueprint_meta)
 
         assert_that(caplog.text).contains("Fail to update blueprint meta", str(blueprint_meta.blueprint_id))
 
-    blueprint_meta = Blueprint(
+    blueprint_meta = BlueprintVersion(
         blueprint_id=str(uuid.uuid4()),
         version_id='v1.0',
         blueprint_name='a',
@@ -277,8 +277,9 @@ class TestPostgreSQLBlueprintMeta:
         monkeypatch.setattr(db.connection, 'cursor', GetBlueprintMeta)
 
         # test
-        blueprint_meta: Blueprint = self.blueprint_meta
-        assert_that(Blueprint.from_dict(db.get_blueprint_meta(blueprint_meta.blueprint_id))).is_equal_to(blueprint_meta)
+        blueprint_meta: BlueprintVersion = self.blueprint_meta
+        assert_that(BlueprintVersion.from_dict(db.get_blueprint_meta(blueprint_meta.blueprint_id))).is_equal_to(
+            blueprint_meta)
 
     def test_get_project_blueprint_meta_missing(self, mocker, caplog, generic_blueprint_meta):
         # test set up
@@ -287,7 +288,7 @@ class TestPostgreSQLBlueprintMeta:
         db = PostgreSQL({})
 
         # test
-        blueprint_meta: Blueprint = generic_blueprint_meta
+        blueprint_meta: BlueprintVersion = generic_blueprint_meta
         assert db.get_blueprint_meta(blueprint_meta.blueprint_id) is None
 
     def test_get_project_domain(self, mocker, monkeypatch, caplog, generic_blueprint_meta):
@@ -298,7 +299,7 @@ class TestPostgreSQLBlueprintMeta:
         monkeypatch.setattr(db.connection, 'cursor', GetBlueprintMeta)
 
         # test
-        blueprint_meta: Blueprint = generic_blueprint_meta
+        blueprint_meta: BlueprintVersion = generic_blueprint_meta
         assert db.get_project_domain(blueprint_meta.blueprint_id) == blueprint_meta.project_domain
 
     def test_get_project_domain_missing(self, mocker, caplog, generic_blueprint_meta):
@@ -308,7 +309,7 @@ class TestPostgreSQLBlueprintMeta:
         db = PostgreSQL({})
 
         # test
-        blueprint_meta: Blueprint = generic_blueprint_meta
+        blueprint_meta: BlueprintVersion = generic_blueprint_meta
         assert db.get_project_domain(blueprint_meta.blueprint_id) is None
 
     def test_get_blueprint_name(self, mocker, monkeypatch, caplog, generic_blueprint_meta):
@@ -319,7 +320,7 @@ class TestPostgreSQLBlueprintMeta:
         monkeypatch.setattr(db.connection, 'cursor', GetBlueprintMeta)
 
         # test
-        blueprint_meta: Blueprint = generic_blueprint_meta
+        blueprint_meta: BlueprintVersion = generic_blueprint_meta
         assert db.get_blueprint_name(blueprint_meta.blueprint_id) == blueprint_meta.blueprint_name
 
     def test_save_blueprint_name(self, mocker, monkeypatch, caplog, generic_blueprint_meta):
@@ -330,7 +331,7 @@ class TestPostgreSQLBlueprintMeta:
         monkeypatch.setattr(db.connection, 'cursor', NoneCursor)
 
         # test
-        blueprint_meta: Blueprint = generic_blueprint_meta
+        blueprint_meta: BlueprintVersion = generic_blueprint_meta
         new_name = 'new_name'
         db.update_blueprint_name(blueprint_meta.blueprint_id, new_name)
         command = db.connection.cursor().get_command()
@@ -344,7 +345,7 @@ class TestPostgreSQLBlueprintMeta:
         db = PostgreSQL({})
         monkeypatch.setattr(db.connection, 'cursor', PsycopgErrorCursor)
 
-        blueprint_meta: Blueprint = generic_blueprint_meta
+        blueprint_meta: BlueprintVersion = generic_blueprint_meta
         new_name = 'new_name'
         db.update_blueprint_name(blueprint_meta.blueprint_id, new_name)
 
@@ -357,7 +358,7 @@ class TestPostgreSQLBlueprintMeta:
         db = PostgreSQL({})
 
         # test
-        blueprint_meta: Blueprint = generic_blueprint_meta
+        blueprint_meta: BlueprintVersion = generic_blueprint_meta
         assert db.get_blueprint_name(blueprint_meta.blueprint_id) is None
 
     def test_delete_blueprint_meta(self, mocker, monkeypatch, caplog):
@@ -403,10 +404,14 @@ class TestPostgreSQLBlueprintMeta:
 
 
 class TestGetBlueprint:
-    blueprints = ['91df79b1-d78b-4cac-ae24-4edaf49c5030',
-                  '50905496-e640-4c9d-92f7-0660571b119b',
-                  '13c1f4fa-aef7-4f59-ba0e-fe814143ab9d',
-                  '1aa85976-d66e-4ecb-bfd1-91c08bc90bca']
+    blueprints = [{
+            "blueprint_id": '91df79b1-d78b-4cac-ae24-4edaf49c5030',
+            "blueprint_name": 'TestBlueprint',
+            "aadm_id": 'aadm_id',
+            "username": 'mihaTrajbaric',
+            "project_domain": 'SODALITE',
+            "timestamp": timestamp_util.datetime_now_to_string()
+        }]
 
     def test_success(self, mocker, monkeypatch):
         # test set up
