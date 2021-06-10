@@ -70,8 +70,6 @@ def get_blueprints_user_domain(username=None, project_domain=None):
 
     :rtype: List[Blueprint]
     """
-    logger.debug(f"{username=}")
-    logger.debug(f"{project_domain=}")
     if not username and not project_domain:
         return "At least on of (user, project_domain) must be present", 400
 

@@ -546,7 +546,6 @@ class PostgreSQL(Database):
             )
             dbcur.execute(stmt)
             line = dbcur.fetchone()
-            logger.debug(f'{line=}')
             if not line:
                 return None
             name = line[1]
