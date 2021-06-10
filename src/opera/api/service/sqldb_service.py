@@ -67,12 +67,6 @@ class Database:
         """
         pass
 
-    def delete_opera_session_data(self, deployment_id: uuid):
-        """
-        Delete session data for deployment
-        """
-        pass
-
     def update_deployment_log(self, invocation_id: uuid, inv: Invocation):
         """
         updates deployment log with deployment_id, timestamp, invocation_id, _log
@@ -109,16 +103,9 @@ class Database:
         """
         pass
 
-    def get_git_transaction_data(self, blueprint_id: uuid, version_id: str = None, fetch_all: bool = False):
+    def get_git_transaction_data(self, blueprint_id: uuid):
         """
-        Gets last git transaction data (if version_id is not None, specific transaction data). If all, it returns all
-        git transaction data, that satisfy conditions
-        """
-        pass
-
-    def get_version_ids(self, blueprint_id: uuid):
-        """
-        returns list of all version ids for blueprint
+        Gets git transaction history
         """
         pass
 
@@ -247,65 +234,78 @@ class PostgreSQL(Database):
         """
         Checks if, according to records in git_log table blueprint (version) exists
         """
+        # TODO change to inspect blueprint table
         # check blueprint has not been deleted
-        dbcur = self.connection.cursor()
-        query = "select version_id,job  from {} " \
-                "where blueprint_id='{}' " \
-                "order by timestamp desc limit 1" \
-            .format(Settings.git_log_table, blueprint_id)
-        dbcur.execute(query)
-        line = dbcur.fetchone()
-        if not line:
-            # blueprint has never existed
-            logger.debug(f"Blueprint {blueprint_id} has never existed")
-            return False
-        last_version_id, last_job = line[0], line[1]
-        if last_version_id is None and last_job == "delete":
-            # entire blueprint has been deleted
-            logger.debug(f"Entire blueprint {blueprint_id} has been deleted, does not exist any more")
-            return False
-
-        if version_id:
-            # check version has not been deleted
-            query = "select job from {} " \
-                    "where blueprint_id='{}' and version_id='{}' " \
-                    "order by timestamp desc limit 1" \
-                .format(Settings.git_log_table, blueprint_id, version_id)
-            dbcur.execute(query)
+        with self.connection.cursor() as dbcur:
+            stmt = sql.SQL("""select version_id,job  from {git_log_table} 
+                                where blueprint_id={blueprint_id} 
+                                order by timestamp desc limit 1;""").format(
+                git_log_table=sql.Identifier(Settings.git_log_table),
+                blueprint_id=sql.Literal(str(blueprint_id))
+            )
+            dbcur.execute(stmt)
             line = dbcur.fetchone()
             if not line:
-                # blueprint version has never existed
-                logger.debug(f"Blueprint-version {blueprint_id}/{version_id} has never existed")
+                # blueprint has never existed
+                logger.debug(f"Blueprint {blueprint_id} has never existed")
                 return False
-            last_job = line[0]
-            if last_job == "delete":
-                # blueprint version has been deleted
-                logger.debug(f"Blueprint-version {blueprint_id}/{version_id} has been deleted, does not exist any more")
+            last_version_id, last_job = line[0], line[1]
+            if last_version_id is None and last_job == "delete":
+                # entire blueprint has been deleted
+                logger.debug(f"Entire blueprint {blueprint_id} has been deleted, does not exist any more")
                 return False
 
-        # all checks have passed, blueprint (version) exists
-        return True
+            if version_id:
+                # check version has not been deleted
+                stmt = sql.SQL("""select job from {git_log_table} 
+                                    where blueprint_id={blueprint_id} and version_id={version_id}
+                                    order by timestamp desc limit 1;""").format(
+                    git_log_table=sql.Identifier(Settings.git_log_table),
+                    blueprint_id=sql.Literal(str(blueprint_id)),
+                    version_id=sql.Literal(version_id)
+                )
+                dbcur.execute(stmt)
+                line = dbcur.fetchone()
+                if not line:
+                    # blueprint version has never existed
+                    logger.debug(f"Blueprint-version {blueprint_id}/{version_id} has never existed")
+                    return False
+                last_job = line[0]
+                if last_job == "delete":
+                    # blueprint version has been deleted
+                    logger.debug(f"Blueprint-version {blueprint_id}/{version_id} has been deleted, does not exist any more")
+                    return False
+
+            # all checks have passed, blueprint (version) exists
+            return True
 
     def get_deployment_ids(self, blueprint_id: uuid, version_id: str = None):
         """
         Returns list of deployment_ids od all deployments created from blueprint with blueprint_id (and version_id)
         """
-        dbcur = self.connection.cursor()
+        with self.connection.cursor() as dbcur:
 
-        if version_id:
-            query = "select deployment_id from {} where blueprint_id = '{}' and version_id = '{}' " \
-                    "group by deployment_id;" \
-                .format(Settings.invocation_table, blueprint_id, version_id)
-        else:
-            query = "select deployment_id from {} where blueprint_id = '{}' group by deployment_id;" \
-                .format(Settings.invocation_table, blueprint_id)
+            if version_id:
+                stmt = sql.SQL("""select deployment_id from {invocation_table} 
+                                    where blueprint_id = {blueprint_id} and version_id = {version_id}
+                                    group by deployment_id;""").format(
+                    invocation_table=sql.Identifier(Settings.invocation_table),
+                    blueprint_id=sql.Literal(str(blueprint_id)),
+                    version_id=sql.Literal(version_id)
+                )
+            else:
+                stmt = sql.SQL("""select deployment_id from {invocation_table} 
+                                    where blueprint_id = {blueprint_id}
+                                    group by deployment_id;""").format(
+                    invocation_table=sql.Identifier(Settings.invocation_table),
+                    blueprint_id=sql.Literal(str(blueprint_id))
+                )
 
-        dbcur.execute(query)
-        lines = dbcur.fetchall()
-        deployment_ids = [uuid.UUID(line[0]) for line in lines]
-        dbcur.close()
+            dbcur.execute(stmt)
+            lines = dbcur.fetchall()
+            deployment_ids = [line[0] for line in lines]
 
-        return deployment_ids
+            return deployment_ids
 
     def blueprint_used_in_deployment(self, blueprint_id: uuid, version_id: str = None):
         """
@@ -317,16 +317,19 @@ class PostgreSQL(Database):
             return False
 
         if version_id:
-            dbcur = self.connection.cursor()
-            for deployment_id in deployment_ids:
-                query = "select version_id from {} where deployment_id = '{}' order by timestamp desc limit 1" \
-                    .format(Settings.invocation_table, deployment_id)
-                dbcur.execute(query)
-                lines = dbcur.fetchall()
-                if lines[0][0] == version_id:
-                    return True
-            dbcur.close()
-            return False
+            with self.connection.cursor() as dbcur:
+                for deployment_id in deployment_ids:
+                    stmt = sql.SQL("""select version_id from {invocation_table} 
+                                        where deployment_id = {deployment_id} 
+                                        order by timestamp desc limit 1;""").format(
+                        invocation_table=sql.Identifier(Settings.invocation_table),
+                        deployment_id=sql.Literal(str(deployment_id))
+                    )
+                    dbcur.execute(stmt)
+                    lines = dbcur.fetchall()
+                    if lines[0][0] == version_id:
+                        return True
+                return False
         return True
 
     def save_opera_session_data(self, deployment_id: uuid, tree: dict):
@@ -352,34 +355,22 @@ class PostgreSQL(Database):
         """
         Returns dict with keys [deployment_id, timestamp, tree], where tree is content of .opera dir
         """
-        dbcur = self.connection.cursor()
-        query = "select deployment_id, timestamp, tree  from {} where deployment_id = '{}';" \
-            .format(Settings.opera_session_data_table, str(deployment_id))
-        dbcur.execute(query)
-        line = dbcur.fetchone()
-        if not line:
-            return None
-        session_data = {
-            'deployment_id': line[0],
-            'timestamp': timestamp_util.datetime_to_str(line[1]),
-            'tree': json.loads(line[2])
-        }
-        dbcur.close()
-        return session_data
-
-    def delete_opera_session_data(self, deployment_id: uuid):
-        """
-        Delete session data for deployment
-        """
-        response = self.execute(
-            "delete from {} where deployment_id = '{}'"
-                .format(Settings.opera_session_data_table, str(deployment_id)))
-        if response:
-            logger.debug(f'Deleted opera_session_data for deployment_id={deployment_id} from PostgreSQL database')
-        else:
-            logger.error(
-                f'Failed to delete opera_session_data for deployment_id={deployment_id} from PostgreSQL database')
-        return response
+        with self.connection.cursor() as dbcur:
+            stmt = sql.SQL("""select deployment_id, timestamp, tree from {session_data_table} 
+                                where deployment_id = {deployment_id};""").format(
+                session_data_table=sql.Identifier(Settings.opera_session_data_table),
+                deployment_id=sql.Literal(str(deployment_id))
+            )
+            dbcur.execute(stmt)
+            line = dbcur.fetchone()
+            if not line:
+                return None
+            session_data = {
+                'deployment_id': line[0],
+                'timestamp': timestamp_util.datetime_to_str(line[1]),
+                'tree': json.loads(line[2])
+            }
+            return session_data
 
     def update_deployment_log(self, invocation_id: uuid, inv: Invocation):
         """
@@ -394,8 +385,9 @@ class PostgreSQL(Database):
                        state=excluded.state,
                        operation=excluded.operation,
                         _log=excluded._log;"""
-            .format(Settings.invocation_table),
-            (str(inv.deployment_id), inv.deployment_label, str(inv.timestamp_submission),str(invocation_id), str(inv.blueprint_id),
+                .format(Settings.invocation_table),
+            (str(inv.deployment_id), inv.deployment_label, str(inv.timestamp_submission), str(invocation_id),
+             str(inv.blueprint_id),
              inv.version_id, inv.state, inv.operation, json.dumps(inv.to_dict(), cls=file_util.UUIDEncoder)))
         deployment_id = inv.deployment_id
         if response:
@@ -412,19 +404,21 @@ class PostgreSQL(Database):
         Get last deployment log
         """
 
-        dbcur = self.connection.cursor()
+        with self.connection.cursor() as dbcur:
+            stmt = sql.SQL("""select timestamp, _log from {invocation_table} 
+                                where deployment_id = {deployment_id} 
+                                order by timestamp desc limit 1;""").format(
+                invocation_table=sql.Identifier(Settings.invocation_table),
+                deployment_id=sql.Literal(str(deployment_id))
+            )
 
-        query = "select timestamp, _log from {} where deployment_id = '{}' order by timestamp desc limit 1;" \
-            .format(Settings.invocation_table, deployment_id)
+            dbcur.execute(stmt)
+            line = dbcur.fetchone()
+            if not line:
+                return None
+            inv = Invocation.from_dict(json.loads(line[1]))
 
-        dbcur.execute(query)
-        line = dbcur.fetchone()
-        if not line:
-            return None
-        inv = Invocation.from_dict(json.loads(line[1]))
-        dbcur.close()
-
-        return inv
+            return inv
 
     # TODO Implemented due to update's need for one before last invocation
     #   remove when solved properly
@@ -439,35 +433,39 @@ class PostgreSQL(Database):
         """
         Get all deployment logs for one deployment
         """
-        dbcur = self.connection.cursor()
+        with self.connection.cursor() as dbcur:
+            stmt = sql.SQL("""select timestamp, _log from {invocation_table} 
+                                where deployment_id = {deployment_id}
+                                order by timestamp;""").format(
+                invocation_table=sql.Identifier(Settings.invocation_table),
+                deployment_id=sql.Literal(str(deployment_id))
+            )
 
-        query = "select timestamp, _log from {} where deployment_id = '{}' order by timestamp;" \
-            .format(Settings.invocation_table, deployment_id)
+            dbcur.execute(stmt)
+            lines = dbcur.fetchall()
+            history = [Invocation.from_dict(json.loads(line[1])) for line in lines]
 
-        dbcur.execute(query)
-        lines = dbcur.fetchall()
-        history = [Invocation.from_dict(json.loads(line[1])) for line in lines]
-        dbcur.close()
-
-        return history
+            return history
 
     def get_last_invocation_id(self, deployment_id: uuid):
         """
         This method exists since we do not want to have invocation_id in Invocation object, to not confuse users
         """
-        dbcur = self.connection.cursor()
+        with self.connection.cursor() as dbcur:
+            stmt = sql.SQL("""select timestamp, invocation_id from {invocation_table} 
+                                where deployment_id = {deployment_id} 
+                                order by timestamp desc limit 1;""").format(
+                invocation_table=sql.Identifier(Settings.invocation_table),
+                deployment_id=sql.Literal(str(deployment_id))
+            )
 
-        query = "select timestamp, invocation_id from {} where deployment_id = '{}' order by timestamp desc limit 1;" \
-            .format(Settings.invocation_table, deployment_id)
+            dbcur.execute(stmt)
+            line = dbcur.fetchone()
+            if not line:
+                return None
+            inv = line[1]
 
-        dbcur.execute(query)
-        line = dbcur.fetchone()
-        if not line:
-            return None
-        inv = line[1]
-        dbcur.close()
-
-        return inv
+            return inv
 
     def save_git_transaction_data(self, blueprint_id: uuid, revision_msg: str, job: str, git_backend: str,
                                   repo_url: str, version_id: str = None, commit_sha: str = None):
@@ -483,84 +481,88 @@ class PostgreSQL(Database):
                 f'Updated git log for blueprint_id={blueprint_id} and version_id={version_id} in PostgreSQL database')
         else:
             logger.error(
-                f'Fail to update git log blueprint_id={blueprint_id} and version_id={version_id} in PostgreSQL database')
+                f'Failed to update git log blueprint_id={blueprint_id} and version_id={version_id} in '
+                f'PostgreSQL database')
         return response
 
-    def get_git_transaction_data(self, blueprint_id: uuid, version_id: str = None, fetch_all: bool = False):
+    def get_git_transaction_data(self, blueprint_id: uuid):
         """
         Gets all transaction data for some blueprint
         """
-        inputs = tuple(xi for xi in (str(blueprint_id), version_id) if xi is not None)
-        dbcur = self.connection.cursor()
-        query = """select blueprint_id, version_id, revision_msg, job, git_backend, repo_url, commit_sha, timestamp
-         from {} where blueprint_id = %s {} order by timestamp desc {};""".format(
-            Settings.git_log_table, "and version_id = %s" if version_id else "", "limit 1" if not fetch_all else "")
+        with self.connection.cursor() as dbcur:
+            stmt = sql.SQL("""select blueprint_id, version_id, revision_msg, job, git_backend, 
+                                                     repo_url, commit_sha, timestamp from {git_log_table} 
+                                                     where blueprint_id = {blueprint_id}
+                                                     order by timestamp desc""").format(
+                git_log_table=sql.Identifier(Settings.git_log_table),
+                blueprint_id=sql.Literal(str(blueprint_id))
+            )
 
-        dbcur.execute(query, inputs)
-        lines = dbcur.fetchall()
-        git_transaction_data_list = [
-            {
-                'blueprint_id': line[0],
-                'version_id': line[1],
-                'revision_msg': line[2],
-                'job': line[3],
-                'git_backend': line[4],
-                'repo_url': line[5],
-                'commit_sha': line[6],
-                'timestamp': timestamp_util.datetime_to_str(line[7])
-            } for line in lines
-        ]
-        dbcur.close()
+            dbcur.execute(stmt)
+            lines = dbcur.fetchall()
+            git_transaction_data_list = [
+                {
+                    'blueprint_id': line[0],
+                    'version_id': line[1],
+                    'revision_msg': line[2],
+                    'job': line[3],
+                    'git_backend': line[4],
+                    'repo_url': line[5],
+                    'commit_sha': line[6],
+                    'timestamp': timestamp_util.datetime_to_str(line[7])
+                } for line in lines
+            ]
 
-        return git_transaction_data_list
-
-    def get_version_ids(self, blueprint_id: uuid):
-        """
-        returns list of all version ids for blueprint
-        """
-        log_data = self.get_git_transaction_data(blueprint_id, fetch_all=True)
-        all_tags = {json_log['version_id'] for json_log in log_data}
-        deleted_tags = {json_log['version_id'] for json_log in log_data if json_log['job'] == 'delete'}
-        return sorted(list(all_tags - deleted_tags))
+            return git_transaction_data_list
 
     def get_project_domain(self, blueprint_id: uuid):
         """
         returns project domain for blueprint
         """
-        dbcur = self.connection.cursor()
-        query = """select blueprint_id, project_domain from {} where blueprint_id = '{}';""".format(
-            Settings.blueprint_table, blueprint_id)
-        dbcur.execute(query)
-        line = dbcur.fetchone()
-        if not line:
-            return None
-        project_domain = line[1]
-        dbcur.close()
-        return project_domain
+        with self.connection.cursor() as dbcur:
+            stmt = sql.SQL("""select blueprint_id, project_domain from {blueprint_table} 
+                               where blueprint_id = {blueprint_id};""").format(
+                blueprint_table=sql.Identifier(Settings.blueprint_table),
+                blueprint_id=sql.Literal(str(blueprint_id))
+            )
+            dbcur.execute(stmt)
+            line = dbcur.fetchone()
+            if not line:
+                return None
+            project_domain = line[1]
+
+            return project_domain
 
     def get_blueprint_name(self, blueprint_id: uuid):
         """
         Returns human-readable name for blueprint
         """
-        dbcur = self.connection.cursor()
-        query = """select blueprint_id, blueprint_name from {} where blueprint_id = '{}';""".format(
-            Settings.blueprint_table, blueprint_id)
-        dbcur.execute(query)
-        line = dbcur.fetchone()
-        if not line:
-            return None
-        name = line[1]
-        dbcur.close()
-        return name
+        with self.connection.cursor() as dbcur:
+            stmt = sql.SQL("""select blueprint_id, blueprint_name from {blueprint_table} 
+                               where blueprint_id = {blueprint_id}""").format(
+                blueprint_table=sql.Identifier(Settings.blueprint_table),
+                blueprint_id=sql.Literal(str(blueprint_id)),
+            )
+            dbcur.execute(stmt)
+            line = dbcur.fetchone()
+            logger.debug(f'{line=}')
+            if not line:
+                return None
+            name = line[1]
+            return name
 
     def update_blueprint_name(self, blueprint_id: uuid, name: str):
         """
         updates blueprint name
         """
-        success = self.execute(
-            """update {}
-                set blueprint_name = '{}'
-                where blueprint_id = '{}'""".format(Settings.blueprint_table, name, str(blueprint_id)))
+        stmt = sql.SQL("""update {blueprint_table}
+                set blueprint_name = {blueprint_name}
+                where blueprint_id = {blueprint_id}""").format(
+            blueprint_table=sql.Identifier(Settings.blueprint_table),
+            blueprint_name=sql.Literal(name),
+            blueprint_id=sql.Literal(str(blueprint_id))
+        )
+        success = self.execute(stmt)
         if success:
             logger.debug(f'Updated blueprint name={name} for blueprint_id={blueprint_id} in PostgreSQL database')
         else:
@@ -571,31 +573,40 @@ class PostgreSQL(Database):
         """
         returns blueprint (version's) metadata
         """
-        dbcur = self.connection.cursor()
-        version_str = f"and version_id = '{version_id}'" if version_id else ''
-        query = """select blueprint_id, version_id, blueprint_name, aadm_id, username, 
-                   project_domain, url, timestamp, commit_sha from {}
-                    where blueprint_id = '{}'
-                    {}
-                    order by timestamp desc limit 1;""".format(
-            Settings.blueprint_table, blueprint_id, version_str)
-        dbcur.execute(query)
-        line = dbcur.fetchone()
-        dbcur.close()
-        if not line:
-            return None
-        blueprint_meta = {
-            'blueprint_id': line[0],
-            'version_id': line[1],
-            'blueprint_name': line[2],
-            'aadm_id': line[3],
-            'username': line[4],
-            'project_domain': line[5],
-            'url': line[6],
-            'timestamp': timestamp_util.datetime_to_str(line[7]),
-            'commit_sha': line[8]
-        }
-        return blueprint_meta
+        with self.connection.cursor() as dbcur:
+            if version_id:
+                stmt = sql.SQL("""select blueprint_id, version_id, blueprint_name, aadm_id, username, 
+                                           project_domain, url, timestamp, commit_sha from {blueprint_table}
+                                            where blueprint_id = {blueprint_id} and version_id = {version_id}
+                                            order by timestamp desc limit 1;""").format(
+                    blueprint_table=sql.Identifier(Settings.blueprint_table),
+                    blueprint_id=sql.Literal(str(blueprint_id)),
+                    version_id=sql.Literal(version_id)
+                )
+            else:
+                stmt = sql.SQL("""select blueprint_id, version_id, blueprint_name, aadm_id, username, 
+                           project_domain, url, timestamp, commit_sha from {blueprint_table}
+                            where blueprint_id = {blueprint_id}
+                            order by timestamp desc limit 1;""").format(
+                    blueprint_table=sql.Identifier(Settings.blueprint_table),
+                    blueprint_id=sql.Literal(str(blueprint_id)),
+                )
+            dbcur.execute(stmt)
+            line = dbcur.fetchone()
+            if not line:
+                return None
+            blueprint_meta = {
+                'blueprint_id': line[0],
+                'version_id': line[1],
+                'blueprint_name': line[2],
+                'aadm_id': line[3],
+                'username': line[4],
+                'project_domain': line[5],
+                'url': line[6],
+                'timestamp': timestamp_util.datetime_to_str(line[7]),
+                'commit_sha': line[8]
+            }
+            return blueprint_meta
 
     def save_blueprint_meta(self, blueprint_meta: BlueprintVersion):
         """
@@ -619,16 +630,23 @@ class PostgreSQL(Database):
         deletes blueprint meta of one or all versions
         """
         if version_id:
-            success = self.execute(
-                "delete from {} where blueprint_id = '{}' and version_id = '{}'"
-                .format(Settings.blueprint_table, str(blueprint_id), version_id))
+            stmt = sql.SQL("""delete from {blueprint_table} 
+                                where blueprint_id = {blueprint_id} and version_id = {version_id}""").format(
+                blueprint_table=sql.Identifier(Settings.blueprint_table),
+                blueprint_id=sql.Literal(str(blueprint_id)),
+                version_id=sql.Literal(version_id),
+            )
 
         else:
-            success = self.execute(
-                "delete from {} where blueprint_id = '{}'"
-                .format(Settings.blueprint_table, str(blueprint_id)))
+            stmt = sql.SQL("""delete from {blueprint_table} 
+                                where blueprint_id = {blueprint_id}""").format(
+                blueprint_table=sql.Identifier(Settings.blueprint_table),
+                blueprint_id=sql.Literal(str(blueprint_id))
+            )
 
         str_version_id = f'and version_id={version_id} ' if version_id else ''
+
+        success = self.execute(stmt)
 
         if success:
             logger.debug(
@@ -643,29 +661,30 @@ class PostgreSQL(Database):
         """
         Returns [Deployment] for every deployment, created from blueprint
         """
-        dbcur = self.connection.cursor()
-        query = """select distinct on (deployment_id) deployment_id, state, operation, timestamp, deployment_label 
-                   from {}
-                   where deployment_id in (
-                        select deployment_id
-                        from {}
-                        where blueprint_id = '{}'
-                   )
-                   order by deployment_id, timestamp desc;""" \
-            .format(Settings.invocation_table, Settings.invocation_table, blueprint_id)
-        dbcur.execute(query)
-        lines = dbcur.fetchall()
-        deployment_list = [
-            {
-                'deployment_id': line[0],
-                'state': line[1],
-                'operation': line[2],
-                'timestamp': timestamp_util.datetime_to_str(line[3]),
-                'deployment_label': line[4]
-            } for line in lines
-        ]
-        dbcur.close()
-        return deployment_list
+        with self.connection.cursor() as dbcur:
+            stmt = sql.SQL("""select distinct on (deployment_id) deployment_id, state, operation, 
+                                timestamp, deployment_label from {invocation_table}
+                                where deployment_id in (
+                                    select deployment_id
+                                    from {invocation_table}
+                                    where blueprint_id = {blueprint_id}
+                                )
+                       order by deployment_id, timestamp desc;""").format(
+                invocation_table=sql.Identifier(Settings.invocation_table),
+                blueprint_id=sql.Literal(str(blueprint_id)),
+            )
+            dbcur.execute(stmt)
+            lines = dbcur.fetchall()
+            deployment_list = [
+                {
+                    'deployment_id': line[0],
+                    'state': line[1],
+                    'operation': line[2],
+                    'timestamp': timestamp_util.datetime_to_str(line[3]),
+                    'deployment_label': line[4]
+                } for line in lines
+            ]
+            return deployment_list
 
     def get_blueprints_by_user_or_project(self, username: str = None, project_domain: str = None):
         """
@@ -673,20 +692,23 @@ class PostgreSQL(Database):
         """
         with self.connection.cursor() as dbcur:
             if username and not project_domain:
-                stmt = sql.SQL("""select distinct on (blueprint_id) blueprint_id, blueprint_name, aadm_id, username, project_domain, timestamp from {blueprint_table}
-                                      where username={username}""").format(
+                stmt = sql.SQL("""select distinct on (blueprint_id) blueprint_id, blueprint_name, aadm_id, 
+                                    username, project_domain, timestamp from {blueprint_table}
+                                    where username={username}""").format(
                     blueprint_table=sql.Identifier(Settings.blueprint_table),
                     username=sql.Literal(username),
                 )
             elif not username and project_domain:
-                stmt = sql.SQL("""select distinct on (blueprint_id) blueprint_id, blueprint_name, aadm_id, username, project_domain, timestamp from {blueprint_table}
-                                      where project_domain={project_domain}""").format(
+                stmt = sql.SQL("""select distinct on (blueprint_id) blueprint_id, blueprint_name, aadm_id, 
+                                    username, project_domain, timestamp from {blueprint_table}
+                                    where project_domain={project_domain}""").format(
                     blueprint_table=sql.Identifier(Settings.blueprint_table),
                     project_domain=sql.Literal(project_domain)
                 )
             else:
-                stmt = sql.SQL("""select distinct on (blueprint_id) blueprint_id, blueprint_name, aadm_id, username, project_domain, timestamp from {blueprint_table}
-                                      where username={username} and project_domain={project_domain}""").format(
+                stmt = sql.SQL("""select distinct on (blueprint_id) blueprint_id, blueprint_name, aadm_id, 
+                                    username, project_domain, timestamp from {blueprint_table}
+                                    where username={username} and project_domain={project_domain}""").format(
                     blueprint_table=sql.Identifier(Settings.blueprint_table),
                     username=sql.Literal(username),
                     project_domain=sql.Literal(project_domain)

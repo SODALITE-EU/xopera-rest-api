@@ -103,7 +103,7 @@ def get_git_log(blueprint_id):
 
     :rtype: List[GitLog]
     """
-    data = SQL_database.get_git_transaction_data(blueprint_id, fetch_all=True)
+    data = SQL_database.get_git_transaction_data(blueprint_id)
     if not data:
         return "Log not found", 404
     return [GitLog.from_dict(item) for item in data], 200

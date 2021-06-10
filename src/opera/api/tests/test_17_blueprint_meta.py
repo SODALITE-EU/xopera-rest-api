@@ -160,4 +160,4 @@ class TestGitHistory:
         assert resp.status_code == 200
         assert_that(resp.json).is_length(1)
         assert_that(resp.json[0]).contains_only(*git_data.to_dict().keys())
-        mock_git_data.assert_called_with(git_data.blueprint_id, fetch_all=True)
+        mock_git_data.assert_called_with(git_data.blueprint_id)
