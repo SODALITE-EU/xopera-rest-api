@@ -71,7 +71,7 @@ paths:
           type: string
       - name: username
         in: query
-        description: End-to-end debugging id
+        description: User's username
         schema:
           type: string
       - name: project_domain

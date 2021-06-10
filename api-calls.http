@@ -12,8 +12,8 @@ accept: application/json
 
 ### Upload new blueprint
 
-# curl -X POST "http://localhost:8080/blueprint?revision_msg=First%20version&project_domain=my_project_domain" -H  "accept: application/json" -H  "X-API-Key: test" -H  "Content-Type: multipart/form-data" -F "CSAR=@CSAR-test.zip;type=application/zip"
-POST http://localhost:8080/blueprint?revision_msg=First%20version&project_domain=my_project_domain
+# curl -X POST "http://localhost:8080/blueprint?revision_msg=revision_msg&blueprint_name=blueprint_name&aadm_id=aadm_id&username=username&project_domain=my_project_domain" -H  "accept: application/json" -H  "X-API-Key: test" -H  "Content-Type: multipart/form-data" -F "CSAR=@CSAR-test.zip;type=application/zip"
+POST http://localhost:8080/blueprint?revision_msg=revision_msg&blueprint_name=blueprint_name&aadm_id=aadm_id&username=username&project_domain=my_project_domain
 accept: application/json
 X-API-Key: test
 Content-Type: multipart/form-data; boundary=WebAppBoundary
@@ -23,6 +23,27 @@ Content-Disposition: form-data; name="CSAR"; filename="CSAR-test.zip"
 
 < CSAR-test.zip
 --WebAppBoundary--
+
+### Fetch blueprints by username
+
+# curl -X GET "http://localhost:8080/blueprint?username=username" -H  "accept: application/json" -H  "X-API-Key: test"
+GET http://localhost:8080/blueprint?username=username
+accept: application/json
+X-API-Key: test
+
+### Fetch blueprints by project_domain
+
+# curl -X GET "http://localhost:8080/blueprint?project_domain=project_domain" -H  "accept: application/json" -H  "X-API-Key: test"
+GET http://localhost:8080/blueprint?project_domain=project_domain
+accept: application/json
+X-API-Key: test
+
+### Fetch blueprints by both username and project_domain
+
+# curl -X GET "http://localhost:8080/blueprint?username=username&project_domain=project_domain" -H  "accept: application/json" -H  "X-API-Key: test"
+GET http://localhost:8080/blueprint?username=username&project_domain=project_domain
+accept: application/json
+X-API-Key: test
 
 ### Upload another version of existing blueprint
 
@@ -167,24 +188,10 @@ Content-Disposition: form-data; name="inputs_file"; filename="inputs.yaml"
 # /deployment endpoint
 ###
 
-### check if blueprint version (with inputs) is already a part of existing deployment
-
-# curl -X PUT "http://localhost:8080/deployment/exists?blueprint_id=854cc717-fd02-4c51-a35d-7223f9fc8423&version_id=v1.0" -H  "accept: application/json" -H  "X-API-Key: test" -H  "Content-Type: multipart/form-data" -F "inputs_file=@inputs.yaml;type=application/x-yaml"
-POST http://localhost:8080/deployment/exists?blueprint_id=854cc717-fd02-4c51-a35d-7223f9fc8423&version_id=v1.0
-accept: application/json
-X-API-Key: test
-Content-Type: multipart/form-data; boundary=WebAppBoundary
-
---WebAppBoundary
-Content-Disposition: form-data; name="inputs_file"; filename="inputs.yaml"
-
-< inputs.yaml
---WebAppBoundary--
-
 ### Initialize deployment and deploy
 
-# curl -X POST "http://localhost:8080/deployment/deploy?blueprint_id=854cc717-fd02-4c51-a35d-7223f9fc8423&version_id=v2.0&workers=10" -H  "accept: application/json" -H  "X-API-Key: test" -H  "Content-Type: multipart/form-data" -F "inputs_file=@inputs.yaml;type=application/x-yaml"
-POST http://localhost:8080/deployment/deploy?blueprint_id=854cc717-fd02-4c51-a35d-7223f9fc8423&version_id=v2.0&workers=10
+# curl -X POST "http://localhost:8080/deployment/deploy?blueprint_id=854cc717-fd02-4c51-a35d-7223f9fc8423&version_id=v2.0&deployment_label=deployment_lavel&workers=10" -H  "accept: application/json" -H  "X-API-Key: test" -H  "Content-Type: multipart/form-data" -F "inputs_file=@inputs.yaml;type=application/x-yaml"
+POST http://localhost:8080/deployment/deploy?blueprint_id=854cc717-fd02-4c51-a35d-7223f9fc8423&version_id=v2.0&deployment_label=deployment_lavel&workers=10
 accept: application/json
 X-API-Key: test
 Content-Type: multipart/form-data; boundary=WebAppBoundary

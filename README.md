@@ -91,16 +91,22 @@ xOpera REST API leverages GIT server (it supports Github and Gitlab at the momen
 A new blueprint can be uploaded with POST to `/blueprint`. `CSAR` must be a valid TOSCA CSAR archive (in zip format). 
 Optionally, user can add several other parameters:
 - `revision_msg` --> commit message for git
-- `name` --> human-readable blueprint_name
+- `blueprint_name` --> human-readable blueprint_name
+- `aadm_id` --> End-to-end debugging id
+- `username` --> User's username
 - `project_domain` --> domain of blueprint
  
-If successful, response in form of Blueprint schema that will include `blueprint_id` and `version_id`, which can later
+If successful, response in form of BlueprintVersion schema that will include `blueprint_id` and `version_id`, which can later
  be used for accessing blueprint (version).
+ 
+#### Get list of blueprints
+This endpoint allows querying blueprints by `username`, `project_domain` or both. It returns `[Blueprint]` where 
+Blueprint consist of (`blueprint_id`, `project_domain`, `username`, `timestamp`)
 
 #### Upload a new blueprint version
 A new version can be added to existing blueprint with POST to `/blueprint/{blueprint_id}`. `CSAR` must be a valid TOSCA
 CSAR archive (in zip format). Optionally, user can add `revision_msg`, or specify `project_domain` for blueprint. 
-If successful, response in form of Blueprint schema will include `blueprint_id` and `version_id`, which can 
+If successful, response in form of BlueprintVersion schema will include `blueprint_id` and `version_id`, which can 
 later be used for accessing blueprint (version).
 
 #### Delete a blueprint
@@ -197,8 +203,9 @@ If `version_id` is not specified, last version is used. Inputs are optional, dep
 #### Initialize and deploy
 To initialize deployment with first deploy, user can POST to `/deployment/deploy`. If `version_id` is not specified, 
 last version is used. Inputs are optional, depending on blueprint. `Workers` is a maximum number of concurrent workers, 
-leveraged by xOpera. In case of successful invocation, REST API returns Invocation schema, with `deployment_id` params,
-which must be used for any further interactions with current deployment.
+leveraged by xOpera. `deployment_label` is a human-readable label, which can be given to deployment.In case of a 
+successful invocation, REST API returns Invocation schema, with `deployment_id` params, which must be used for any 
+further interactions with current deployment.
 
 #### Obtain deployment status
 Status of deployment can be obtained with GET to `/deployment/{deployment_id}/status`. State of deployment can be one of
