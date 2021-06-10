@@ -273,7 +273,8 @@ class PostgreSQL(Database):
                 last_job = line[0]
                 if last_job == "delete":
                     # blueprint version has been deleted
-                    logger.debug(f"Blueprint-version {blueprint_id}/{version_id} has been deleted, does not exist any more")
+                    logger.debug(
+                        f"Blueprint-version {blueprint_id}/{version_id} has been deleted, does not exist any more")
                     return False
 
             # all checks have passed, blueprint (version) exists

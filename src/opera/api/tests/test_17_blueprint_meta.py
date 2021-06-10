@@ -20,7 +20,8 @@ class TestBlueprintMeta:
     @staticmethod
     def test_success(client, mocker, generic_blueprint_meta, patch_auth_wrapper):
         blueprint_meta: BlueprintVersion = generic_blueprint_meta
-        mocker.patch('opera.api.service.sqldb_service.Database.get_blueprint_meta', return_value=blueprint_meta.to_dict())
+        mocker.patch('opera.api.service.sqldb_service.Database.get_blueprint_meta',
+                     return_value=blueprint_meta.to_dict())
 
         blueprint_id = uuid.uuid4()
         resp = client.get(f"/blueprint/{blueprint_id}/meta")
@@ -47,7 +48,8 @@ class TestBlueprintVersionMeta:
                 str(uuid.uuid4()), InvocationState.SUCCESS,
                 OperationType.DEPLOY_CONTINUE, timestamp_util.datetime_now_to_string()
             )]
-        mocker.patch('opera.api.service.sqldb_service.Database.get_blueprint_meta', return_value=blueprint_meta.to_dict())
+        mocker.patch('opera.api.service.sqldb_service.Database.get_blueprint_meta',
+                     return_value=blueprint_meta.to_dict())
         mocker.patch('opera.api.service.csardb_service.GitDB.get_blueprint_user_list', return_value=[['foo'], None])
 
         resp = client.get(f"/blueprint/{uuid.uuid4()}/version/v1.0/meta")

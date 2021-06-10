@@ -3,13 +3,12 @@ import json
 import multiprocessing
 import os
 import shutil
+import sys
 import tempfile
 import traceback
 import uuid
-import sys
 from pathlib import Path
 from typing import Optional
-from werkzeug.datastructures import FileStorage
 
 from opera.commands.deploy import deploy_service_template as opera_deploy
 from opera.commands.diff import diff_instances as opera_diff_instances
@@ -21,9 +20,10 @@ from opera.compare.instance_comparer import InstanceComparer as opera_InstanceCo
 from opera.compare.template_comparer import TemplateComparer as opera_TemplateComparer
 from opera.error import ParseError
 from opera.storage import Storage
+from werkzeug.datastructures import FileStorage
 
-from opera.api.blueprint_converters.blueprint2CSAR import entry_definitions
 from opera.api.blueprint_converters import csar_to_blueprint
+from opera.api.blueprint_converters.blueprint2CSAR import entry_definitions
 from opera.api.cli import CSAR_db, SQL_database
 from opera.api.log import get_logger
 from opera.api.openapi.models import Invocation, InvocationState, OperationType

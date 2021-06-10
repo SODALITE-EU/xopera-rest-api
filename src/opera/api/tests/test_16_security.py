@@ -25,4 +25,3 @@ class TestSecurity:
         mock.json.return_value = {'scope': ['email']}
         result = security_controller.token_info("ACCESS_TOKEN")
         assert result["scope"][0] == 'email'
-

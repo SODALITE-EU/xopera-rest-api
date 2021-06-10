@@ -104,4 +104,3 @@ class TestValidateNew:
         assert resp.status_code == 200
         assert_that(resp.json).contains_only("blueprint_valid")
         assert_that(resp.json['blueprint_valid']).is_true()
-

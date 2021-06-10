@@ -56,7 +56,8 @@ class TestPostNew:
         resp = client.post(f"/blueprint?revision_msg={revision_msg}&blueprint_name={name}&aadm_id={aadm_id}"
                            f"&username={username}&project_domain={project_domain}", data=csar_1)
         assert_that(resp.status_code).is_equal_to(201)
-        assert_that(resp.json).is_not_none().contains_only('blueprint_id', 'version_id', 'blueprint_name', 'aadm_id', 'url',
+        assert_that(resp.json).is_not_none().contains_only('blueprint_id', 'version_id', 'blueprint_name', 'aadm_id',
+                                                           'url',
                                                            'project_domain', 'username', 'commit_sha', 'timestamp')
         uuid.UUID(resp.get_json()['blueprint_id'])
 
@@ -314,7 +315,6 @@ class TestUser:
 class TestGetBlueprintByUserOrDomain:
 
     def test_missing_params(self, client, mocker, patch_auth_wrapper):
-
         resp = client.get(f"/blueprint")
         assert_that(resp.status_code).is_equal_to(400)
 
@@ -334,7 +334,8 @@ class TestGetBlueprintByUserOrDomain:
             "project_domain": 'SODALITE',
             "timestamp": timestamp_util.datetime_now_to_string()
         }]
-        mocker.patch('opera.api.service.sqldb_service.Database.get_blueprints_by_user_or_project', return_value=blueprints)
+        mocker.patch('opera.api.service.sqldb_service.Database.get_blueprints_by_user_or_project',
+                     return_value=blueprints)
         resp = client.get(f"/blueprint?username=foo")
         assert_that(resp.status_code).is_equal_to(200)
         assert_that(len(resp.json)).is_equal_to(1)

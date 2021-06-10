@@ -1,7 +1,7 @@
 import datetime
+import json
 import logging
 import uuid
-import json
 
 import psycopg2
 from assertpy import assert_that
@@ -593,7 +593,8 @@ class TestGitTransactionData:
             commit_sha=self.git_log.commit_sha
         )).is_true()
 
-        assert_that(caplog.text).contains("Updated git log", str(self.git_log.blueprint_id), str(self.git_log.version_id))
+        assert_that(caplog.text).contains("Updated git log", str(self.git_log.blueprint_id),
+                                          str(self.git_log.version_id))
 
     def test_save_fail(self, mocker, monkeypatch, caplog):
         # test set up
@@ -621,7 +622,6 @@ class TestGitTransactionData:
 
 
 class TestInvocation:
-
     inv = Invocation(
         deployment_id=str(uuid.uuid4()),
         deployment_label='label',
