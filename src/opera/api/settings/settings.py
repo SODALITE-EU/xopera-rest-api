@@ -49,7 +49,6 @@ class Settings:
     connection_protocols = ["http://", "https://"]
     vault_secret_prefix = "_get_secret"
 
-
     @staticmethod
     def load_settings():
         Settings.git_config = {

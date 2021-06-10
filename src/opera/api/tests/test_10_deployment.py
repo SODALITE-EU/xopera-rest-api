@@ -39,13 +39,21 @@ class TestDeployFresh:
         blueprint_id = uuid.uuid4()
         version_id = 'v2.0'
         workers = 42
-        resp = client.post(f"/deployment/deploy?blueprint_id={blueprint_id}&version_id={version_id}&workers={workers}",
+        deployment_label = 'production'
+        resp = client.post(f"/deployment/deploy?blueprint_id={blueprint_id}&version_id={version_id}"
+                           f"&workers={workers}&deployment_label={deployment_label}",
                            data=inputs_1)
         assert resp.status_code == 202
         inv_dict = generic_invocation.to_dict()
         assert_that(resp.json).contains_only(*[k for k in inv_dict.keys() if inv_dict[k] is not None])
-        mock_invoke.assert_called_with(OperationType.DEPLOY_FRESH, str(blueprint_id), version_id, None, workers,
-                                       {'marker': 'blah'})
+        mock_invoke.assert_called_with(
+            operation_type=OperationType.DEPLOY_FRESH,
+            blueprint_id=str(blueprint_id),
+            version_id=version_id,
+            deployment_label=deployment_label,
+            workers=workers,
+            inputs={'marker': 'blah'}
+        )
 
     def test_no_inputs(self, client, mocker, generic_invocation):
         mock_invoke = mocker.MagicMock(name='invoke', return_value=generic_invocation)
@@ -55,7 +63,14 @@ class TestDeployFresh:
         blueprint_id = uuid.uuid4()
         resp = client.post(f"/deployment/deploy?blueprint_id={blueprint_id}")
         assert resp.status_code == 202
-        mock_invoke.assert_called_with('deploy_fresh', str(blueprint_id), None, None, 1, None)
+        mock_invoke.assert_called_with(
+            operation_type=OperationType.DEPLOY_FRESH,
+            blueprint_id=str(blueprint_id),
+            version_id=None,
+            deployment_label=None,
+            workers=1,
+            inputs=None
+        )
 
 
 class TestStatus:
@@ -172,8 +187,15 @@ class TestDeployContinue:
         assert resp.status_code == 202
         inv_dict = inv.to_dict()
         assert_that(resp.json).contains_only(*[k for k in inv_dict.keys() if inv_dict[k] is not None])
-        mock_invoke.assert_called_with(OperationType.DEPLOY_CONTINUE, str(inv.blueprint_id), inv.version_id,
-                                       str(inv.deployment_id), inv.workers, {'marker': 'blah'}, inv.clean_state)
+        mock_invoke.assert_called_with(
+            operation_type=OperationType.DEPLOY_CONTINUE,
+            blueprint_id=str(inv.blueprint_id),
+            version_id=inv.version_id,
+            deployment_id=str(inv.deployment_id),
+            workers=inv.workers,
+            inputs={'marker': 'blah'},
+            clean_state=inv.clean_state
+        )
 
 
 class TestDiff:
@@ -235,8 +257,14 @@ class TestUpdate:
         assert resp.status_code == 202
         inv_dict = inv.to_dict()
         assert_that(resp.json).contains_only(*[k for k in inv_dict.keys() if inv_dict[k] is not None])
-        mock_invoke.assert_called_with(OperationType.UPDATE, str(inv.blueprint_id), inv.version_id,
-                                       str(inv.deployment_id), inv.workers, {'marker': 'blah'})
+        mock_invoke.assert_called_with(
+            operation_type=OperationType.UPDATE,
+            blueprint_id=str(inv.blueprint_id),
+            version_id=inv.version_id,
+            deployment_id=str(inv.deployment_id),
+            workers=inv.workers,
+            inputs={'marker': 'blah'}
+        )
 
 
 class TestUndeploy:
@@ -264,5 +292,11 @@ class TestUndeploy:
         assert resp.status_code == 202
         inv_dict = inv.to_dict()
         assert_that(resp.json).contains_only(*[k for k in inv_dict.keys() if inv_dict[k] is not None])
-        mock_invoke.assert_called_with(OperationType.UNDEPLOY, str(inv.blueprint_id), inv.version_id,
-                                       str(inv.deployment_id), inv.workers, {'marker': 'blah'})
+        mock_invoke.assert_called_with(
+            operation_type=OperationType.UNDEPLOY,
+            blueprint_id=str(inv.blueprint_id),
+            version_id=inv.version_id,
+            deployment_id=str(inv.deployment_id),
+            workers=inv.workers,
+            inputs={'marker': 'blah'}
+        )

@@ -6,8 +6,8 @@ import git
 import gitlab
 from github import Github, GithubException
 from gitlab import Gitlab
-from opera.api.log import get_logger
 
+from opera.api.log import get_logger
 
 logger = get_logger(__name__)
 

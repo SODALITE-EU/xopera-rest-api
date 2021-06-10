@@ -1,10 +1,10 @@
 import functools
+import logging
 import re
+from base64 import b64encode
+
 import connexion
 import requests
-import logging
-
-from base64 import b64encode
 
 from opera.api.cli import CSAR_db, SQL_database
 from opera.api.settings import Settings
@@ -53,7 +53,7 @@ def token_info(access_token) -> dict:
         return json
     except Exception as e:
         logging.error(str(e))
-        return None            
+        return None
 
 
 def validate_scope(required_scopes, token_scopes) -> bool:
@@ -98,7 +98,8 @@ def check_role_auth_blueprint(func):
             return f"Authorization configuration error", 401
 
         version_id = kwargs.get("version_id")
-        if not SQL_database.version_exists(blueprint_id, version_id) and not CSAR_db.version_exists(blueprint_id, version_id):
+        if not SQL_database.version_exists(blueprint_id, version_id) and not CSAR_db.version_exists(blueprint_id,
+                                                                                                    version_id):
             return f"Did not find blueprint with id: {blueprint_id} and version_id: {version_id or 'any'}", 404
 
         project_domain = SQL_database.get_project_domain(blueprint_id)
@@ -137,7 +138,8 @@ def check_role_auth_deployment(func):
         if not inv:
             return f"Deployment with id: {deployment_id} does not exist", 404
 
-        if not SQL_database.version_exists(inv.blueprint_id, inv.version_id) and not CSAR_db.version_exists(inv.blueprint_id, inv.version_id):
+        if not SQL_database.version_exists(inv.blueprint_id, inv.version_id) and not CSAR_db.version_exists(
+                inv.blueprint_id, inv.version_id):
             return f"Did not find blueprint with id: {inv.blueprint_id} and version_id: {inv.version_id or 'any'}", 404
 
         project_domain = SQL_database.get_project_domain(inv.blueprint_id)
@@ -147,4 +149,3 @@ def check_role_auth_deployment(func):
         return func(*args, **kwargs)
 
     return wrapper_check_role_auth
-

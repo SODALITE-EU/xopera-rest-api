@@ -1,5 +1,5 @@
-from pathlib import Path
 import datetime
+from pathlib import Path
 
 from assertpy import assert_that
 from pytest_mock import mocker as Mock
@@ -69,7 +69,8 @@ class TestXoperaUtil:
             '~/projects/SODALITE/SODALITE-EU-github/xopera-rest-api-2',
         ]
         stacktrace = f"Exception: {workdirs[0]} does not exist, also {workdirs[1]} is missing. {workdirs[2]} is ok."
-        assert_that(xopera_util.mask_workdirs([Path(workdir) for workdir in workdirs], stacktrace)).does_not_contain(*workdirs)
+        assert_that(xopera_util.mask_workdirs([Path(workdir) for workdir in workdirs], stacktrace)).does_not_contain(
+            *workdirs)
 
     def test_configure_ssh_keys_too_many(self, mock_ssh_keys_loc: Path, mocker: Mock, caplog):
         # mock os.chown func

@@ -10,7 +10,7 @@ import pytest
 from opera.api.cli import test
 from opera.api.gitCsarDB import GitCsarDB
 from opera.api.gitCsarDB.connectors import MockConnector
-from opera.api.openapi.models import Invocation, InvocationState, OperationType, Blueprint, Deployment
+from opera.api.openapi.models import Invocation, InvocationState, OperationType, BlueprintVersion, Deployment
 from opera.api.settings import Settings
 from opera.api.util import timestamp_util, xopera_util
 
@@ -44,11 +44,13 @@ def change_API_WORKDIR(new_workdir: str):
 
 
 @pytest.fixture()
-def generic_blueprint_meta() -> Blueprint:
-    blueprint_meta = Blueprint()
+def generic_blueprint_meta() -> BlueprintVersion:
+    blueprint_meta = BlueprintVersion()
     blueprint_meta.blueprint_id = str(uuid.uuid4())
     blueprint_meta.version_id = 'v1.0'
-    blueprint_meta.name = 'name'
+    blueprint_meta.blueprint_name = 'name'
+    blueprint_meta.aadm_id = str(uuid.uuid4())
+    blueprint_meta.username = 'username'
     blueprint_meta.project_domain = 'project_domain'
     blueprint_meta.url = 'https://github.com/torvalds/linux'
     blueprint_meta.commit_sha = 'd7c5303fbc8ac874ae3e597a5a0d3707dc0230b4'
@@ -61,6 +63,7 @@ def generic_deployment() -> Deployment:
     dep = Deployment()
     dep.deployment_id = str(uuid.uuid4())
     dep.state = InvocationState.SUCCESS
+    # dep.label = 'deployment_label'
     dep.operation = OperationType.DEPLOY_FRESH
     dep.timestamp = timestamp_util.datetime_now_to_string()
     return dep
@@ -70,6 +73,7 @@ def generic_deployment() -> Deployment:
 def generic_invocation():
     inv = Invocation()
     inv.state = InvocationState.PENDING
+    inv.deployment_label = 'TestDeployment'
     inv.blueprint_id = str(uuid.uuid4())
     inv.deployment_id = str(uuid.uuid4())
     inv.version_id = 'v1.0'
@@ -234,18 +238,19 @@ def generic_dir():
 @pytest.fixture
 def inputs_no_secret():
     inputs = {
-                "frontend-address": "14.15.11.12",
-                "user": "test_user"
-             }
+        "frontend-address": "14.15.11.12",
+        "user": "test_user"
+    }
 
     return inputs
+
 
 @pytest.fixture
 def inputs_with_secret():
     inputs = {
-                "frontend-address": "14.15.11.12",
-                "user": "test_user",
-                "_get_secret_ssh": "pds/ssh_key_slurm:pds"
-             }
+        "frontend-address": "14.15.11.12",
+        "user": "test_user",
+        "_get_secret_ssh": "pds/ssh_key_slurm:pds"
+    }
 
     return inputs

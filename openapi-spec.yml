@@ -59,9 +59,19 @@ paths:
         description: Optional comment on submission
         schema:
           type: string
-      - name: name
+      - name: blueprint_name
         in: query
         description: Optional human-readable blueprint name
+        schema:
+          type: string
+      - name: aadm_id
+        in: query
+        description: End-to-end debugging id
+        schema:
+          type: string
+      - name: username
+        in: query
+        description: End-to-end debugging id
         schema:
           type: string
       - name: project_domain
@@ -88,7 +98,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Blueprint'
+                $ref: '#/components/schemas/BlueprintVersion'
         401:
           description: Unauthorized request for this blueprint
           content:
@@ -107,6 +117,63 @@ paths:
             application/json:
               schema:
                 type: string
+
+    get:
+      summary: "Get blueprints for user or project domain"
+      security:
+        - apiKey: [ ]
+        - oauth2: [ email ]
+      tags:
+        - blueprint
+      operationId: get_blueprints_user_domain
+      parameters:
+        - name: username
+          in: query
+          description: username
+          required: false
+          schema:
+            type: string
+        - name: project_domain
+          in: query
+          description: Project domain
+          required: false
+          schema:
+            type: string
+      responses:
+        200:
+          description: List of blueprints returned
+          content:
+            application/json:
+              schema:
+                type: array
+                description: List of blueprints for current user or project_domain
+                items:
+                  $ref: '#/components/schemas/Blueprint'
+        400:
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                type: string
+        401:
+          description: Unauthorized request for this blueprint
+          content:
+            application/json:
+              schema:
+                type: string
+        404:
+          description: User or project domain not found
+          content:
+            application/json:
+              schema:
+                type: string
+        500:
+          description: DB or REST API error
+          content:
+            application/json:
+              schema:
+                type: string
+
 
   /blueprint/{blueprint_id}:
     post:
@@ -149,7 +216,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Blueprint'
+                $ref: '#/components/schemas/BlueprintVersion'
         401:
           description: Unauthorized request for this blueprint
           content:
@@ -195,7 +262,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Blueprint'
+                $ref: '#/components/schemas/BlueprintVersion'
         401:
           description: Unauthorized request for this blueprint
           content:
@@ -250,7 +317,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Blueprint'
+                $ref: '#/components/schemas/BlueprintVersion'
         401:
           description: Unauthorized request for this blueprint
           content:
@@ -293,7 +360,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Blueprint'
+                $ref: '#/components/schemas/BlueprintVersion'
         401:
           description: Unauthorized request for this blueprint
           content:
@@ -343,7 +410,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Blueprint'
+                $ref: '#/components/schemas/BlueprintVersion'
         401:
           description: Unauthorized request for this blueprint
           content:
@@ -820,7 +887,7 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/GitLog'
-        400:
+        404:
           description: Log file not found
           content:
             application/json:
@@ -909,6 +976,11 @@ paths:
         schema:
           type: string
           pattern: '^v(0|[1-9][0-9]*).(0|[1-9][0-9]*)$'
+      - name: deployment_label
+        in: query
+        description: Human-readable deployment label
+        schema:
+          type: string
       - name: workers
         in: query
         description: Number of workers
@@ -1309,6 +1381,33 @@ components:
           type: string
           description: Rest api's public key
     Blueprint:
+      type: object
+      required:
+        - blueprint_id
+        - timestamp
+      properties:
+        blueprint_id:
+          type: string
+          format: uuid
+          description: Id of blueprint
+        blueprint_name:
+          type: string
+          description: Name of the blueprint
+        aadm_id:
+          type: string
+          description: End-to-end debugging id
+        username:
+          type: string
+          description: Username of user, that created blueprint
+        project_domain:
+          type: string
+          description: Domain name of the blueprint
+        timestamp:
+          type: string
+          description: timestamp of database entry
+          format: date-time
+
+    BlueprintVersion:
       required:
         - blueprint_id
         - timestamp
@@ -1323,9 +1422,15 @@ components:
           type: string
           pattern: '^v(0|[1-9][0-9]*).(0|[1-9][0-9]*)$'
           description: Id of blueprint version
-        name:
+        blueprint_name:
           type: string
           description: Name of the blueprint
+        aadm_id:
+          type: string
+          description: End-to-end debugging id
+        username:
+          type: string
+          description: Username of user, that created blueprint
         project_domain:
           type: string
           description: Domain name of the blueprint
@@ -1337,19 +1442,9 @@ components:
           type: string
           description: timestamp of database entry
           format: date-time
-        users:
-          type: array
-          description: List of users with access to git repository
-          items:
-            type: string
         commit_sha:
           type: string
           description: SHA-1 checksum of commit
-        deployments:
-          type: array
-          description: List of deployments from current blueprint
-          items:
-            $ref: '#/components/schemas/Deployment'
 
     GitLog:
       required:
@@ -1409,6 +1504,9 @@ components:
           description: Id of deployment
           type: string
           format: uuid
+        deployment_label:
+          type: string
+          description: Human-readable deployment name
         state:
           description: State of last invocation
           $ref: "#/components/schemas/InvocationState"
@@ -1444,6 +1542,9 @@ components:
           description: Id of deployment
           type: string
           format: uuid
+        deployment_label:
+          description: Human-readable deployment name
+          type: string
         state:
           $ref: "#/components/schemas/InvocationState"
         operation:

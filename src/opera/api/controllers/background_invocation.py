@@ -3,13 +3,12 @@ import json
 import multiprocessing
 import os
 import shutil
+import sys
 import tempfile
 import traceback
 import uuid
-import sys
 from pathlib import Path
 from typing import Optional
-from werkzeug.datastructures import FileStorage
 
 from opera.commands.deploy import deploy_service_template as opera_deploy
 from opera.commands.diff import diff_instances as opera_diff_instances
@@ -21,9 +20,10 @@ from opera.compare.instance_comparer import InstanceComparer as opera_InstanceCo
 from opera.compare.template_comparer import TemplateComparer as opera_TemplateComparer
 from opera.error import ParseError
 from opera.storage import Storage
+from werkzeug.datastructures import FileStorage
 
-from opera.api.blueprint_converters.blueprint2CSAR import entry_definitions
 from opera.api.blueprint_converters import csar_to_blueprint
+from opera.api.blueprint_converters.blueprint2CSAR import entry_definitions
 from opera.api.cli import CSAR_db, SQL_database
 from opera.api.log import get_logger
 from opera.api.openapi.models import Invocation, InvocationState, OperationType
@@ -253,7 +253,7 @@ class InvocationWorkerProcess:
                     opera_validate(service_template, inputs)
                 return None
         except Exception as e:
-            return "{}: {}".format(e.__class__.__name__, xopera_util.mask_workdirs([location, csar_workdir], str(e)),)
+            return "{}: {}".format(e.__class__.__name__, xopera_util.mask_workdirs([location, csar_workdir], str(e)), )
 
     @staticmethod
     def outputs(deployment_id: str):
@@ -287,11 +287,11 @@ class InvocationService:
             workers_num: number of workers
         """
         self.work_queue: multiprocessing.Queue = multiprocessing.Queue()
-        self.workers_pool = multiprocessing.Pool(workers_num, InvocationWorkerProcess.run_internal, (self.work_queue, ))
+        self.workers_pool = multiprocessing.Pool(workers_num, InvocationWorkerProcess.run_internal, (self.work_queue,))
 
     def invoke(self, operation_type: OperationType, blueprint_id: uuid, version_id: uuid,
-               deployment_id: uuid, workers: int, inputs: dict,
-               clean_state: bool = None) -> Invocation:
+               workers: int, inputs: dict, deployment_id: uuid = None,
+               clean_state: bool = None, deployment_label: str = None) -> Invocation:
         now = datetime.datetime.now(tz=datetime.timezone.utc)
         logger.info("Invoking %s with ID %s at %s", operation_type, deployment_id, now.isoformat())
 
@@ -299,6 +299,7 @@ class InvocationService:
 
         inv = Invocation()
         inv.blueprint_id = blueprint_id
+        inv.deployment_label = deployment_label
         inv.version_id = version_id or CSAR_db.get_last_tag(blueprint_id)
         inv.deployment_id = deployment_id or uuid.uuid4()
         inv.state = InvocationState.PENDING

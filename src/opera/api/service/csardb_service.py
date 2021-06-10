@@ -8,9 +8,8 @@ from werkzeug.datastructures import FileStorage
 from opera.api import gitCsarDB
 from opera.api.blueprint_converters import csar_to_blueprint
 from opera.api.blueprint_converters.blueprint2CSAR import validate_csar
-from opera.api.util.timestamp_util import datetime_now_to_string
 from opera.api.log import get_logger
-
+from opera.api.util.timestamp_util import datetime_now_to_string
 
 logger = get_logger(__name__)
 

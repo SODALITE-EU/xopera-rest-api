@@ -9,10 +9,9 @@ from pathlib import Path
 import connexion
 import yaml
 
-from opera.api.settings import Settings
 from opera.api.log import get_logger
+from opera.api.settings import Settings
 from opera.api.util.vault_client import get_secret
-
 
 logger = get_logger(__name__)
 
@@ -91,7 +90,7 @@ def get_preprocessed_inputs():
     raw_inputs = inputs_file()
     if raw_inputs:
         return preprocess_inputs(raw_inputs, get_access_token())
-    return None    
+    return None
 
 
 def inputs_file():
@@ -113,8 +112,8 @@ def preprocess_inputs(inputs, access_token):
                 raise ValueError(
                     "Incorrect input format for secret: {0}".format(
                         inputs[key]
-                        )
                     )
+                )
             secret = get_secret(path, role, access_token)
             if isinstance(secret, dict):
                 refined_inputs.pop(key)
@@ -124,8 +123,8 @@ def preprocess_inputs(inputs, access_token):
                     "Incorrect secret: {0} for role {1}".format(
                         path,
                         role
-                        )
                     )
+                )
 
     return refined_inputs
 
