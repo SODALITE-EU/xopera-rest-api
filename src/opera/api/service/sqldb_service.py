@@ -680,7 +680,7 @@ class PostgreSQL(Database):
                 return None
             try:
                 return json.loads(line[0])
-            except json.decoder.JSONDecodeError:
+            except (json.decoder.JSONDecodeError, TypeError):
                 return None
 
     def get_deployments_for_blueprint(self, blueprint_id: uuid):
@@ -711,7 +711,7 @@ class PostgreSQL(Database):
                     'deployment_label': line[4]
                 } for line in lines
             ]
-            return deployment_list
+            return sorted(deployment_list, key=lambda x: x['timestamp'], reverse=True)
 
     def get_blueprints_by_user_or_project(self, username: str = None, project_domain: str = None):
         """
