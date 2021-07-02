@@ -126,6 +126,18 @@ class VersionExistsCursor(NoneCursor):
         return ["update"]
 
 
+class GetInputsCursor(NoneCursor):
+    @classmethod
+    def fetchone(cls):
+        return [json.dumps(TestBlueprintMeta.inputs)]
+
+
+class GetStringCursor(NoneCursor):
+    @classmethod
+    def fetchone(cls):
+        return [""]
+
+
 class GetBlueprintMetaCursor(NoneCursor):
     @classmethod
     def fetchone(cls):
@@ -493,17 +505,47 @@ class TestBlueprintMeta:
         assert not db.delete_blueprint_meta(blueprint_id)
         assert_that(caplog.text).contains("Failed to delete blueprint metadata", str(blueprint_id))
 
+    inputs = {
+        'foo': 'bar',
+        'foo2': 'bar2'
+    }
+
+    def test_get_inputs(self, mocker, monkeypatch):
+        # test set up
+        mocker.patch('psycopg2.connect', new=FakePostgres)
+        db = PostgreSQL({})
+        monkeypatch.setattr(db.connection, 'cursor', GetInputsCursor)
+
+        deployment_id = uuid.uuid4()
+        assert_that(db.get_inputs(deployment_id=deployment_id)).is_equal_to(self.inputs)
+
+    def test_get_inputs_missing(self, mocker):
+        # test set up
+        mocker.patch('psycopg2.connect', new=FakePostgres)
+        db = PostgreSQL({})
+
+        deployment_id = uuid.uuid4()
+        assert_that(db.get_inputs(deployment_id=deployment_id)).is_none()
+
+    def test_get_inputs_exception(self, mocker, monkeypatch):
+        mocker.patch('psycopg2.connect', new=FakePostgres)
+        db = PostgreSQL({})
+        monkeypatch.setattr(db.connection, 'cursor', GetStringCursor)
+
+        deployment_id = uuid.uuid4()
+        assert_that(db.get_inputs(deployment_id=deployment_id)).is_none()
+
     deployment = {
         'deployment_id': str(uuid.uuid4()),
         'state': InvocationState.SUCCESS,
         'operation': OperationType.DEPLOY_CONTINUE,
         'timestamp': timestamp_util.datetime_now_to_string(),
+        'last_inputs': None,
         'deployment_label': 'label'
     }
 
-    def test_get_deployments(self, mocker, monkeypatch, caplog):
+    def test_get_deployments(self, mocker, monkeypatch):
         # test set up
-        caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
         mocker.patch('psycopg2.connect', new=FakePostgres)
         db = PostgreSQL({})
         monkeypatch.setattr(db.connection, 'cursor', GetBlueprintMetaCursor)

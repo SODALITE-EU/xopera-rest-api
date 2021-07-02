@@ -1513,6 +1513,11 @@ components:
         operation:
           description: Type of last invocation
           $ref: "#/components/schemas/OperationType"
+        last_inputs:
+          description: Inputs from last invocation.
+          type: object
+          additionalProperties:
+            type: string
         timestamp:
           description: An ISO8601 timestamp of when last job ended
           type: string

@@ -145,6 +145,12 @@ class Database:
         """
         pass
 
+    def get_inputs(self, deployment_id: uuid):
+        """
+        extracts inputs from last invocation, belonging to deployment with this deployment_id
+        """
+        pass
+
     def get_deployments_for_blueprint(self, blueprint_id: uuid):
         """
         Returns [Deployment] for every deployment, created from blueprint
@@ -657,6 +663,26 @@ class PostgreSQL(Database):
 
         return success
 
+    def get_inputs(self, deployment_id: uuid):
+        """
+        extracts inputs from last invocation, belonging to deployment with this deployment_id
+        """
+        with self.connection.cursor() as dbcur:
+            stmt = sql.SQL("""select _log::json->>'inputs' from {invocation_table}
+                                where deployment_id = {deployment_id}
+                                order by timestamp desc limit 1""").format(
+                invocation_table=sql.Identifier(Settings.invocation_table),
+                deployment_id=sql.Literal(str(deployment_id))
+            )
+            dbcur.execute(stmt)
+            line = dbcur.fetchone()
+            if not line:
+                return None
+            try:
+                return json.loads(line[0])
+            except (json.decoder.JSONDecodeError, TypeError):
+                return None
+
     def get_deployments_for_blueprint(self, blueprint_id: uuid):
         """
         Returns [Deployment] for every deployment, created from blueprint
@@ -681,10 +707,11 @@ class PostgreSQL(Database):
                     'state': line[1],
                     'operation': line[2],
                     'timestamp': timestamp_util.datetime_to_str(line[3]),
+                    'last_inputs': self.get_inputs(line[0]),
                     'deployment_label': line[4]
                 } for line in lines
             ]
-            return deployment_list
+            return sorted(deployment_list, key=lambda x: x['timestamp'], reverse=True)
 
     def get_blueprints_by_user_or_project(self, username: str = None, project_domain: str = None):
         """
