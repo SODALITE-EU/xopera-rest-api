@@ -187,7 +187,7 @@ class PostgreSQL(Database):
                         blueprint_id varchar (36),
                         version_id varchar(36),
                         blueprint_name varchar(250),
-                        aadm_id varchar(36),
+                        aadm_id varchar(250),
                         username varchar(250),
                         project_domain varchar(250),
                         url text,
