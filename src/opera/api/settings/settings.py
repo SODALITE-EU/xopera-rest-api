@@ -16,7 +16,7 @@ class Settings:
     key_pair = ""
 
     # deployment config
-    API_WORKDIR = ".opera-api"
+    API_WORKDIR = "/tmp/xopera"
     STDFILE_DIR = f"{API_WORKDIR}/in_progress"
     INVOCATION_DIR = f"{API_WORKDIR}/invocations"
     DEPLOYMENT_DIR = f"{API_WORKDIR}/deployment_dir"

@@ -7,6 +7,7 @@ import sys
 import tempfile
 import traceback
 import uuid
+import pwd
 from pathlib import Path
 from typing import Optional
 
@@ -102,10 +103,36 @@ class InvocationWorkerProcess:
                 shutil.rmtree(InvocationService.stdstream_dir(inv.deployment_id))
 
     @staticmethod
+    def setup_user(location: Path, inv: Invocation):
+        try:
+            user = pwd.getpwnam(inv.user_id)
+        except KeyError:
+            os.system("adduser --system --no-create-home " + inv.user_id)
+            user = pwd.getpwnam(inv.user_id)
+        tmp = (location / "tmp")
+        os.mkdir(tmp)
+        os.chown(location, user.pw_uid, user.pw_gid)
+        os.chmod(location, 0o700)
+        for root, dirs, files in os.walk(location):
+            for momo in dirs:
+                os.chown(os.path.join(root, momo), user.pw_uid, user.pw_gid)
+                os.chmod(os.path.join(root, momo), 0o700)
+            for momo in files:
+                os.chown(os.path.join(root, momo), user.pw_uid, user.pw_gid)
+                os.chmod(os.path.join(root, momo), 0o700)
+
+        os.setuid(user.pw_uid)
+        os.environ["TMPDIR"] = str(tmp)
+        #logger.info("UID changed " + str(os.geteuid()))
+
+    @staticmethod
     def _deploy_fresh(location: Path, inv: Invocation):
         CSAR_db.get_revision(inv.blueprint_id, location, inv.version_id)
 
         with xopera_util.cwd(location):
+            if inv.user_id:
+                InvocationWorkerProcess.setup_user(location, inv)
+
             opera_storage = Storage.create(".opera")
             service_template = str(entry_definitions(location))
             opera_deploy(service_template, inv.inputs, opera_storage,
@@ -290,8 +317,9 @@ class InvocationService:
         self.workers_pool = multiprocessing.Pool(workers_num, InvocationWorkerProcess.run_internal, (self.work_queue,))
 
     def invoke(self, operation_type: OperationType, blueprint_id: uuid, version_id: uuid,
-               workers: int, inputs: dict, deployment_id: uuid = None,
+               workers: int, inputs: dict, deployment_id: uuid = None, username: str = None,
                clean_state: bool = None, deployment_label: str = None) -> Invocation:
+
         now = datetime.datetime.now(tz=datetime.timezone.utc)
         logger.info("Invoking %s with ID %s at %s", operation_type, deployment_id, now.isoformat())
 
@@ -313,6 +341,7 @@ class InvocationService:
         inv.stderr = None
         inv.workers = workers
         inv.clean_state = clean_state
+        inv.user_id = username
 
         self.stdstream_dir(inv.deployment_id).mkdir(parents=True, exist_ok=True)
         self.save_invocation(invocation_id, inv)
