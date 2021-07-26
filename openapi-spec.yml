@@ -537,6 +537,13 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: active
+          in: query
+          description: Obtain only list of active deployments.
+          required: false
+          schema:
+            type: boolean
+            default: true
       responses:
         200:
           description: Deployments returned

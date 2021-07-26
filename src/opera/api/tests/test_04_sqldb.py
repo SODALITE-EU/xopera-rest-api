@@ -165,6 +165,20 @@ class GetBlueprintMetaCursor(NoneCursor):
         ]
 
 
+class GetDeploymentsCursor(NoneCursor):
+
+    @classmethod
+    def fetchall(cls):
+        # used to get deployments
+        deployments = [Deployment.from_dict(x) for x in TestBlueprintMeta.deployments]
+        return [
+            [
+                deployment.deployment_id, deployment.state, deployment.operation,
+                deployment.timestamp, deployment.deployment_label
+            ] for deployment in deployments
+        ]
+
+
 class GetBlueprintCursor(NoneCursor):
     @classmethod
     def fetchall(cls):
@@ -551,7 +565,36 @@ class TestBlueprintMeta:
         monkeypatch.setattr(db.connection, 'cursor', GetBlueprintMetaCursor)
 
         blueprint_id = uuid.uuid4()
-        assert_that(db.get_deployments_for_blueprint(blueprint_id)).is_equal_to([self.deployment])
+        assert_that(db.get_deployments_for_blueprint(blueprint_id, active=False)).is_equal_to([self.deployment])
+
+    deployments = [
+        {
+            "deployment_id": "71ceef1c-f169-4204-b180-e95948329108",
+            "operation": OperationType.DEPLOY_FRESH,
+            "state":  InvocationState.SUCCESS,
+            "timestamp": timestamp_util.datetime_now_to_string(),
+            'last_inputs': None,
+            'deployment_label': 'label'
+        },
+        {
+            "deployment_id": "30e143c9-e614-41bc-9b22-47c588f394e3",
+            "operation": OperationType.UNDEPLOY,
+            "state":  InvocationState.SUCCESS,
+            "timestamp": timestamp_util.datetime_to_str(datetime.datetime.fromtimestamp(1)),
+            'last_inputs': None,
+            'deployment_label': 'label'
+        }
+    ]
+
+    def test_get_active_deployments(self, mocker, monkeypatch):
+        # test set up
+        mocker.patch('psycopg2.connect', new=FakePostgres)
+        db = PostgreSQL({})
+        monkeypatch.setattr(db.connection, 'cursor', GetDeploymentsCursor)
+
+        blueprint_id = uuid.uuid4()
+        assert_that(db.get_deployments_for_blueprint(blueprint_id, active=False)).is_equal_to(self.deployments)
+        assert_that(db.get_deployments_for_blueprint(blueprint_id, active=True)).is_equal_to([self.deployments[0]])
 
 
 class TestGetBlueprint:

@@ -5,7 +5,7 @@ import psycopg2
 from psycopg2 import sql
 
 from opera.api.log import get_logger
-from opera.api.openapi.models import Invocation, InvocationState, BlueprintVersion
+from opera.api.openapi.models import Invocation, InvocationState, BlueprintVersion, OperationType
 from opera.api.settings import Settings
 from opera.api.util import timestamp_util, file_util
 
@@ -151,7 +151,7 @@ class Database:
         """
         pass
 
-    def get_deployments_for_blueprint(self, blueprint_id: uuid):
+    def get_deployments_for_blueprint(self, blueprint_id: uuid, active: bool):
         """
         Returns [Deployment] for every deployment, created from blueprint
         """
@@ -683,7 +683,7 @@ class PostgreSQL(Database):
             except (json.decoder.JSONDecodeError, TypeError):
                 return None
 
-    def get_deployments_for_blueprint(self, blueprint_id: uuid):
+    def get_deployments_for_blueprint(self, blueprint_id: uuid, active: bool):
         """
         Returns [Deployment] for every deployment, created from blueprint
         """
@@ -711,7 +711,13 @@ class PostgreSQL(Database):
                     'deployment_label': line[4]
                 } for line in lines
             ]
-            return sorted(deployment_list, key=lambda x: x['timestamp'], reverse=True)
+            deployment_list.sort(key=lambda x: x['timestamp'], reverse=True)
+            if active:
+                # remove successfully completed undeploy jobs
+                deployment_list = [x for x in deployment_list if not (x['operation'] == OperationType.UNDEPLOY and
+                                                                      x['state'] == InvocationState.SUCCESS)]
+
+            return deployment_list
 
     def get_blueprints_by_user_or_project(self, username: str = None, project_domain: str = None):
         """
