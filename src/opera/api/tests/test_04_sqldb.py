@@ -165,6 +165,20 @@ class GetBlueprintMetaCursor(NoneCursor):
         ]
 
 
+class GetDeploymentsCursor(NoneCursor):
+
+    @classmethod
+    def fetchall(cls):
+        # used to get deployments
+        deployments = [Deployment.from_dict(x) for x in TestBlueprintMeta.deployments]
+        return [
+            [
+                deployment.deployment_id, deployment.state, deployment.operation,
+                deployment.timestamp, deployment.deployment_label
+            ] for deployment in deployments
+        ]
+
+
 class GetBlueprintCursor(NoneCursor):
     @classmethod
     def fetchall(cls):
@@ -551,7 +565,36 @@ class TestBlueprintMeta:
         monkeypatch.setattr(db.connection, 'cursor', GetBlueprintMetaCursor)
 
         blueprint_id = uuid.uuid4()
-        assert_that(db.get_deployments_for_blueprint(blueprint_id)).is_equal_to([self.deployment])
+        assert_that(db.get_deployments_for_blueprint(blueprint_id, active=False)).is_equal_to([self.deployment])
+
+    deployments = [
+        {
+            "deployment_id": "71ceef1c-f169-4204-b180-e95948329108",
+            "operation": OperationType.DEPLOY_FRESH,
+            "state":  InvocationState.SUCCESS,
+            "timestamp": timestamp_util.datetime_now_to_string(),
+            'last_inputs': None,
+            'deployment_label': 'label'
+        },
+        {
+            "deployment_id": "30e143c9-e614-41bc-9b22-47c588f394e3",
+            "operation": OperationType.UNDEPLOY,
+            "state":  InvocationState.SUCCESS,
+            "timestamp": timestamp_util.datetime_to_str(datetime.datetime.fromtimestamp(1)),
+            'last_inputs': None,
+            'deployment_label': 'label'
+        }
+    ]
+
+    def test_get_active_deployments(self, mocker, monkeypatch):
+        # test set up
+        mocker.patch('psycopg2.connect', new=FakePostgres)
+        db = PostgreSQL({})
+        monkeypatch.setattr(db.connection, 'cursor', GetDeploymentsCursor)
+
+        blueprint_id = uuid.uuid4()
+        assert_that(db.get_deployments_for_blueprint(blueprint_id, active=False)).is_equal_to(self.deployments)
+        assert_that(db.get_deployments_for_blueprint(blueprint_id, active=True)).is_equal_to([self.deployments[0]])
 
 
 class TestGetBlueprint:
@@ -802,6 +845,27 @@ class TestInvocation:
 
         assert_that(db.blueprint_used_in_deployment(uuid.uuid4(), 'blah')).is_false()
 
+    def test_delete_deployment(self, mocker, caplog):
+        # test set up
+        caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
+        mocker.patch('psycopg2.connect', new=FakePostgres)
+        db = PostgreSQL({})
+
+        deployment_id = uuid.uuid4()
+        assert_that(db.delete_deployment(deployment_id)).is_true()
+        assert_that(caplog.text).contains("Deleted deployment", str(deployment_id))
+
+    def test_delete_deployment_fail(self, mocker, monkeypatch, caplog):
+        # test set up
+        caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
+        mocker.patch('psycopg2.connect', new=FakePostgres)
+        db = PostgreSQL({})
+        monkeypatch.setattr(db.connection, 'cursor', PsycopgErrorCursor)
+
+        deployment_id = uuid.uuid4()
+        assert_that(db.delete_deployment(deployment_id)).is_false()
+        assert_that(caplog.text).contains("Failed to delete deployment", str(deployment_id))
+
 
 class TestSessionData:
     session_data = {
@@ -834,4 +898,33 @@ class TestSessionData:
         mocker.patch('psycopg2.connect', new=FakePostgres)
         db = PostgreSQL({})
         monkeypatch.setattr(db.connection, 'cursor', OperaSessionDataCursor)
+
         assert_that(db.get_opera_session_data(self.session_data['deployment_id'])).is_equal_to(self.session_data)
+
+    def test_get_opera_session_data_fail(self, mocker):
+        # test set up
+        mocker.patch('psycopg2.connect', new=FakePostgres)
+        db = PostgreSQL({})
+
+        assert_that(db.get_opera_session_data(self.session_data['deployment_id'])).is_none()
+
+    def test_delete_opera_session_data(self, mocker, caplog):
+        # test set up
+        caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
+        mocker.patch('psycopg2.connect', new=FakePostgres)
+        db = PostgreSQL({})
+
+        deployment_id = uuid.uuid4()
+        assert_that(db.delete_opera_session_data(deployment_id)).is_true()
+        assert_that(caplog.text).contains("Deleted opera_session_data", str(deployment_id))
+
+    def test_delete_opera_session_data_fail(self, mocker, monkeypatch, caplog):
+        # test set up
+        caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
+        mocker.patch('psycopg2.connect', new=FakePostgres)
+        db = PostgreSQL({})
+        monkeypatch.setattr(db.connection, 'cursor', PsycopgErrorCursor)
+
+        deployment_id = uuid.uuid4()
+        assert_that(db.delete_opera_session_data(deployment_id)).is_false()
+        assert_that(caplog.text).contains("Failed to delete opera_session_data", str(deployment_id))

@@ -6,27 +6,10 @@ from opera.api.log import get_logger
 from opera.api.openapi.models import InvocationState
 from opera.api.openapi.models import OperationType, Invocation
 from opera.api.settings import Settings
-# from opera.api.openapi.models.deployment_exists import DeploymentExists
 from opera.api.util import xopera_util
 
 logger = get_logger(__name__)
 invocation_service = InvocationService(workers_num=Settings.invocation_service_workers)
-
-
-# def deployment_exists(blueprint_id, version_id=None, inputs_file=None):
-#     """Check if deployment exists
-#
-#     :param blueprint_id: Id of blueprint
-#     :type blueprint_id:
-#     :param version_id: Id of blueprint version
-#     :type version_id: str
-#     :param inputs_file: File with inputs TOSCA blueprint
-#     :type inputs_file: str
-#
-#     :rtype: DeploymentExists
-#     """
-#     # TODO implement
-#     return 'Not implemented'
 
 
 @security_controller.check_role_auth_deployment
@@ -204,3 +187,28 @@ def post_update(deployment_id, blueprint_id, version_id=None, workers=1):
     )
     logger.info(f"Updating '{deployment_id}' with blueprint '{blueprint_id}', version_id: {version_id}")
     return result, 202
+
+
+@security_controller.check_role_auth_deployment
+def delete_deployment(deployment_id):
+    """Delete all deployment data
+
+    This endpoint deletes all data, about deployment, that are stored on xOpera REST API. It does not modify actual
+    deployed instance. To undeploy actual instance, use /deployment/{deployment_id}/undeploy
+
+    :param deployment_id: Id of deployment
+    :type deployment_id:
+
+    :rtype: str
+    """
+
+    inv = SQL_database.get_deployment_status(deployment_id)
+    if inv.state in [InvocationState.PENDING, InvocationState.IN_PROGRESS]:
+        return f"Previous operation on this deployment still running", 403
+
+    success_deployment = SQL_database.delete_deployment(deployment_id)
+    success_session_data = SQL_database.delete_opera_session_data(deployment_id)
+    if not (success_deployment and success_session_data):
+        return "Failed to delete deployment", 500
+
+    return 'Deployment deleted', 200
