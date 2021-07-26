@@ -907,59 +907,6 @@ paths:
               schema:
                 type: string
 
-#  /deployment/exists:
-#    put:
-#      summary: "Check if deployment exists"
-#      security:
-#        - apiKey: []
-#        - oauth2: [email]
-#      tags:
-#      - deployment
-#      operationId: deployment_exists
-#      parameters:
-#      - name: blueprint_id
-#        in: query
-#        description: Id of blueprint
-#        required: true
-#        schema:
-#          type: string
-#          format: uuid
-#      - name: version_id
-#        in: query
-#        description: Id of blueprint version
-#        schema:
-#          type: string
-#          pattern: '^v(0|[1-9][0-9]*).(0|[1-9][0-9]*)$'
-#      requestBody:
-#        content:
-#          multipart/form-data:
-#            schema:
-#              type: object
-#              properties:
-#                inputs_file:
-#                  type: string
-#                  description: File with inputs TOSCA blueprint
-#                  format: binary
-#      responses:
-#        200:
-#          description: OK
-#          content:
-#            application/json:
-#              schema:
-#                $ref: '#/components/schemas/DeploymentExists'
-#        401:
-#          description: Unauthorized request for this blueprint
-#          content:
-#            application/json:
-#              schema:
-#                type: string
-#        404:
-#          description: Did not find blueprint
-#          content:
-#            application/json:
-#              schema:
-#                type: string
-
   /deployment/deploy:
     post:
       summary: "Initialize deployment and deploy"
@@ -1362,6 +1309,58 @@ paths:
               schema:
                 type: string
 
+  /deployment/{deployment_id}:
+    delete:
+      summary: "Delete all deployment data"
+      description: "This endpoint deletes all data, about deployment, that are stored on xOpera REST API. It does not
+      modify actual deployed instance. To undeploy actual instance, use /deployment/{deployment_id}/undeploy"
+      security:
+        - apiKey: [ ]
+        - oauth2: [ email ]
+      tags:
+        - deployment
+      operationId: delete_deployment
+      parameters:
+        - name: deployment_id
+          in: path
+          description: Id of deployment
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: Deployment deleted.
+          content:
+            application/json:
+              schema:
+                type: string
+        401:
+          description: Unauthorized request for this blueprint
+          content:
+            application/json:
+              schema:
+                type: string
+        403:
+          description: Not allowed, previous operation on deployment still running
+          content:
+            application/json:
+              schema:
+                type: string
+        404:
+          description: Did not find blueprint or deployment
+          content:
+            application/json:
+              schema:
+                type: string
+
+        500:
+          description: DB or REST API error
+          content:
+            application/json:
+              schema:
+                type: string
+
 components:
   schemas:
     BlueprintValidation:
@@ -1490,14 +1489,6 @@ components:
           type: string
           description: Id of version
           pattern: '^v(0|[1-9][0-9]*).(0|[1-9][0-9]*)$'
-
-#    DeploymentExists:
-#      type: object
-#      properties:
-#        exists:
-#          type: boolean
-#        checksum:
-#          type: string
 
     Deployment:
       type: object

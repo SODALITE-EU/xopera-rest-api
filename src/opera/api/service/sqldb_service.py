@@ -67,6 +67,12 @@ class Database:
         """
         pass
 
+    def delete_opera_session_data(self, deployment_id: uuid):
+        """
+        Deletes opera session data
+        """
+        pass
+
     def update_deployment_log(self, invocation_id: uuid, inv: Invocation):
         """
         updates deployment log with deployment_id, timestamp, invocation_id, _log
@@ -160,6 +166,12 @@ class Database:
     def get_blueprints_by_user_or_project(self, username: str = None, project_domain: str = None):
         """
         Returns [blueprint_id] for every blueprint, that belongs to user or project (or both)
+        """
+        pass
+
+    def delete_deployment(self, deployment_id: uuid):
+        """
+        Deletes deployment data
         """
         pass
 
@@ -378,6 +390,27 @@ class PostgreSQL(Database):
                 'tree': json.loads(line[2])
             }
             return session_data
+
+    def delete_opera_session_data(self, deployment_id: uuid):
+        """
+        Deletes opera session data
+        """
+        stmt = sql.SQL("""delete from {session_data_table} 
+                            where deployment_id = {deployment_id}""").format(
+            session_data_table=sql.Identifier(Settings.opera_session_data_table),
+            deployment_id=sql.Literal(str(deployment_id))
+        )
+
+        success = self.execute(stmt)
+
+        if success:
+            logger.debug(
+                f'Deleted opera_session_data for deployment_id={deployment_id} from PostgreSQL database')
+        else:
+            logger.error(
+                f'Failed to delete opera_session_data for deployment_id={deployment_id} from PostgreSQL database')
+
+        return success
 
     def update_deployment_log(self, invocation_id: uuid, inv: Invocation):
         """
@@ -759,3 +792,24 @@ class PostgreSQL(Database):
                 } for line in lines
             ]
             return blueprint_list
+
+    def delete_deployment(self, deployment_id: uuid):
+        """
+        Deletes deployment data
+        """
+        stmt = sql.SQL("""delete from {invocation_table} 
+                            where deployment_id = {deployment_id}""").format(
+            invocation_table=sql.Identifier(Settings.invocation_table),
+            deployment_id=sql.Literal(str(deployment_id))
+        )
+
+        success = self.execute(stmt)
+
+        if success:
+            logger.debug(
+                f'Deleted deployment for deployment_id={deployment_id} from PostgreSQL database')
+        else:
+            logger.error(
+                f'Failed to delete deployment for deployment_id={deployment_id} from PostgreSQL database')
+
+        return success
