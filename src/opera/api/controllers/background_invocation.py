@@ -103,36 +103,48 @@ class InvocationWorkerProcess:
                 shutil.rmtree(InvocationService.stdstream_dir(inv.deployment_id))
 
     @staticmethod
-    def setup_user(location: Path, inv: Invocation):
+    def setup_user(locations: list, inv: Invocation):
         try:
             user = pwd.getpwnam(inv.user_id)
         except KeyError:
-            os.system("adduser --system --no-create-home " + inv.user_id)
+            os.system("adduser --system " + inv.user_id)
             user = pwd.getpwnam(inv.user_id)
-        tmp = (location / "tmp")
+        tmp = (locations[0] / "tmp")
         os.mkdir(tmp)
-        os.chown(location, user.pw_uid, user.pw_gid)
+        for location in locations:
+            InvocationWorkerProcess.setup_user_dir(location, user.pw_uid, user.pw_gid)
+
+        tempfile.tempdir = str(tmp)
+
+        os.environ["ANSIBLE_LOCAL_TEMP"] = str(tmp)
+        os.environ["HOME"] = user.pw_dir
+        os.environ["USERNAME"] = inv.user_id
+        os.environ["USER"] = inv.user_id
+        os.environ["LOGNAME"] = inv.user_id
+
+        os.setgid(user.pw_gid)
+        os.setuid(user.pw_uid)
+
+    @staticmethod
+    def setup_user_dir(location: Path, user_id: int, group_id: int):
+        os.chown(location, user_id, group_id)
         os.chmod(location, 0o700)
         for root, dirs, files in os.walk(location):
-            for momo in dirs:
-                os.chown(os.path.join(root, momo), user.pw_uid, user.pw_gid)
-                os.chmod(os.path.join(root, momo), 0o700)
-            for momo in files:
-                os.chown(os.path.join(root, momo), user.pw_uid, user.pw_gid)
-                os.chmod(os.path.join(root, momo), 0o700)
+            for ndir in dirs:
+                os.chown(os.path.join(root, ndir), user_id, group_id)
+                os.chmod(os.path.join(root, ndir), 0o700)
+            for nfile in files:
+                os.chown(os.path.join(root, nfile), user_id, group_id)
+                os.chmod(os.path.join(root, nfile), 0o700)
 
-        os.setuid(user.pw_uid)
-        os.environ["TMPDIR"] = str(tmp)
-        #logger.info("UID changed " + str(os.geteuid()))
 
     @staticmethod
     def _deploy_fresh(location: Path, inv: Invocation):
         CSAR_db.get_revision(inv.blueprint_id, location, inv.version_id)
 
         with xopera_util.cwd(location):
-            if inv.user_id:
-                InvocationWorkerProcess.setup_user(location, inv)
-
+            if inv.user_id and Settings.secure_workdir:
+                InvocationWorkerProcess.setup_user([location], inv)
             opera_storage = Storage.create(".opera")
             service_template = str(entry_definitions(location))
             opera_deploy(service_template, inv.inputs, opera_storage,
@@ -148,6 +160,8 @@ class InvocationWorkerProcess:
         InvocationService.get_dot_opera_from_db(inv.deployment_id, location)
 
         with xopera_util.cwd(location):
+            if inv.user_id and Settings.secure_workdir:
+                InvocationWorkerProcess.setup_user([location], inv)
             opera_storage = Storage.create(".opera")
             service_template = str(entry_definitions(location))
             opera_deploy(service_template, inv.inputs, opera_storage,
@@ -163,6 +177,8 @@ class InvocationWorkerProcess:
         InvocationService.get_dot_opera_from_db(inv.deployment_id, location)
 
         with xopera_util.cwd(location):
+            if inv.user_id and Settings.secure_workdir:
+                InvocationWorkerProcess.setup_user([location], inv)
             opera_storage = Storage.create(".opera")
             if inv.inputs:
                 opera_storage.write_json(inv.inputs, "inputs")
@@ -178,6 +194,8 @@ class InvocationWorkerProcess:
         assert location_new == str(location)
 
         with xopera_util.cwd(location_new):
+            if inv.user_id and Settings.secure_workdir:
+                InvocationWorkerProcess.setup_user([location_old, location_new], inv)
             instance_diff = opera_diff_instances(storage_old, location_old,
                                                  storage_new, location_new,
                                                  opera_TemplateComparer(), opera_InstanceComparer(),
