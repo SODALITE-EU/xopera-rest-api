@@ -78,17 +78,19 @@ def post_blueprint_name(blueprint_id, name):  # noqa: E501
 
 
 @security_controller.check_role_auth_blueprint
-def get_blueprint_deployments(blueprint_id):  # noqa: E501
+def get_blueprint_deployments(blueprint_id, active=True):  # noqa: E501
     """Get deployments for current blueprint
 
      # noqa: E501
 
     :param blueprint_id: Id of blueprint
-    :type blueprint_id: 
+    :type blueprint_id:
+    :param active: Obtain only list of active deployments.
+    :type active: bool
 
     :rtype: List[Deployment]
     """
-    data = SQL_database.get_deployments_for_blueprint(blueprint_id)
+    data = SQL_database.get_deployments_for_blueprint(blueprint_id, active)
     if not data:
         return "Deployments not found", 404
     return [Deployment.from_dict(item) for item in data], 200

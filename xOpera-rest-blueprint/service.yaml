@@ -248,6 +248,7 @@ topology_template:
         docker_network_name: { get_property: [ SELF, network, name ] }
         image_name: swaggerapi/swagger-ui:v3.37.0
         restart_policy: always
+        restart: yes
         volumes:
           - /home/xopera/openapi-spec.yml:/openapi/openapi-spec.yml:ro
         env:
@@ -295,6 +296,7 @@ topology_template:
           # dashboard
           - "--api.dashboard=true"
         restart_policy: always
+        restart: yes
         ports:  ['5001:5001', '5000:5000', '8080:8080', '5432:5432']
         volumes:
           - /var/run/docker.sock:/var/run/docker.sock:ro

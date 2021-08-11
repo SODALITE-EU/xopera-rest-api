@@ -302,3 +302,43 @@ class TestUndeploy:
             workers=inv.workers,
             inputs={'marker': 'blah'}
         )
+
+
+class TestDeleteDeployment:
+
+    def test_still_running(self, client, mocker, generic_invocation: Invocation, patch_auth_wrapper):
+        inv = generic_invocation
+        inv.state = InvocationState.IN_PROGRESS
+        mocker.patch('opera.api.service.sqldb_service.Database.get_deployment_status', return_value=inv)
+
+        resp = client.delete(f"/deployment/{inv.deployment_id}")
+        assert resp.status_code == 403
+        assert_that(resp.json).contains('still running')
+
+    def test_fail(self, client, mocker, generic_invocation: Invocation, patch_auth_wrapper):
+        inv = generic_invocation
+        inv.deployment_id = uuid.uuid4()
+        # to pass previous operation test
+        inv.state = InvocationState.SUCCESS
+        inv.workers = 42
+
+        mocker.patch('opera.api.service.sqldb_service.Database.delete_deployment', return_value=False)
+        mocker.patch('opera.api.service.sqldb_service.Database.delete_opera_session_data', return_value=True)
+
+        resp = client.delete(f"/deployment/{inv.deployment_id}")
+        assert resp.status_code == 500
+        assert_that(resp.json).contains("Failed to delete")
+
+    def test_params(self, client, mocker, generic_invocation: Invocation, patch_auth_wrapper):
+        inv = generic_invocation
+        inv.deployment_id = uuid.uuid4()
+        # to pass previous operation test
+        inv.state = InvocationState.SUCCESS
+        inv.workers = 42
+
+        mocker.patch('opera.api.service.sqldb_service.Database.delete_deployment', return_value=True)
+        mocker.patch('opera.api.service.sqldb_service.Database.delete_opera_session_data', return_value=True)
+
+        resp = client.delete(f"/deployment/{inv.deployment_id}")
+        assert resp.status_code == 200
+        assert_that(resp.json).contains("deleted")
