@@ -52,7 +52,8 @@ class TestDeployFresh:
             version_id=version_id,
             deployment_label=deployment_label,
             workers=workers,
-            inputs={'marker': 'blah'}
+            inputs={'marker': 'blah'},
+            username=None
         )
 
     def test_no_inputs(self, client, mocker, generic_invocation):
@@ -69,7 +70,8 @@ class TestDeployFresh:
             version_id=None,
             deployment_label=None,
             workers=1,
-            inputs=None
+            inputs=None,
+            username=None
         )
 
 
