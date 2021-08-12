@@ -16,7 +16,7 @@ FROM python:3.10.0rc1-alpine3.13
 
 ARG HELM_VERSION=3.5.3
 ARG KUBECTL_VERSION=1.20.4
-ARG PYTHON_VERSION=3.8
+ARG PYTHON_LIB_VERSION=3.10
 ENV BASE_URL=https://get.helm.sh
 ENV TAR_FILE=helm-v${HELM_VERSION}-linux-amd64.tar.gz
 
@@ -27,7 +27,7 @@ RUN export PACKAGES="git bash openssh-client libpq" \
 # copy python packages
 COPY --from=python-builder /root/.local /root/.local
 ENV PATH=/root/.local/bin:$PATH
-ENV PYTHONPATH=/root/.local/lib/python${PYTHON_VERSION}/site-packages
+ENV PYTHONPATH=/root/.local/lib/python${PYTHON_LIB_VERSION}/site-packages
 
 # install kubectl
 RUN apk add --update --no-cache curl \
