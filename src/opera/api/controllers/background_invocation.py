@@ -7,7 +7,6 @@ import sys
 import tempfile
 import traceback
 import uuid
-import pwd
 from pathlib import Path
 from typing import Optional
 
@@ -33,6 +32,22 @@ from opera.api.util import xopera_util, file_util
 
 logger = get_logger(__name__)
 
+class ExtendedInvocation(Invocation):
+    def __init__(self, access_token=None, blueprint_id=None,
+                 version_id=None, deployment_id=None, user_id=None,
+                 deployment_label=None, state=None, operation=None,
+                 timestamp_submission=None, timestamp_start=None,
+                 timestamp_end=None, inputs=None, instance_state=None,
+                 outputs=None, exception=None, stdout=None,
+                 stderr=None, workers=None, clean_state=None):
+        super().__init__(blueprint_id=blueprint_id, version_id=version_id, deployment_id=deployment_id,
+                         user_id=user_id, deployment_label=deployment_label, state=state, operation=operation,
+                         timestamp_submission=timestamp_submission, timestamp_start=timestamp_start,
+                         timestamp_end=timestamp_end, inputs=inputs, instance_state=instance_state,
+                         outputs=outputs, exception=exception, stdout=stdout, stderr=stderr,
+                         workers=workers, clean_state=clean_state)
+        self.access_token = access_token
+
 
 class InvocationWorkerProcess:
 
@@ -40,7 +55,7 @@ class InvocationWorkerProcess:
     def run_internal(work_queue: multiprocessing.Queue):
 
         while True:
-            inv: Invocation = work_queue.get(block=True)
+            inv: ExtendedInvocation = work_queue.get(block=True)
             inv.timestamp_start = datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
 
             invocation_id = SQL_database.get_last_invocation_id(inv.deployment_id)
@@ -103,56 +118,25 @@ class InvocationWorkerProcess:
                 shutil.rmtree(InvocationService.stdstream_dir(inv.deployment_id))
 
     @staticmethod
-    def setup_user(locations: list, inv: Invocation):
-        try:
-            user = pwd.getpwnam(inv.user_id)
-        except KeyError:
-            os.system("adduser --system " + inv.user_id)
-            user = pwd.getpwnam(inv.user_id)
-        tmp = (locations[0] / "tmp")
-        os.mkdir(tmp)
-        for location in locations:
-            InvocationWorkerProcess.setup_user_dir(location, user.pw_uid, user.pw_gid)
-
-        tempfile.tempdir = str(tmp)
-
-        os.environ["ANSIBLE_LOCAL_TEMP"] = str(tmp)
-        os.environ["HOME"] = user.pw_dir
-        os.environ["USERNAME"] = inv.user_id
-        os.environ["USER"] = inv.user_id
-        os.environ["LOGNAME"] = inv.user_id
-
-        os.setgid(user.pw_gid)
-        os.setuid(user.pw_uid)
-
-    @staticmethod
-    def setup_user_dir(location: Path, user_id: int, group_id: int):
-        os.chown(location, user_id, group_id)
-        os.chmod(location, 0o700)
-        for root, dirs, files in os.walk(location):
-            for ndir in dirs:
-                os.chown(os.path.join(root, ndir), user_id, group_id)
-                os.chmod(os.path.join(root, ndir), 0o700)
-            for nfile in files:
-                os.chown(os.path.join(root, nfile), user_id, group_id)
-                os.chmod(os.path.join(root, nfile), 0o700)
-
-
-    @staticmethod
-    def _deploy_fresh(location: Path, inv: Invocation):
+    def _deploy_fresh(location: Path, inv: ExtendedInvocation):
         CSAR_db.get_revision(inv.blueprint_id, location, inv.version_id)
 
         with xopera_util.cwd(location):
             if inv.user_id and Settings.secure_workdir:
-                InvocationWorkerProcess.setup_user([location], inv)
+                xopera_util.setup_user([location], inv.user_id, inv.access_token)
             opera_storage = Storage.create(".opera")
             service_template = str(entry_definitions(location))
             opera_deploy(service_template, inv.inputs, opera_storage,
                          verbose_mode=False, num_workers=inv.workers, delete_existing_state=True)
-            return opera_outputs(opera_storage)
+
+            outputs = opera_outputs(opera_storage)
+            if inv.user_id and Settings.secure_workdir:
+                xopera_util.cleanup_user()
+            return outputs
+
 
     @staticmethod
-    def _deploy_continue(location: Path, inv: Invocation):
+    def _deploy_continue(location: Path, inv: ExtendedInvocation):
 
         # get blueprint
         CSAR_db.get_revision(inv.blueprint_id, location, inv.version_id)
@@ -161,15 +145,18 @@ class InvocationWorkerProcess:
 
         with xopera_util.cwd(location):
             if inv.user_id and Settings.secure_workdir:
-                InvocationWorkerProcess.setup_user([location], inv)
+                xopera_util.setup_user([location], inv.user_id, inv.access_token)
             opera_storage = Storage.create(".opera")
             service_template = str(entry_definitions(location))
             opera_deploy(service_template, inv.inputs, opera_storage,
                          verbose_mode=False, num_workers=inv.workers, delete_existing_state=inv.clean_state)
-            return opera_outputs(opera_storage)
+            outputs = opera_outputs(opera_storage)
+            if inv.user_id and Settings.secure_workdir:
+                xopera_util.cleanup_user()
+            return outputs
 
     @staticmethod
-    def _undeploy(location: Path, inv: Invocation):
+    def _undeploy(location: Path, inv: ExtendedInvocation):
 
         # get blueprint
         CSAR_db.get_revision(inv.blueprint_id, location, inv.version_id)
@@ -178,15 +165,18 @@ class InvocationWorkerProcess:
 
         with xopera_util.cwd(location):
             if inv.user_id and Settings.secure_workdir:
-                InvocationWorkerProcess.setup_user([location], inv)
+                xopera_util.setup_user([location], inv.user_id, inv.access_token)
             opera_storage = Storage.create(".opera")
             if inv.inputs:
                 opera_storage.write_json(inv.inputs, "inputs")
             opera_undeploy(opera_storage, verbose_mode=False, num_workers=inv.workers)
-            return opera_outputs(opera_storage)
+            outputs = opera_outputs(opera_storage)
+            if inv.user_id and Settings.secure_workdir:
+                xopera_util.cleanup_user()
+            return outputs
 
     @staticmethod
-    def _update(location: Path, inv: Invocation):
+    def _update(location: Path, inv: ExtendedInvocation):
 
         storage_old, location_old, storage_new, location_new = InvocationWorkerProcess.prepare_two_workdirs(
             inv.deployment_id, inv.blueprint_id, inv.version_id, inv.inputs, location)
@@ -195,7 +185,7 @@ class InvocationWorkerProcess:
 
         with xopera_util.cwd(location_new):
             if inv.user_id and Settings.secure_workdir:
-                InvocationWorkerProcess.setup_user([location_old, location_new], inv)
+                xopera_util.setup_user([location_old, location_new], inv.user_id, inv.access_token)
             instance_diff = opera_diff_instances(storage_old, location_old,
                                                  storage_new, location_new,
                                                  opera_TemplateComparer(), opera_InstanceComparer(),
@@ -206,6 +196,8 @@ class InvocationWorkerProcess:
                          opera_InstanceComparer(), instance_diff,
                          verbose_mode=False, num_workers=inv.workers, overwrite=False)
             outputs = opera_outputs(storage_new)
+            if inv.user_id and Settings.secure_workdir:
+                xopera_util.cleanup_user()
 
         shutil.rmtree(location_old)
         # location_new is needed in __run_internal and deleted afterwards
@@ -336,14 +328,14 @@ class InvocationService:
 
     def invoke(self, operation_type: OperationType, blueprint_id: uuid, version_id: uuid,
                workers: int, inputs: dict, deployment_id: uuid = None, username: str = None,
-               clean_state: bool = None, deployment_label: str = None) -> Invocation:
+               clean_state: bool = None, deployment_label: str = None, access_token: str = None) -> Invocation:
 
         now = datetime.datetime.now(tz=datetime.timezone.utc)
         logger.info("Invoking %s with ID %s at %s", operation_type, deployment_id, now.isoformat())
 
         invocation_id = uuid.uuid4()
 
-        inv = Invocation()
+        inv = ExtendedInvocation()
         inv.blueprint_id = blueprint_id
         inv.deployment_label = deployment_label
         inv.version_id = version_id or CSAR_db.get_last_tag(blueprint_id)
@@ -360,6 +352,7 @@ class InvocationService:
         inv.workers = workers
         inv.clean_state = clean_state
         inv.user_id = username
+        inv.access_token = access_token
 
         self.stdstream_dir(inv.deployment_id).mkdir(parents=True, exist_ok=True)
         self.save_invocation(invocation_id, inv)

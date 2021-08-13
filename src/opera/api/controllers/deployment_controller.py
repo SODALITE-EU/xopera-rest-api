@@ -70,7 +70,8 @@ def post_deploy_continue(deployment_id, workers=1, clean_state=False):
         workers=workers,
         inputs=inputs,
         clean_state=clean_state,
-        username=username
+        username=username,
+        access_token=xopera_util.get_access_token()
     )
     logger.info(f"Deploying '{inv.blueprint_id}', version_id: {inv.version_id}")
     return result, 202
@@ -101,7 +102,8 @@ def post_deploy_fresh(blueprint_id, version_id=None, deployment_label=None, work
         deployment_label=deployment_label,
         workers=workers,
         inputs=inputs,
-        username=username
+        username=username,
+        access_token=xopera_util.get_access_token()
     )
     logger.info(f"Deploying '{blueprint_id}', version_id: {version_id}")
     return result, 202
@@ -153,7 +155,8 @@ def post_undeploy(deployment_id, workers=1):
         deployment_id=deployment_id,
         workers=workers,
         inputs=inputs,
-        username=username
+        username=username,
+        access_token=xopera_util.get_access_token()
     )
     logger.info(f"Undeploying '{deployment_id}'")
     return result, 202
@@ -191,7 +194,8 @@ def post_update(deployment_id, blueprint_id, version_id=None, workers=1):
         deployment_id=deployment_id,
         workers=workers,
         inputs=inputs,
-        username=username
+        username=username,
+        access_token=xopera_util.get_access_token()
     )
     logger.info(f"Updating '{deployment_id}' with blueprint '{blueprint_id}', version_id: {version_id}")
     return result, 202
