@@ -3,6 +3,9 @@ import os
 import pwd
 import re
 import shutil
+import subprocess
+import atexit
+import tempfile
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -157,3 +160,81 @@ def mask_workdirs(locations: [Path], stacktrace: str, placeholder="$BLUEPRINT_DI
     for location in locations:
         stacktrace = stacktrace.replace(str(location), placeholder)
     return stacktrace
+
+
+def setup_agent():
+    process = subprocess.run(["ssh-agent", "-s"],
+                             stdout=subprocess.PIPE,
+                             universal_newlines=True)
+    OUTPUT_PATTERN = re.compile("SSH_AUTH_SOCK=(?P<socket>[^;]+).*SSH_AGENT_PID=(?P<pid>\d+)", re.MULTILINE | re.DOTALL )
+    match = OUTPUT_PATTERN.search(process.stdout)
+    if match is None:
+        raise ValueError("Could not parse ssh-agent output. It was: {}".format(process.stdout))
+    agentData = match.groupdict()
+    logger.debug("ssh agent data: {}".format(agentData))
+    logger.debug("exporting ssh agent environment variables")
+    os.environ["SSH_AUTH_SOCK"] = agentData["socket"]
+    os.environ["SSH_AGENT_PID"] = agentData["pid"]
+    atexit.register(kill_agent)
+
+
+def kill_agent():
+    logger.debug("killing previously started ssh-agent")
+    subprocess.run(["ssh-agent", "-k"])
+    del os.environ["SSH_AUTH_SOCK"]
+    del os.environ["SSH_AGENT_PID"]
+
+
+def addKey(key: str):
+    process = subprocess.run(['ssh-add', '-'], input=key, text=True)
+    if process.returncode != 0:
+        logger.error( "Failed to add SSH key.")
+
+
+def setup_user(locations: list, username: str, access_token: str):
+    try:
+        user = pwd.getpwnam(username)
+    except KeyError:
+        os.system("adduser --system " + username)
+        user = pwd.getpwnam(username)
+    tmp = (locations[0] / "tmp")
+    os.mkdir(tmp)
+    for location in locations:
+        setup_user_dir(location, user.pw_uid, user.pw_gid)
+
+    tempfile.tempdir = str(tmp)
+
+    os.environ["ANSIBLE_LOCAL_TEMP"] = str(tmp)
+    os.environ["HOME"] = user.pw_dir
+    os.environ["USERNAME"] = username
+    os.environ["USER"] = username
+    os.environ["LOGNAME"] = username
+
+    os.setgid(user.pw_gid)
+    os.setuid(user.pw_uid)
+
+    if access_token:
+        try:
+            ssh_key = get_secret(Settings.ssh_key_path_template.format(username=username), username, access_token)
+            if ssh_key:
+                setup_agent()
+                for key in ssh_key.values():
+                    addKey(key)
+        except Exception as e:
+            logger.error( "An error occurred adding SSH key: " + str(e))
+
+
+def cleanup_user():
+    kill_agent()
+
+
+def setup_user_dir(location: Path, user_id: int, group_id: int):
+    os.chown(location, user_id, group_id)
+    os.chmod(location, 0o700)
+    for root, dirs, files in os.walk(location):
+        for ndir in dirs:
+            os.chown(os.path.join(root, ndir), user_id, group_id)
+            os.chmod(os.path.join(root, ndir), 0o700)
+        for nfile in files:
+            os.chown(os.path.join(root, nfile), user_id, group_id)
+            os.chmod(os.path.join(root, nfile), 0o700)

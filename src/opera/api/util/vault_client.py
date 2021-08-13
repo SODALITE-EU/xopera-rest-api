@@ -15,7 +15,7 @@ logger = get_logger(__name__)
 
 
 def get_secret(secret_path, vault_role, access_token) -> dict:
-    logger.info("Obtaining secret from Vault")
+    logger.debug("Obtaining secret from Vault")
     if access_token is None:
         raise ValueError(
             "Vault secret retrieval error. Access token is not provided."

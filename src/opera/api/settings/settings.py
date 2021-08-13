@@ -49,6 +49,7 @@ class Settings:
     connection_protocols = ["http://", "https://"]
     vault_secret_prefix = "_get_secret"
     secure_workdir = True
+    ssh_key_path_template = "{username}/_ssh_key"
 
     @staticmethod
     def load_settings():
