@@ -7,7 +7,6 @@ import sys
 import tempfile
 import traceback
 import uuid
-import pwd
 from pathlib import Path
 from typing import Optional
 
@@ -34,8 +33,19 @@ from opera.api.util import xopera_util, file_util
 logger = get_logger(__name__)
 
 class ExtendedInvocation(Invocation):
-    def __init__(self, access_token=None, blueprint_id=None, version_id=None, deployment_id=None, user_id=None, deployment_label=None, state=None, operation=None, timestamp_submission=None, timestamp_start=None, timestamp_end=None, inputs=None, instance_state=None, outputs=None, exception=None, stdout=None, stderr=None, workers=None, clean_state=None):
-        super().__init__(blueprint_id=blueprint_id, version_id=version_id, deployment_id=deployment_id, user_id=user_id, deployment_label=deployment_label, state=state, operation=operation, timestamp_submission=timestamp_submission, timestamp_start=timestamp_start, timestamp_end=timestamp_end, inputs=inputs, instance_state=instance_state, outputs=outputs, exception=exception, stdout=stdout, stderr=stderr, workers=workers, clean_state=clean_state)
+    def __init__(self, access_token=None, blueprint_id=None,
+                 version_id=None, deployment_id=None, user_id=None,
+                 deployment_label=None, state=None, operation=None,
+                 timestamp_submission=None, timestamp_start=None,
+                 timestamp_end=None, inputs=None, instance_state=None,
+                 outputs=None, exception=None, stdout=None,
+                 stderr=None, workers=None, clean_state=None):
+        super().__init__(blueprint_id=blueprint_id, version_id=version_id, deployment_id=deployment_id,
+                         user_id=user_id, deployment_label=deployment_label, state=state, operation=operation,
+                         timestamp_submission=timestamp_submission, timestamp_start=timestamp_start,
+                         timestamp_end=timestamp_end, inputs=inputs, instance_state=instance_state,
+                         outputs=outputs, exception=exception, stdout=stdout, stderr=stderr,
+                         workers=workers, clean_state=clean_state)
         self.access_token = access_token
 
 

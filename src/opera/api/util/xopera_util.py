@@ -8,6 +8,7 @@ import atexit
 import tempfile
 from contextlib import contextmanager
 from pathlib import Path
+from cryptography.hazmat.primitives import serialization
 
 import connexion
 import yaml
@@ -163,39 +164,42 @@ def mask_workdirs(locations: [Path], stacktrace: str, placeholder="$BLUEPRINT_DI
 
 
 def setup_agent():
-    process = subprocess.run(["ssh-agent", "-s"],
+    process = subprocess.run(["/usr/bin/ssh-agent", "-s"],
                              stdout=subprocess.PIPE,
                              universal_newlines=True)
     OUTPUT_PATTERN = re.compile("SSH_AUTH_SOCK=(?P<socket>[^;]+).*SSH_AGENT_PID=(?P<pid>\d+)", re.MULTILINE | re.DOTALL )
     match = OUTPUT_PATTERN.search(process.stdout)
     if match is None:
         raise ValueError("Could not parse ssh-agent output. It was: {}".format(process.stdout))
-    agentData = match.groupdict()
-    logger.debug("ssh agent data: {}".format(agentData))
+    agent_data = match.groupdict()
+    logger.debug("ssh agent data: {}".format(agent_data))
     logger.debug("exporting ssh agent environment variables")
-    os.environ["SSH_AUTH_SOCK"] = agentData["socket"]
-    os.environ["SSH_AGENT_PID"] = agentData["pid"]
+    os.environ["SSH_AUTH_SOCK"] = agent_data["socket"]
+    os.environ["SSH_AGENT_PID"] = agent_data["pid"]
     atexit.register(kill_agent)
 
 
 def kill_agent():
     logger.debug("killing previously started ssh-agent")
-    subprocess.run(["ssh-agent", "-k"])
+    subprocess.run(["/usr/bin/ssh-agent", "-k"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     del os.environ["SSH_AUTH_SOCK"]
     del os.environ["SSH_AGENT_PID"]
 
 
-def addKey(key: str):
-    process = subprocess.run(['ssh-add', '-'], input=key, text=True)
+def add_key(key: str):
+    process = subprocess.run(['/usr/bin/ssh-add', '-'], input=key, text=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     if process.returncode != 0:
         logger.error( "Failed to add SSH key.")
 
 
 def setup_user(locations: list, username: str, access_token: str):
+    if not validate_username(username):
+        raise ValueError("Username {} contains illegal characters".format(username))
+
     try:
         user = pwd.getpwnam(username)
     except KeyError:
-        os.system("adduser --system " + username)
+        subprocess.run(["/usr/sbin/adduser", "--system", username], stdout=subprocess.DEVNULL)
         user = pwd.getpwnam(username)
     tmp = (locations[0] / "tmp")
     os.mkdir(tmp)
@@ -215,17 +219,25 @@ def setup_user(locations: list, username: str, access_token: str):
 
     if access_token:
         try:
-            ssh_key = get_secret(Settings.ssh_key_path_template.format(username=username), username, access_token)
-            if ssh_key:
-                setup_agent()
-                for key in ssh_key.values():
-                    addKey(key)
+            setup_user_keys(username, access_token)
+
         except Exception as e:
             logger.error( "An error occurred adding SSH key: " + str(e))
 
 
 def cleanup_user():
     kill_agent()
+
+
+def setup_user_keys(username: str, access_token: str):
+    ssh_key = get_secret(Settings.ssh_key_path_template.format(username=username), username, access_token)
+    if ssh_key:
+        setup_agent()
+        for key in ssh_key.values():
+            if vaildate_key(key):
+                add_key(key)
+            else:
+                logger.error( "Provided key value is not a valid SSH key.")
 
 
 def setup_user_dir(location: Path, user_id: int, group_id: int):
@@ -238,3 +250,25 @@ def setup_user_dir(location: Path, user_id: int, group_id: int):
         for nfile in files:
             os.chown(os.path.join(root, nfile), user_id, group_id)
             os.chmod(os.path.join(root, nfile), 0o700)
+
+
+def vaildate_key(key: str):
+    try:
+        serialization.load_ssh_private_key(str.encode(key), password=None)
+        return True
+    except ValueError:
+        pass
+
+    try:
+        serialization.load_pem_private_key(str.encode(key), password=None)
+        return True
+    except ValueError:
+        pass
+
+    return False
+
+
+def validate_username(username: str):
+    if re.match(r"^[a-zA-Z0-9_-]*$", username):
+        return True
+    return False
