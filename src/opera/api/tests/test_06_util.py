@@ -156,8 +156,8 @@ class TestXoperaUtil:
         location = tmp_path_factory.mktemp("temp")
         file = location / "hello.txt"
         file.write_text("hello")
-        os.chmod(location, 0o777)
-        os.chmod(file, 0o777)
+        os.chmod(location, 0o755)
+        os.chmod(file, 0o755)
         mock = mocker.MagicMock()
         mock.pw_uid = os.getuid()
         mock.pw_gid = os.getgid()
