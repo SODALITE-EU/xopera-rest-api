@@ -17,9 +17,9 @@ class Settings:
 
     # deployment config
     API_WORKDIR = ".opera-api"
-    STDFILE_DIR = None
-    INVOCATION_DIR = None
-    DEPLOYMENT_DIR = None
+    STDFILE_DIR = f"{API_WORKDIR}/in_progress"
+    INVOCATION_DIR = f"{API_WORKDIR}/invocations"
+    DEPLOYMENT_DIR = f"{API_WORKDIR}/deployment_dir"
 
     # maximum number of invocations at the same time
     invocation_service_workers = 10
@@ -33,11 +33,11 @@ class Settings:
 
     # OfflineStorage database (alternative to sql_database) config
     USE_OFFLINE_STORAGE = False
-    offline_storage = None
+    offline_storage = Path(API_WORKDIR) / 'storage'
 
     # gitCsarDB config
     git_config = None
-    workdir = None
+    workdir = Path(API_WORKDIR) / "git_db/mockConnector"
 
     # Authorization and Authentication config
     oidc_introspection_endpoint_uri = None
@@ -48,19 +48,9 @@ class Settings:
     apiKey = None
     connection_protocols = ["http://", "https://"]
     vault_secret_prefix = "_get_secret"
-    secure_workdir = True
-    ssh_key_path_template = "{username}/_ssh_key"
 
     @staticmethod
     def load_settings():
-        Settings.API_WORKDIR = os.getenv("XOPERA_API_WORKDIR", Settings.API_WORKDIR)
-        Settings.STDFILE_DIR = f"{Settings.API_WORKDIR}/in_progress"
-        Settings.INVOCATION_DIR = f"{Settings.API_WORKDIR}/invocations"
-        Settings.DEPLOYMENT_DIR = f"{Settings.API_WORKDIR}/deployment_dir"
-        Settings.offline_storage = Path(Settings.API_WORKDIR) / 'storage'
-        Settings.workdir = Path(Settings.API_WORKDIR) / "git_db/mockConnector"
-        Settings.secure_workdir = os.getenv("XOPERA_SECURE_WORKDIR", "True").lower() == "true"
-
         Settings.git_config = {
             'type': os.getenv('XOPERA_GIT_TYPE', 'mock'),
             'url': os.getenv("XOPERA_GIT_URL", ""),

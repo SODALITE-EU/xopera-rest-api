@@ -1545,9 +1545,6 @@ components:
           description: Id of deployment
           type: string
           format: uuid
-        user_id:
-          description: Id of user
-          type: string
         deployment_label:
           description: Human-readable deployment name
           type: string

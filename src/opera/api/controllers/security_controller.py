@@ -90,22 +90,6 @@ def check_roles(project_domain):
     return False
 
 
-def get_username():
-    info = connexion.context.get("token_info")
-    if info is None:
-        return None
-
-    # TODO decide what to do in case of apiKey
-    # use default username or None?
-    if "scope" in info and "apiKey" in info["scope"]:
-        return None
-
-    if "azp" not in info or "resource_access" not in info:
-        return False
-
-    return info["preferred_username"]
-
-
 def check_role_auth_blueprint(func):
     @functools.wraps(func)
     def wrapper_check_role_auth(*args, **kwargs):

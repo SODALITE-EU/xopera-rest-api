@@ -52,9 +52,7 @@ class TestDeployFresh:
             version_id=version_id,
             deployment_label=deployment_label,
             workers=workers,
-            inputs={'marker': 'blah'},
-            username=None,
-            access_token=None
+            inputs={'marker': 'blah'}
         )
 
     def test_no_inputs(self, client, mocker, generic_invocation):
@@ -71,9 +69,7 @@ class TestDeployFresh:
             version_id=None,
             deployment_label=None,
             workers=1,
-            inputs=None,
-            username=None,
-            access_token=None
+            inputs=None
         )
 
 
@@ -198,9 +194,7 @@ class TestDeployContinue:
             deployment_id=str(inv.deployment_id),
             workers=inv.workers,
             inputs={'marker': 'blah'},
-            clean_state=inv.clean_state,
-            username=None,
-            access_token=None
+            clean_state=inv.clean_state
         )
 
 
@@ -269,9 +263,7 @@ class TestUpdate:
             version_id=inv.version_id,
             deployment_id=str(inv.deployment_id),
             workers=inv.workers,
-            inputs={'marker': 'blah'},
-            username=None,
-            access_token=None
+            inputs={'marker': 'blah'}
         )
 
 
@@ -306,9 +298,7 @@ class TestUndeploy:
             version_id=inv.version_id,
             deployment_id=str(inv.deployment_id),
             workers=inv.workers,
-            inputs={'marker': 'blah'},
-            username=None,
-            access_token=None
+            inputs={'marker': 'blah'}
         )
 
 

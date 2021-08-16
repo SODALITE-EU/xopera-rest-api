@@ -1,6 +1,4 @@
 import datetime
-import os
-import stat
 from pathlib import Path
 
 from assertpy import assert_that
@@ -139,48 +137,6 @@ class TestXoperaUtil:
         assert len(result) == 2
         assert result["frontend-address"] == "14.15.11.12"
         assert result["user"] == "test_user"
-
-    def test_validate_key_valid(self, valid_ssh_key):
-        assert xopera_util.vaildate_key(valid_ssh_key) is True
-
-    def test_validate_key_invalid(self, invalid_ssh_key):
-        assert xopera_util.vaildate_key(invalid_ssh_key) is False
-
-    def test_validate_username_valid(self):
-        assert xopera_util.validate_username("test") is True
-
-    def test_validate_username_invalid(self):
-        assert xopera_util.validate_username("test=") is False
-
-    def test_setup_user(self, mocker, tmp_path_factory):
-        location = tmp_path_factory.mktemp("temp")
-        file = location / "hello.txt"
-        file.write_text("hello")
-        os.chmod(location, 0o755)
-        os.chmod(file, 0o755)
-        mock = mocker.MagicMock()
-        mock.pw_uid = os.getuid()
-        mock.pw_gid = os.getgid()
-        mock.pw_dir = str(location)
-        user_mock = mocker.patch("pwd.getpwnam", return_value=mock)
-
-        mocker.patch("os.setgid")
-        mocker.patch("os.setuid")
-        xopera_util.setup_user([Path(location)], "test", None)
-
-        permissions = oct(os.stat(file).st_mode & stat.S_IRWXU)
-
-        assert permissions == '0o700'
-        user_mock.assert_called_with("test")
-
-    def test_setup_user_keys(self, mocker, valid_ssh_key, invalid_ssh_key):
-        keys = {"key1": valid_ssh_key, "key2": invalid_ssh_key}
-        secret_mock = mocker.patch("opera.api.util.xopera_util.get_secret", return_value=keys)
-        add_mock = mocker.patch("opera.api.util.xopera_util.add_key", return_value=None)
-        xopera_util.setup_user_keys("test", "ACCESS_TOKEN")
-        secret_mock.assert_called_once_with('test/_ssh_key', 'test', 'ACCESS_TOKEN')
-        add_mock.assert_called_once_with(valid_ssh_key)
-
 
 
 class TestTimestampUtil:
