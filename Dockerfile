@@ -55,6 +55,7 @@ RUN ansible-galaxy install -r requirements.yml \
 RUN chmod 755 /root
 RUN chmod 755 $PYTHONPATH
 ENV XOPERA_API_WORKDIR=/app/.xopera-api
+ENV ANSIBLE_ROLES_PATH=/root/.ansible/roles:$ANSIBLE_ROLES_PATH
 
 # copy app code
 COPY --from=app-builder /build/src/ /app/
