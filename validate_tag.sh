@@ -47,7 +47,7 @@ SemVarProd() {
 }
 
 MajorRelease() {
-  if [[ "$VALUE" == "M18Release" ]] || [[ "$VALUE" == "M24Release" ]] || [[ "$VALUE" == "M36Release" ]]; then
+  if [[ "$VALUE" == "M18Release" ]] || [[ "$VALUE" == "M24Release" ]] || [[ "$VALUE" == "M30Release" ]] || [[ "$VALUE" == "M36Release" ]]; then
     echo true | tr -d '\n'
   else
     echo false | tr -d '\n'
