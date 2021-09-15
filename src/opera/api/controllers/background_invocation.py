@@ -122,17 +122,19 @@ class InvocationWorkerProcess:
         CSAR_db.get_revision(inv.blueprint_id, location, inv.version_id)
 
         with xopera_util.cwd(location):
-            if inv.user_id and Settings.secure_workdir:
-                xopera_util.setup_user([location], inv.user_id, inv.access_token)
-            opera_storage = Storage.create(".opera")
-            service_template = str(entry_definitions(location))
-            opera_deploy(service_template, inv.inputs, opera_storage,
-                         verbose_mode=False, num_workers=inv.workers, delete_existing_state=True)
+            try:
+                if inv.user_id and Settings.secure_workdir:
+                    xopera_util.setup_user([location], inv.user_id, inv.access_token)
+                opera_storage = Storage.create(".opera")
+                service_template = str(entry_definitions(location))
+                opera_deploy(service_template, inv.inputs, opera_storage,
+                            verbose_mode=False, num_workers=inv.workers, delete_existing_state=True)
 
-            outputs = opera_outputs(opera_storage)
-            if inv.user_id and Settings.secure_workdir:
-                xopera_util.cleanup_user()
-            return outputs
+                outputs = opera_outputs(opera_storage)
+                return outputs
+            finally:
+                if inv.user_id and Settings.secure_workdir:
+                    xopera_util.cleanup_user()
 
 
     @staticmethod
@@ -144,16 +146,18 @@ class InvocationWorkerProcess:
         InvocationService.get_dot_opera_from_db(inv.deployment_id, location)
 
         with xopera_util.cwd(location):
-            if inv.user_id and Settings.secure_workdir:
-                xopera_util.setup_user([location], inv.user_id, inv.access_token)
-            opera_storage = Storage.create(".opera")
-            service_template = str(entry_definitions(location))
-            opera_deploy(service_template, inv.inputs, opera_storage,
-                         verbose_mode=False, num_workers=inv.workers, delete_existing_state=inv.clean_state)
-            outputs = opera_outputs(opera_storage)
-            if inv.user_id and Settings.secure_workdir:
-                xopera_util.cleanup_user()
-            return outputs
+            try:
+                if inv.user_id and Settings.secure_workdir:
+                    xopera_util.setup_user([location], inv.user_id, inv.access_token)
+                opera_storage = Storage.create(".opera")
+                service_template = str(entry_definitions(location))
+                opera_deploy(service_template, inv.inputs, opera_storage,
+                            verbose_mode=False, num_workers=inv.workers, delete_existing_state=inv.clean_state)
+                outputs = opera_outputs(opera_storage)
+                return outputs
+            finally:
+                if inv.user_id and Settings.secure_workdir:
+                    xopera_util.cleanup_user()
 
     @staticmethod
     def _undeploy(location: Path, inv: ExtendedInvocation):
@@ -164,16 +168,18 @@ class InvocationWorkerProcess:
         InvocationService.get_dot_opera_from_db(inv.deployment_id, location)
 
         with xopera_util.cwd(location):
-            if inv.user_id and Settings.secure_workdir:
-                xopera_util.setup_user([location], inv.user_id, inv.access_token)
-            opera_storage = Storage.create(".opera")
-            if inv.inputs:
-                opera_storage.write_json(inv.inputs, "inputs")
-            opera_undeploy(opera_storage, verbose_mode=False, num_workers=inv.workers)
-            outputs = opera_outputs(opera_storage)
-            if inv.user_id and Settings.secure_workdir:
-                xopera_util.cleanup_user()
-            return outputs
+            try:
+                if inv.user_id and Settings.secure_workdir:
+                    xopera_util.setup_user([location], inv.user_id, inv.access_token)
+                opera_storage = Storage.create(".opera")
+                if inv.inputs:
+                    opera_storage.write_json(inv.inputs, "inputs")
+                opera_undeploy(opera_storage, verbose_mode=False, num_workers=inv.workers)
+                outputs = opera_outputs(opera_storage)
+                return outputs
+            finally:
+                if inv.user_id and Settings.secure_workdir:
+                    xopera_util.cleanup_user()
 
     @staticmethod
     def _update(location: Path, inv: ExtendedInvocation):
@@ -184,24 +190,26 @@ class InvocationWorkerProcess:
         assert location_new == str(location)
 
         with xopera_util.cwd(location_new):
-            if inv.user_id and Settings.secure_workdir:
-                xopera_util.setup_user([location_old, location_new], inv.user_id, inv.access_token)
-            instance_diff = opera_diff_instances(storage_old, location_old,
-                                                 storage_new, location_new,
-                                                 opera_TemplateComparer(), opera_InstanceComparer(),
-                                                 verbose_mode=False)
+            try:
+                if inv.user_id and Settings.secure_workdir:
+                    xopera_util.setup_user([location_old, location_new], inv.user_id, inv.access_token)
+                instance_diff = opera_diff_instances(storage_old, location_old,
+                                                    storage_new, location_new,
+                                                    opera_TemplateComparer(), opera_InstanceComparer(),
+                                                    verbose_mode=False)
 
-            opera_update(storage_old, location_old,
-                         storage_new, location_new,
-                         opera_InstanceComparer(), instance_diff,
-                         verbose_mode=False, num_workers=inv.workers, overwrite=False)
-            outputs = opera_outputs(storage_new)
-            if inv.user_id and Settings.secure_workdir:
-                xopera_util.cleanup_user()
+                opera_update(storage_old, location_old,
+                            storage_new, location_new,
+                            opera_InstanceComparer(), instance_diff,
+                            verbose_mode=False, num_workers=inv.workers, overwrite=False)
+                outputs = opera_outputs(storage_new)
+                return outputs
+            finally:
+                if inv.user_id and Settings.secure_workdir:
+                    xopera_util.cleanup_user()
+                shutil.rmtree(location_old)
+                # location_new is needed in __run_internal and deleted afterwards
 
-        shutil.rmtree(location_old)
-        # location_new is needed in __run_internal and deleted afterwards
-        return outputs
 
     @staticmethod
     def prepare_two_workdirs(deployment_id: str, blueprint_id: str, version_id: str,

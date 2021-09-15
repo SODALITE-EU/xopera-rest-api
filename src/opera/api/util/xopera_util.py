@@ -199,8 +199,8 @@ def setup_user(locations: list, username: str, access_token: str):
     try:
         user = pwd.getpwnam(username)
     except KeyError:
-        subprocess.run(["/usr/sbin/adduser", "--system", username], stdout=subprocess.DEVNULL)
-        user = pwd.getpwnam(username)
+        user = create_user(username)
+
     tmp = (locations[0] / "tmp")
     os.mkdir(tmp)
     for location in locations:
@@ -222,7 +222,22 @@ def setup_user(locations: list, username: str, access_token: str):
             setup_user_keys(username, access_token)
 
         except Exception as e:
-            logger.error( "An error occurred adding SSH key: " + str(e))
+            logger.warn( "An error occurred adding SSH key: " + str(e))
+
+
+def create_user(username: str):
+    subprocess.run(["/usr/sbin/adduser", "--system", username], stdout=subprocess.DEVNULL)
+    user = pwd.getpwnam(username)
+    user_ssh_path = Path(user.pw_dir + "/.ssh")
+    shutil.copytree(Settings.ssh_keys_location, user_ssh_path, dirs_exist_ok=True)
+    if Settings.key_pair:
+        config = "ConnectTimeout 5\n" \
+                f"IdentityFile {Path(user_ssh_path / Settings.key_pair)}\n" \
+                "UserKnownHostsFile=/dev/null\n" \
+                "StrictHostKeyChecking=no"
+        Path(user_ssh_path / Path('config')).write_text(config)
+    setup_user_dir(user_ssh_path, user.pw_uid, user.pw_gid)
+    return user
 
 
 def cleanup_user():
@@ -237,7 +252,7 @@ def setup_user_keys(username: str, access_token: str):
             if vaildate_key(key):
                 add_key(key)
             else:
-                logger.error( "Provided key value is not a valid SSH key.")
+                logger.warn("Provided key value is not a valid SSH key.")
 
 
 def setup_user_dir(location: Path, user_id: int, group_id: int):
