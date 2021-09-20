@@ -175,8 +175,8 @@ class InvocationWorkerProcess:
                 if inv.inputs:
                     opera_storage.write_json(inv.inputs, "inputs")
                 opera_undeploy(opera_storage, verbose_mode=False, num_workers=inv.workers)
-                outputs = opera_outputs(opera_storage)
-                return outputs
+                # Outputs in undeployment are not returned
+                return None
             finally:
                 if inv.user_id and Settings.secure_workdir:
                     xopera_util.cleanup_user()
