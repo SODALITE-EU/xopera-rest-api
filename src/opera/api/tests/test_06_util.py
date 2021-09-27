@@ -174,13 +174,26 @@ class TestXoperaUtil:
         user_mock.assert_called_with("test")
 
     def test_setup_user_keys(self, mocker, valid_ssh_key, invalid_ssh_key):
-        keys = {"key1": valid_ssh_key, "key2": invalid_ssh_key}
+        keys = {Settings.ssh_key_secret_name: valid_ssh_key, "other": invalid_ssh_key}
+        list_secret_mock = mocker.patch("opera.api.util.xopera_util.list_secrets", return_value=["secret"])
         secret_mock = mocker.patch("opera.api.util.xopera_util.get_secret", return_value=keys)
         add_mock = mocker.patch("opera.api.util.xopera_util.add_key", return_value=None)
         xopera_util.setup_user_keys("test", "ACCESS_TOKEN")
-        secret_mock.assert_called_once_with('test/_ssh_key', 'test', 'ACCESS_TOKEN')
+
+        list_secret_mock.assert_called_once_with(Settings.ssh_key_path_template.format(username='test'), 'test', 'ACCESS_TOKEN')
+        secret_mock.assert_called_once_with(Settings.ssh_key_path_template.format(username='test') + '/secret', 'test', 'ACCESS_TOKEN')
         add_mock.assert_called_once_with(valid_ssh_key)
 
+    def test_setup_user_keys_invalid(self, mocker, valid_ssh_key, invalid_ssh_key):
+        keys = {Settings.ssh_key_secret_name: invalid_ssh_key}
+        list_secret_mock = mocker.patch("opera.api.util.xopera_util.list_secrets", return_value=["secret"])
+        secret_mock = mocker.patch("opera.api.util.xopera_util.get_secret", return_value=keys)
+        add_mock = mocker.patch("opera.api.util.xopera_util.add_key", return_value=None)
+        xopera_util.setup_user_keys("test", "ACCESS_TOKEN")
+
+        list_secret_mock.assert_called_once_with(Settings.ssh_key_path_template.format(username='test'), 'test', 'ACCESS_TOKEN')
+        secret_mock.assert_called_once_with(Settings.ssh_key_path_template.format(username='test') + '/secret', 'test', 'ACCESS_TOKEN')
+        add_mock.assert_not_called()
 
 
 class TestTimestampUtil:

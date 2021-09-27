@@ -14,8 +14,7 @@ for protocol in Settings.connection_protocols:
 logger = get_logger(__name__)
 
 
-def get_secret(secret_path, vault_role, access_token) -> dict:
-    logger.debug("Obtaining secret from Vault")
+def get_vault_token(vault_role, access_token):
     if access_token is None:
         raise ValueError(
             "Vault secret retrieval error. Access token is not provided."
@@ -27,7 +26,12 @@ def get_secret(secret_path, vault_role, access_token) -> dict:
         raise ConnectionError(
             "Vault auth error. {}".format(token_request.text)
         )
-    vault_token = token_request.json()['auth']['client_token']
+    return token_request.json()['auth']['client_token']
+
+
+def get_secret(secret_path, vault_role, access_token) -> dict:
+    logger.debug("Obtaining secret from Vault")
+    vault_token = get_vault_token(vault_role, access_token)
     headers = {'X-Vault-Token': vault_token}
     secret_vault_uri = Settings.vault_secret_storage_uri
     secret_request = session.get(
@@ -38,3 +42,20 @@ def get_secret(secret_path, vault_role, access_token) -> dict:
             "Vault secret retrieval error. {}".format(secret_request.text)
         )
     return secret_request.json()["data"]
+
+
+def list_secrets(secret_path, vault_role, access_token) -> list:
+    logger.debug("Listing users secrets in Vault")
+    vault_token = get_vault_token(vault_role, access_token)
+    headers = {'X-Vault-Token': vault_token}
+    secret_vault_uri = Settings.vault_secret_storage_uri
+    secret_request = session.get(
+        urllib.parse.urljoin(secret_vault_uri, secret_path + "?list=true"), headers=headers
+    )
+    if not secret_request.ok:
+        raise ConnectionError(
+            "Vault secret retrieval error. {}".format(secret_request.text)
+        )
+    if secret_request.json()["data"] and "keys" in secret_request.json()["data"]:
+        return secret_request.json()["data"]["keys"]
+    return []

@@ -15,7 +15,7 @@ import yaml
 
 from opera.api.log import get_logger
 from opera.api.settings import Settings
-from opera.api.util.vault_client import get_secret
+from opera.api.util.vault_client import get_secret, list_secrets
 
 logger = get_logger(__name__)
 
@@ -182,8 +182,11 @@ def setup_agent():
 def kill_agent():
     logger.debug("killing previously started ssh-agent")
     subprocess.run(["/usr/bin/ssh-agent", "-k"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    del os.environ["SSH_AUTH_SOCK"]
-    del os.environ["SSH_AGENT_PID"]
+    try:
+        del os.environ["SSH_AUTH_SOCK"]
+        del os.environ["SSH_AGENT_PID"]
+    except KeyError:
+        pass
 
 
 def add_key(key: str):
@@ -245,14 +248,18 @@ def cleanup_user():
 
 
 def setup_user_keys(username: str, access_token: str):
-    ssh_key = get_secret(Settings.ssh_key_path_template.format(username=username), username, access_token)
-    if ssh_key:
+    secrets = list_secrets(Settings.ssh_key_path_template.format(username=username), username, access_token)
+    if secrets:
         setup_agent()
-        for key in ssh_key.values():
-            if vaildate_key(key):
-                add_key(key)
-            else:
-                logger.warn("Provided key value is not a valid SSH key.")
+        for secret in secrets:
+            ssh_key = get_secret(Settings.ssh_key_path_template.format(username=username) + f"/{secret}", username, access_token)
+            key = ssh_key.get(Settings.ssh_key_secret_name)
+            if key:
+                if vaildate_key(key):
+                    add_key(key)
+                else:
+                    logger.warn("Provided key value is not a valid SSH key.")
+
 
 
 def setup_user_dir(location: Path, user_id: int, group_id: int):
