@@ -386,20 +386,24 @@ class InvocationService:
 
     @classmethod
     def load_invocation(cls, deployment_id: str) -> Optional[Invocation]:
+        # TODO check if it can introduce errors, then catch error
+        inv = SQL_database.get_deployment_status(deployment_id)
+        if not inv:
+            return None
         try:
-            inv = SQL_database.get_deployment_status(deployment_id)
             if inv.state == InvocationState.IN_PROGRESS:
                 inv.stdout = InvocationWorkerProcess.read_file(cls.stdout_file(inv.deployment_id))
                 inv.stderr = InvocationWorkerProcess.read_file(cls.stderr_file(inv.deployment_id))
                 location = InvocationService.deployment_location(inv.deployment_id, inv.blueprint_id)
                 inv.instance_state = InvocationService.get_instance_state(location)
-            return inv
 
         except BaseException as e:
-            if isinstance(e, FileNotFoundError) or isinstance(e, AttributeError):
-                return None
+            if not isinstance(e, FileNotFoundError) and not isinstance(e, AttributeError):
+                logger.error(str(e))
             else:
-                raise e
+                logger.warning(str(e))
+
+        return inv
 
     @classmethod
     def save_invocation(cls, invocation_id: uuid, inv: Invocation):

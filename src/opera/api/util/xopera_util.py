@@ -225,7 +225,7 @@ def setup_user(locations: list, username: str, access_token: str):
             setup_user_keys(username, access_token)
 
         except Exception as e:
-            logger.warn( "An error occurred adding SSH key: " + str(e))
+            logger.warning("An error occurred adding SSH key: " + str(e))
 
 
 def create_user(username: str):
@@ -258,7 +258,7 @@ def setup_user_keys(username: str, access_token: str):
                 if vaildate_key(key):
                     add_key(key)
                 else:
-                    logger.warn("Provided key value is not a valid SSH key.")
+                    logger.warning("Provided key value is not a valid SSH key.")
 
 
 
