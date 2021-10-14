@@ -37,6 +37,8 @@ def get_status(deployment_id):
     :rtype: Invocation
     """
     inv = invocation_service.load_invocation(deployment_id)
+    if not inv:
+        return "Job not found", 404
     return inv, 200
 
 
