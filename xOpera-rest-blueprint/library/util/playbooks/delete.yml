@@ -2,5 +2,5 @@
   tasks:
     - name: Delete file
       file:
-        state: "{{ absent }}"
+        state: "absent"
         path: "{{ dest }}"
