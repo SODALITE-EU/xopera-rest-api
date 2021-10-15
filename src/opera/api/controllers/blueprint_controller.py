@@ -60,20 +60,22 @@ def post_new_blueprint(revision_msg=None, blueprint_name=None, aadm_id=None, use
     return blueprint_meta, 201
 
 
-def get_blueprints_user_domain(username=None, project_domain=None):
+def get_blueprints_user_domain(username=None, project_domain=None, active=True):
     """Get blueprints for user or project domain
 
     :param username: username
     :type username: str
     :param project_domain: Project domain
     :type project_domain: str
+    :param active: Obtain only list of blueprints with deployments.
+    :type active: bool
 
     :rtype: List[Blueprint]
     """
     if not username and not project_domain:
         return "At least on of (user, project_domain) must be present", 400
 
-    data = SQL_database.get_blueprints_by_user_or_project(username=username, project_domain=project_domain)
+    data = SQL_database.get_blueprints_by_user_or_project(username=username, project_domain=project_domain, active=active)
 
     if not data:
         return "Blueprints not found", 404

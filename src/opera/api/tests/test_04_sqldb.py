@@ -182,10 +182,16 @@ class GetDeploymentsCursor(NoneCursor):
 class GetBlueprintCursor(NoneCursor):
     @classmethod
     def fetchall(cls):
-        blueprints = [{key: (timestamp_util.str_to_datetime(value) if key == 'timestamp' else value)
-                       for key, value in blueprint.items()} for blueprint in TestGetBlueprint.blueprints]
+        def items_to_lines(items):
+            items_marshalled = [{key: (timestamp_util.str_to_datetime(value) if key == 'timestamp' else value)
+                                for key, value in item.items()} for item in items]
 
-        return [list(x.values()) for x in blueprints]
+            return [list(x.values()) for x in items_marshalled]
+
+        if "select distinct on (deployment_id)" in cls.command:
+            return items_to_lines(TestGetBlueprint.deployments)
+        else:
+            return items_to_lines(TestGetBlueprint.blueprints)
 
 
 class GitTransactionDataCursor(NoneCursor):
@@ -571,7 +577,7 @@ class TestBlueprintMeta:
         {
             "deployment_id": "71ceef1c-f169-4204-b180-e95948329108",
             "operation": OperationType.DEPLOY_FRESH,
-            "state":  InvocationState.SUCCESS,
+            "state": InvocationState.SUCCESS,
             "timestamp": timestamp_util.datetime_now_to_string(),
             'last_inputs': None,
             'deployment_label': 'label'
@@ -579,7 +585,7 @@ class TestBlueprintMeta:
         {
             "deployment_id": "30e143c9-e614-41bc-9b22-47c588f394e3",
             "operation": OperationType.UNDEPLOY,
-            "state":  InvocationState.SUCCESS,
+            "state": InvocationState.SUCCESS,
             "timestamp": timestamp_util.datetime_to_str(datetime.datetime.fromtimestamp(1)),
             'last_inputs': None,
             'deployment_label': 'label'
@@ -598,14 +604,56 @@ class TestBlueprintMeta:
 
 
 class TestGetBlueprint:
-    blueprints = [{
-        "blueprint_id": '91df79b1-d78b-4cac-ae24-4edaf49c5030',
-        "blueprint_name": 'TestBlueprint',
-        "aadm_id": 'aadm_id',
-        "username": 'mihaTrajbaric',
-        "project_domain": 'SODALITE',
-        "timestamp": timestamp_util.datetime_now_to_string()
-    }]
+    blueprints = [
+        {
+            "blueprint_id": '91df79b1-d78b-4cac-ae24-4edaf49c5030',
+            "blueprint_name": 'TestBlueprint',
+            "aadm_id": 'aadm_id',
+            "username": 'mihaTrajbaric',
+            "project_domain": 'SODALITE',
+            "timestamp": timestamp_util.datetime_now_to_string()
+        },
+        {
+            "blueprint_id": 'b02e465f-eb6e-42a0-af1c-13bc63c3eed5',
+            "blueprint_name": 'BlueprintNoDeployment',
+            "aadm_id": 'aadm_id',
+            "username": 'mihaTrajbaric',
+            "project_domain": 'SODALITE',
+            "timestamp": timestamp_util.datetime_now_to_string()
+        },
+        {
+            "blueprint_id": 'b02e465f-eb6e-42a0-af1c-13bc63c3eed6',
+            "blueprint_name": 'BlueprintInactiveDeployment',
+            "aadm_id": 'aadm_id',
+            "username": 'mihaTrajbaric',
+            "project_domain": 'SODALITE',
+            "timestamp": timestamp_util.datetime_now_to_string()
+        }
+    ]
+
+    deployments = [
+        {
+            'deployment_id': '3fa85f64-5717-4562-b3fc-2c963f66afa6',
+            'blueprint_id': '91df79b1-d78b-4cac-ae24-4edaf49c5030',
+            'state': InvocationState.SUCCESS,
+            'operation': OperationType.DEPLOY_FRESH,
+            'timestamp': '2021-10-15T10:33:50.318695+00:00'
+        },
+        {
+            'deployment_id': '3fa85f64-5717-4562-b3fc-2c963f66afa7',
+            'blueprint_id': 'b02e465f-eb6e-42a0-af1c-13bc63c3eed6',
+            'state': InvocationState.SUCCESS,
+            'operation': OperationType.UNDEPLOY,
+            'timestamp': '2021-10-15T10:34:51.318695+00:00'
+        },
+        {
+            'deployment_id': '3fa85f64-5717-4562-b3fc-2c963f66afa7',
+            'blueprint_id': 'b02e465f-eb6e-42a0-af1c-13bc63c3eed6',
+            'state': InvocationState.SUCCESS,
+            'operation': OperationType.UNDEPLOY,
+            'timestamp': '2021-10-15T10:34:55.318695+00:00'
+        }
+    ]
 
     def test_user(self, mocker, monkeypatch):
         # test set up
@@ -614,7 +662,7 @@ class TestGetBlueprint:
         monkeypatch.setattr(db.connection, 'cursor', GetBlueprintCursor)
 
         # testing
-        assert db.get_blueprints_by_user_or_project(username='username') == self.blueprints
+        assert db.get_blueprints_by_user_or_project(username='username', active=False) == self.blueprints
 
     def test_project_domain(self, mocker, monkeypatch):
         # test set up
@@ -623,7 +671,7 @@ class TestGetBlueprint:
         monkeypatch.setattr(db.connection, 'cursor', GetBlueprintCursor)
 
         # testing
-        assert db.get_blueprints_by_user_or_project(project_domain='project_domain') == self.blueprints
+        assert db.get_blueprints_by_user_or_project(project_domain='project_domain', active=False) == self.blueprints
 
     def test_user_and_project_domain(self, mocker, monkeypatch):
         # test set up
@@ -633,7 +681,16 @@ class TestGetBlueprint:
 
         # testing
         assert db.get_blueprints_by_user_or_project(username='username',
-                                                    project_domain='project_domain') == self.blueprints
+                                                    project_domain='project_domain', active=False) == self.blueprints
+
+    def test_active(self, mocker, monkeypatch):
+        # test set up
+        mocker.patch('psycopg2.connect', new=FakePostgres)
+        db = PostgreSQL({})
+        monkeypatch.setattr(db.connection, 'cursor', GetBlueprintCursor)
+
+        # testing
+        assert db.get_blueprints_by_user_or_project(username='username', active=True) == [self.blueprints[0]]
 
 
 class TestGitTransactionData:
