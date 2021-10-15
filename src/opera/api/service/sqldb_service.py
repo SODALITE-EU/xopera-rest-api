@@ -163,7 +163,7 @@ class Database:
         """
         pass
 
-    def get_blueprints_by_user_or_project(self, username: str = None, project_domain: str = None):
+    def get_blueprints_by_user_or_project(self, username: str = None, project_domain: str = None, active: bool = True):
         """
         Returns [blueprint_id] for every blueprint, that belongs to user or project (or both)
         """
@@ -752,7 +752,7 @@ class PostgreSQL(Database):
 
             return deployment_list
 
-    def get_blueprints_by_user_or_project(self, username: str = None, project_domain: str = None):
+    def get_blueprints_by_user_or_project(self, username: str = None, project_domain: str = None, active: bool = True):
         """
         Returns [blueprint_id] for every blueprint, that belongs to user or project (or both)
         """
@@ -791,6 +791,29 @@ class PostgreSQL(Database):
                     "timestamp": timestamp_util.datetime_to_str(line[5])
                 } for line in lines
             ]
+
+            if active:
+                # remove blueprints with no active deployment
+
+                # get all deployments and their last state and operations
+                stmt2 = sql.SQL("""select distinct on (deployment_id) deployment_id, blueprint_id, state, operation, 
+                                                timestamp from {invocation_table}
+                                                where deployment_id in (
+                                                    select deployment_id
+                                                    from {invocation_table}
+                                                )
+                                       order by deployment_id, timestamp desc;""").format(
+                    invocation_table=sql.Identifier(Settings.invocation_table)
+                )
+                dbcur.execute(stmt2)
+                lines2 = dbcur.fetchall()
+
+                # get active deployments
+                blueprint_ids = [line[1] for line in lines2 if not (line[2] == InvocationState.SUCCESS and
+                                                                    line[3] == OperationType.UNDEPLOY)]
+
+                blueprint_list = [x for x in blueprint_list if (x['blueprint_id'] in blueprint_ids)]
+
             return blueprint_list
 
     def delete_deployment(self, deployment_id: uuid):
