@@ -32,6 +32,9 @@ from opera.api.util import xopera_util, file_util
 
 logger = get_logger(__name__)
 
+class MissingDeploymentDataError(BaseException):
+    pass
+
 class ExtendedInvocation(Invocation):
     def __init__(self, access_token=None, blueprint_id=None,
                  version_id=None, deployment_id=None, user_id=None,
@@ -64,10 +67,14 @@ class InvocationWorkerProcess:
             inv.state = InvocationState.IN_PROGRESS
             InvocationService.save_invocation(invocation_id, inv)
 
-            # stdout&err
+            # for catching stdout&err
             file_stdout = open(InvocationService.stdout_file(inv.deployment_id), "w")
             file_stderr = open(InvocationService.stderr_file(inv.deployment_id), "w")
 
+            # Copy file descriptors of stdout&&err for later restoration
+            stdout_copy = os.dup(1)
+            stderr_copy = os.dup(2)
+            # Reroute stdout&err to file_stdout and file_stderr,
             os.dup2(file_stdout.fileno(), 1)
             os.dup2(file_stderr.fileno(), 2)
 
@@ -108,10 +115,19 @@ class InvocationWorkerProcess:
                 file_stdout.close()
                 file_stderr.close()
 
+                # Restore stdout&&err
+                os.dup2(stdout_copy, 1)
+                os.dup2(stderr_copy, 2)
+
                 inv.timestamp_end = datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
 
-                InvocationService.save_dot_opera_to_db(inv, location)
-                InvocationService.save_invocation(invocation_id, inv)
+                if InvocationService.deployment_exists(inv):
+                    InvocationService.save_dot_opera_to_db(inv, location)
+                    InvocationService.save_invocation(invocation_id, inv)
+                else:
+                    logger.error(f"Deployment with deployment_id={inv.deployment_id} does not exist any more, it could "
+                                 f"have been deleted with force, therefore I cannot save following invocation to DB:"
+                                 f"\n" + inv.to_str())
 
                 # clean
                 shutil.rmtree(location)
@@ -128,14 +144,13 @@ class InvocationWorkerProcess:
                 opera_storage = Storage.create(".opera")
                 service_template = str(entry_definitions(location))
                 opera_deploy(service_template, inv.inputs, opera_storage,
-                            verbose_mode=False, num_workers=inv.workers, delete_existing_state=True)
+                             verbose_mode=False, num_workers=inv.workers, delete_existing_state=True)
 
                 outputs = opera_outputs(opera_storage)
                 return outputs
             finally:
                 if inv.user_id and Settings.secure_workdir:
                     xopera_util.cleanup_user()
-
 
     @staticmethod
     def _deploy_continue(location: Path, inv: ExtendedInvocation):
@@ -152,7 +167,7 @@ class InvocationWorkerProcess:
                 opera_storage = Storage.create(".opera")
                 service_template = str(entry_definitions(location))
                 opera_deploy(service_template, inv.inputs, opera_storage,
-                            verbose_mode=False, num_workers=inv.workers, delete_existing_state=inv.clean_state)
+                             verbose_mode=False, num_workers=inv.workers, delete_existing_state=inv.clean_state)
                 outputs = opera_outputs(opera_storage)
                 return outputs
             finally:
@@ -165,7 +180,8 @@ class InvocationWorkerProcess:
         # get blueprint
         CSAR_db.get_revision(inv.blueprint_id, location, inv.version_id)
         # get session data (.opera)
-        InvocationService.get_dot_opera_from_db(inv.deployment_id, location)
+        if not InvocationService.get_dot_opera_from_db(inv.deployment_id, location):
+            raise MissingDeploymentDataError('Could not get .opera data from previous job, aborting...')
 
         with xopera_util.cwd(location):
             try:
@@ -194,14 +210,14 @@ class InvocationWorkerProcess:
                 if inv.user_id and Settings.secure_workdir:
                     xopera_util.setup_user([location_old, location_new], inv.user_id, inv.access_token)
                 instance_diff = opera_diff_instances(storage_old, location_old,
-                                                    storage_new, location_new,
-                                                    opera_TemplateComparer(), opera_InstanceComparer(),
-                                                    verbose_mode=False)
+                                                     storage_new, location_new,
+                                                     opera_TemplateComparer(), opera_InstanceComparer(),
+                                                     verbose_mode=False)
 
                 opera_update(storage_old, location_old,
-                            storage_new, location_new,
-                            opera_InstanceComparer(), instance_diff,
-                            verbose_mode=False, num_workers=inv.workers, overwrite=False)
+                             storage_new, location_new,
+                             opera_InstanceComparer(), instance_diff,
+                             verbose_mode=False, num_workers=inv.workers, overwrite=False)
                 outputs = opera_outputs(storage_new)
                 return outputs
             finally:
@@ -209,7 +225,6 @@ class InvocationWorkerProcess:
                     xopera_util.cleanup_user()
                 shutil.rmtree(location_old)
                 # location_new is needed in __run_internal and deleted afterwards
-
 
     @staticmethod
     def prepare_two_workdirs(deployment_id: str, blueprint_id: str, version_id: str,
@@ -406,6 +421,11 @@ class InvocationService:
         return inv
 
     @classmethod
+    def deployment_exists(cls, inv: Invocation) -> bool:
+        """Check if records about deployment exist in DB"""
+        return SQL_database.get_deployment_status(inv.deployment_id) is not None
+
+    @classmethod
     def save_invocation(cls, invocation_id: uuid, inv: Invocation):
         SQL_database.update_deployment_log(invocation_id, inv)
 
@@ -415,11 +435,14 @@ class InvocationService:
         SQL_database.save_opera_session_data(inv.deployment_id, data)
 
     @classmethod
-    def get_dot_opera_from_db(cls, deployment_id: uuid, location: Path) -> None:
+    def get_dot_opera_from_db(cls, deployment_id: uuid, location: Path) -> bool:
         dot_opera_data = SQL_database.get_opera_session_data(deployment_id)
         if not dot_opera_data:
             logger.error(f"sqldb_service.get_opera_session_data failed: deployment_id: {deployment_id}")
-        file_util.json_to_dir(dot_opera_data['tree'], (location / '.opera'))
+            return False
+        else:
+            file_util.json_to_dir(dot_opera_data['tree'], (location / '.opera'))
+            return True
 
     @classmethod
     def prepare_location(cls, deployment_id: uuid, location: Path):

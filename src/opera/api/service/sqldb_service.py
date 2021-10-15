@@ -234,18 +234,19 @@ class PostgreSQL(Database):
         self.connection.close()
 
     def execute(self, command, replacements=None):
-        dbcur = self.connection.cursor()
-        try:
-            if replacements is not None:
-                dbcur.execute(command, replacements)
-            else:
-                dbcur.execute(command)
-        except psycopg2.Error as e:
-            logger.debug(str(e))
-            dbcur.execute("ROLLBACK")
-            return False
-        dbcur.close()
-        self.connection.commit()
+        with self.connection.cursor() as dbcur:
+            try:
+                if replacements is not None:
+                    dbcur.execute(command, replacements)
+                else:
+                    dbcur.execute(command)
+                self.connection.commit()
+            except psycopg2.Error as e:
+                logger.debug(str(e))
+                dbcur.execute("ROLLBACK")
+                self.connection.commit()
+                return False
+
         return True
 
     def version_exists(self, blueprint_id: uuid, version_id=None) -> bool:
