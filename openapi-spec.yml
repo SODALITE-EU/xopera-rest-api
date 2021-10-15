@@ -139,6 +139,13 @@ paths:
           required: false
           schema:
             type: string
+        - name: active
+          in: query
+          description: Obtain only list of blueprints with deployments.
+          required: false
+          schema:
+            type: boolean
+            default: true
       responses:
         200:
           description: List of blueprints returned
