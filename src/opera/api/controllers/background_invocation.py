@@ -77,7 +77,8 @@ class InvocationWorkerProcess:
                 elif inv.operation == OperationType.DEPLOY_CONTINUE:
                     outputs = InvocationWorkerProcess._deploy_continue(location, inv)
                 elif inv.operation == OperationType.UNDEPLOY:
-                    outputs = InvocationWorkerProcess._undeploy(location, inv)
+                    InvocationWorkerProcess._undeploy(location, inv)
+                    outputs = None
                 elif inv.operation == OperationType.UPDATE:
                     outputs = InvocationWorkerProcess._update(location, inv)
                 else:
@@ -210,7 +211,6 @@ class InvocationWorkerProcess:
                 shutil.rmtree(location_old)
                 # location_new is needed in __run_internal and deleted afterwards
 
-
     @staticmethod
     def prepare_two_workdirs(deployment_id: str, blueprint_id: str, version_id: str,
                              inputs: dict, location: Path = None):
@@ -230,30 +230,6 @@ class InvocationWorkerProcess:
         storage_new = Storage.create(str(location_new / '.opera'))
         storage_new.write_json(inputs or {}, "inputs")
         storage_new.write(str(entry_definitions(location_new)), "root_file")
-
-        ##############################################################
-        # TODO remove when fixed
-        #  Due to bug in xOpera, copy old TOSCA to new workdir with random name
-        #  we also have to copy all the other files in TOSCA blueprint to new workdir
-        new_filename = str(uuid.uuid4())
-        shutil.copyfile(str(location_old / entry_definitions(location_old)), str(location_new / new_filename))
-        storage_old.write(str(new_filename), "root_file")
-
-        def copytree(src, dst, symlinks=False, ignore=None):
-            for item in os.listdir(src):
-                s = os.path.join(src, item)
-                d = os.path.join(dst, item)
-                if os.path.isdir(s) and Path(s).name != '.opera':
-                    if not os.path.exists(d):
-                        os.mkdir(d)
-                    copytree(s, d, symlinks, ignore)
-                else:
-                    if not os.path.exists(d):
-                        shutil.copy2(s, d)
-
-        copytree(location_old, location_new)
-
-        ############################################################################
 
         return storage_old, str(location_old), storage_new, str(location_new)
 
@@ -278,7 +254,7 @@ class InvocationWorkerProcess:
             CSAR_db.get_revision(blueprint_id, location, version_tag)
             try:
                 with xopera_util.cwd(location):
-                    service_template = str(entry_definitions(location))
+                    service_template = Path(location) / entry_definitions(location)
                     opera_validate(service_template, inputs)
                 return None
             except Exception as e:
@@ -294,7 +270,7 @@ class InvocationWorkerProcess:
                     csar_to_blueprint(csar=csar_path, dst=location)
 
                 with xopera_util.cwd(location):
-                    service_template = str(entry_definitions(location))
+                    service_template = Path(location) / entry_definitions(location)
                     opera_validate(service_template, inputs)
                 return None
         except Exception as e:
