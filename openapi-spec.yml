@@ -1280,6 +1280,12 @@ paths:
         schema:
           type: integer
           default: 1
+      - name: force
+        in: query
+        description: Undeploy forcefully (for stuck deployments).
+        schema:
+          type: boolean
+          default: False
       requestBody:
         content:
           multipart/form-data:
@@ -1335,6 +1341,12 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: force
+          in: query
+          description: Force-remove deployment data
+          schema:
+            type: boolean
+            default: False
       responses:
         200:
           description: Deployment deleted.

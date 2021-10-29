@@ -134,13 +134,15 @@ def post_diff(deployment_id, blueprint_id, version_id=None):
 
 
 @security_controller.check_role_auth_deployment
-def post_undeploy(deployment_id, workers=1):
+def post_undeploy(deployment_id, workers=1, force=False):
     """Undeploy deployment.
 
     :param deployment_id: Id of deployment
     :type deployment_id:
     :param workers: Number of workers
     :type workers: int
+    :param force: Undeploy forcefully (for stuck deployments).
+    :type force: bool
 
     :rtype: Invocation
     """
@@ -148,8 +150,9 @@ def post_undeploy(deployment_id, workers=1):
     username = security_controller.get_username()
 
     inv = SQL_database.get_deployment_status(deployment_id)
-    if inv.state in [InvocationState.PENDING, InvocationState.IN_PROGRESS]:
-        return f"Previous operation on this deployment still running", 403
+    if not force:
+        if inv.state in [InvocationState.PENDING, InvocationState.IN_PROGRESS]:
+            return f"Previous operation on this deployment still running", 403
 
     result = invocation_service.invoke(
         operation_type=OperationType.UNDEPLOY,
@@ -206,7 +209,7 @@ def post_update(deployment_id, blueprint_id, version_id=None, workers=1):
 
 
 @security_controller.check_role_auth_deployment
-def delete_deployment(deployment_id):
+def delete_deployment(deployment_id, force=False):
     """Delete all deployment data
 
     This endpoint deletes all data, about deployment, that are stored on xOpera REST API. It does not modify actual
@@ -214,13 +217,16 @@ def delete_deployment(deployment_id):
 
     :param deployment_id: Id of deployment
     :type deployment_id:
+    :param force: Force-remove deployment data
+    :type force: bool
 
     :rtype: str
     """
 
     inv = SQL_database.get_deployment_status(deployment_id)
-    if inv.state in [InvocationState.PENDING, InvocationState.IN_PROGRESS]:
-        return f"Previous operation on this deployment still running", 403
+    if not force:
+        if inv.state in [InvocationState.PENDING, InvocationState.IN_PROGRESS]:
+            return f"Previous operation on this deployment still running", 403
 
     success_deployment = SQL_database.delete_deployment(deployment_id)
     success_session_data = SQL_database.delete_opera_session_data(deployment_id)
