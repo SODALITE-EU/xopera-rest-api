@@ -4,7 +4,7 @@ COPY . /build/
 RUN /build/generate.sh
 
 
-FROM python:3.10.0rc1-alpine3.13 as python-builder
+FROM python:3.10-alpine3.13 as python-builder
 COPY requirements.txt .
 RUN export BUILD_PREREQS="gcc musl-dev libffi-dev openssl-dev postgresql-dev cargo" \
     && apk add --no-cache $BUILD_PREREQS \
@@ -12,7 +12,7 @@ RUN export BUILD_PREREQS="gcc musl-dev libffi-dev openssl-dev postgresql-dev car
     && pip3 install --user --no-warn-script-location -r requirements.txt
 
 
-FROM python:3.10.0rc1-alpine3.13
+FROM python:3.10-alpine3.13
 
 ARG HELM_VERSION=3.5.3
 ARG KUBECTL_VERSION=1.20.4
