@@ -26,7 +26,7 @@ class TestPostNew:
         assert_that(resp.json).is_not_none().contains("Invalid CSAR")
 
     def test_db_fail(self, client, csar_empty, mocker):
-        mocker.patch('opera.api.service.sqldb_service.Database.save_blueprint_meta', return_value=False)
+        mocker.patch('opera.api.service.sqldb_service.PostgreSQL.save_blueprint_meta', return_value=False)
         mocker.patch('opera.api.controllers.security_controller.check_roles', return_value=True)
         mocker.patch('opera.api.service.csardb_service.GitDB.add_revision', return_value=({'blueprint_id': 'a'}, None))
         domain = '42'
@@ -35,8 +35,8 @@ class TestPostNew:
         assert_that(resp.json).contains('Failed to save project data')
 
     def test_success(self, client, csar_1, mocker):
-        mocker.patch('opera.api.service.sqldb_service.Database.save_blueprint_meta', return_value=True)
-        mocker.patch('opera.api.service.sqldb_service.Database.save_git_transaction_data')
+        mocker.patch('opera.api.service.sqldb_service.PostgreSQL.save_blueprint_meta', return_value=True)
+        mocker.patch('opera.api.service.sqldb_service.PostgreSQL.save_git_transaction_data')
         mocker.patch('opera.api.controllers.security_controller.check_roles', return_value=True)
         mocker.patch('opera.api.service.csardb_service.GitDB.add_revision', return_value=(
             {
@@ -68,8 +68,9 @@ class TestPostNew:
 
 class TestPostMultipleVersions:
 
-    def test_wrong_token(self, client, csar_1):
+    def test_wrong_token(self, client, csar_1, mocker):
         blueprint_id = uuid.uuid4()
+        mocker.patch('opera.api.service.sqldb_service.PostgreSQL.version_exists', return_value=False)
         resp = client.post(f"/blueprint/{blueprint_id}", data=csar_1)
         assert_that(resp.status_code).is_equal_to(404)
         assert_that(resp.json).is_not_none().contains("Did not find blueprint")
@@ -77,8 +78,9 @@ class TestPostMultipleVersions:
     def test_unauthorized(self, client, csar_1, mocker):
         blueprint_id = uuid.uuid4()
         mocker.patch('opera.api.service.csardb_service.GitDB.version_exists', return_value=True)
+        mocker.patch('opera.api.service.sqldb_service.PostgreSQL.version_exists', return_value=False)
         mocker.patch('opera.api.controllers.security_controller.check_roles', return_value=False)
-        mocker.patch('opera.api.service.sqldb_service.Database.get_project_domain', return_value='foo')
+        mocker.patch('opera.api.service.sqldb_service.PostgreSQL.get_project_domain', return_value='foo')
 
         resp = client.post(f"/blueprint/{blueprint_id}", data=csar_1)
         assert_that(resp.status_code).is_equal_to(401)
@@ -86,6 +88,8 @@ class TestPostMultipleVersions:
 
     def test_emtpy_request(self, client, csar_empty, mocker):
         mocker.patch('opera.api.service.csardb_service.GitDB.version_exists', return_value=True)
+        mocker.patch('opera.api.service.sqldb_service.PostgreSQL.version_exists', return_value=True)
+        mocker.patch('opera.api.service.sqldb_service.PostgreSQL.get_project_domain', return_value=None)
         mocker.patch('opera.api.service.csardb_service.GitDB.add_revision', return_value=(
             None, "Invalid CSAR: something missing"))
         resp = client.post(f"/blueprint/{uuid.uuid4()}", data=csar_empty, content_type='multipart/form-data')
@@ -94,7 +98,7 @@ class TestPostMultipleVersions:
         assert_that(resp.json).is_not_none().contains("Invalid CSAR")
 
     def test_project_data_saving_error(self, csar_1, client, mocker, patch_auth_wrapper):
-        mocker.patch('opera.api.service.sqldb_service.Database.save_blueprint_meta', return_value=False)
+        mocker.patch('opera.api.service.sqldb_service.PostgreSQL.save_blueprint_meta', return_value=False)
         mocker.patch('opera.api.service.csardb_service.GitDB.add_revision', return_value=(
             {
                 'message': "Revision saved to GitDB",
@@ -109,9 +113,11 @@ class TestPostMultipleVersions:
         assert_that(resp.status_code).is_equal_to(500)
         assert_that(resp.json).contains('Failed to save project data')
 
-    def test_success(self, client, csar_1, mocker):
-        mocker.patch('opera.api.service.sqldb_service.Database.save_blueprint_meta', return_value=True)
-        mocker.patch('opera.api.service.sqldb_service.Database.save_git_transaction_data')
+    def test_success(self, client, csar_1, mocker, patch_auth_wrapper):
+        mocker.patch('opera.api.service.sqldb_service.PostgreSQL.save_blueprint_meta', return_value=True)
+        mocker.patch('opera.api.service.sqldb_service.PostgreSQL.version_exists', return_value=True)
+        mocker.patch('opera.api.service.sqldb_service.PostgreSQL.get_project_domain', return_value=None)
+        mocker.patch('opera.api.service.sqldb_service.PostgreSQL.save_git_transaction_data')
         mocker.patch('opera.api.service.csardb_service.GitDB.version_exists', return_value=True)
         mocker.patch('opera.api.service.csardb_service.GitDB.add_revision', return_value=(
             {
@@ -134,24 +140,25 @@ class TestPostMultipleVersions:
 
 class TestDelete:
 
-    def test_json_keys_error(self, client):
+    def test_json_keys_error(self, mocker, client, patch_db):
+        mocker.patch('opera.api.service.csardb_service.GitDB.version_exists', return_value=False)
         resp = client.delete(f"/blueprint/{42}")
         assert_that(resp.status_code).is_equal_to(404)
         assert_that(resp.json).is_not_none().contains("Did not find blueprint")
 
     def test_json_keys_success(self, client, mocker, patch_auth_wrapper):
-        mocker.patch('opera.api.service.sqldb_service.Database.blueprint_used_in_deployment', return_value=False)
+        mocker.patch('opera.api.service.sqldb_service.PostgreSQL.blueprint_used_in_deployment', return_value=False)
         mocker.patch('opera.api.service.csardb_service.GitDB.get_repo_url', return_value=['url', None])
         mocker.patch('opera.api.service.csardb_service.GitDB.delete_blueprint', return_value=[1, 200])
-        mocker.patch('opera.api.service.sqldb_service.Database.delete_blueprint_meta')
-        mocker.patch('opera.api.service.sqldb_service.Database.save_git_transaction_data')
+        mocker.patch('opera.api.service.sqldb_service.PostgreSQL.delete_blueprint_meta')
+        mocker.patch('opera.api.service.sqldb_service.PostgreSQL.save_git_transaction_data')
 
         resp = client.delete(f"/blueprint/{uuid.uuid4()}")
         assert_that(resp.status_code).is_equal_to(200)
         assert_that(resp.json).is_not_none().contains_only('blueprint_id', 'timestamp', 'url')
 
     def test_delete_before_undeploy(self, mocker, client, patch_auth_wrapper):
-        mocker.patch('opera.api.service.sqldb_service.Database.blueprint_used_in_deployment', return_value=True)
+        mocker.patch('opera.api.service.sqldb_service.PostgreSQL.blueprint_used_in_deployment', return_value=True)
 
         # try to delete
         blueprint_id = uuid.uuid4()
@@ -161,7 +168,7 @@ class TestDelete:
 
     def test_force_delete(self, mocker, client, patch_auth_wrapper):
         repo_url = 'https://url/to/repo.git'
-        mocker.patch('opera.api.service.sqldb_service.Database.blueprint_used_in_deployment', return_value=True)
+        mocker.patch('opera.api.service.sqldb_service.PostgreSQL.blueprint_used_in_deployment', return_value=True)
         mocker.patch('opera.api.service.csardb_service.GitDB.get_repo_url', return_value=[repo_url, None])
         mocker.patch('opera.api.service.csardb_service.GitDB.delete_blueprint', return_value=[1, 200])
 
@@ -182,7 +189,8 @@ class TestDelete:
 
 class TestDeleteVersion:
 
-    def test_delete_by_wrong_version_tag(self, client):
+    def test_delete_by_wrong_version_tag(self, client, mocker, patch_db):
+        mocker.patch('opera.api.service.csardb_service.GitDB.version_exists', return_value=False)
         blueprint_id = uuid.uuid4()
         version_id = 'v1.0'
         resp = client.delete(f"/blueprint/{blueprint_id}/version/{version_id}")
@@ -203,7 +211,7 @@ class TestDeleteVersion:
         assert resp.json['version_id'] == version_id
 
     def test_delete_before_undeploy(self, mocker, client, patch_auth_wrapper):
-        mocker.patch('opera.api.service.sqldb_service.Database.blueprint_used_in_deployment', return_value=True)
+        mocker.patch('opera.api.service.sqldb_service.PostgreSQL.blueprint_used_in_deployment', return_value=True)
 
         # try to delete
         blueprint_id = uuid.uuid4()
@@ -214,7 +222,7 @@ class TestDeleteVersion:
 
     def test_force_delete(self, mocker, client, patch_auth_wrapper):
         repo_url = 'https://url/to/repo.git'
-        mocker.patch('opera.api.service.sqldb_service.Database.blueprint_used_in_deployment', return_value=True)
+        mocker.patch('opera.api.service.sqldb_service.PostgreSQL.blueprint_used_in_deployment', return_value=True)
         mocker.patch('opera.api.service.csardb_service.GitDB.get_repo_url', return_value=[repo_url, None])
         mocker.patch('opera.api.service.csardb_service.GitDB.delete_blueprint', return_value=[1, 200])
 
@@ -238,7 +246,8 @@ class TestDeleteVersion:
 
 class TestUser:
 
-    def test_get_users_non_existing_blueprint(self, client):
+    def test_get_users_non_existing_blueprint(self, client, mocker, patch_db):
+        mocker.patch('opera.api.service.csardb_service.GitDB.version_exists', return_value=False)
         blueprint_token = uuid.uuid4()
         resp = client.get(f"/blueprint/{blueprint_token}/user")
         assert_that(resp.status_code).is_equal_to(404)
@@ -261,7 +270,8 @@ class TestUser:
         assert_that(resp.status_code).is_equal_to(200)
         assert_that(resp.json).is_equal_to(user_list)
 
-    def test_add_users_to_non_existing_blueprint(self, client):
+    def test_add_users_to_non_existing_blueprint(self, client, mocker, patch_db):
+        mocker.patch('opera.api.service.csardb_service.GitDB.version_exists', return_value=False)
         blueprint_token = '42'
         user_id = 'foo'
         resp = client.post(f"/blueprint/{blueprint_token}/user/{user_id}")
@@ -319,7 +329,7 @@ class TestGetBlueprintByUserOrDomain:
         assert_that(resp.status_code).is_equal_to(400)
 
     def test_no_blueprint(self, client, mocker, patch_auth_wrapper):
-        mocker.patch('opera.api.service.sqldb_service.Database.get_blueprints_by_user_or_project', return_value=None)
+        mocker.patch('opera.api.service.sqldb_service.PostgreSQL.get_blueprints_by_user_or_project', return_value=None)
 
         resp = client.get(f"/blueprint?username=foo")
         assert_that(resp.status_code).is_equal_to(404)
@@ -334,7 +344,7 @@ class TestGetBlueprintByUserOrDomain:
             "project_domain": 'SODALITE',
             "timestamp": timestamp_util.datetime_now_to_string()
         }]
-        mocker.patch('opera.api.service.sqldb_service.Database.get_blueprints_by_user_or_project',
+        mocker.patch('opera.api.service.sqldb_service.PostgreSQL.get_blueprints_by_user_or_project',
                      return_value=blueprints)
         resp = client.get(f"/blueprint?username=foo")
         assert_that(resp.status_code).is_equal_to(200)

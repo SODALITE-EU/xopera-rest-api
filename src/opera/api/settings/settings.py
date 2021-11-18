@@ -24,16 +24,12 @@ class Settings:
     # maximum number of invocations at the same time
     invocation_service_workers = 10
 
-    # sql_database config
+    # PostgreSQL config
     sql_config = None
     invocation_table = 'invocation'
     blueprint_table = 'blueprint'
     git_log_table = 'git_log'
     opera_session_data_table = 'opera_session_data'
-
-    # OfflineStorage database (alternative to sql_database) config
-    USE_OFFLINE_STORAGE = False
-    offline_storage = None
 
     # gitCsarDB config
     git_config = None
@@ -58,7 +54,6 @@ class Settings:
         Settings.STDFILE_DIR = f"{Settings.API_WORKDIR}/in_progress"
         Settings.INVOCATION_DIR = f"{Settings.API_WORKDIR}/invocations"
         Settings.DEPLOYMENT_DIR = f"{Settings.API_WORKDIR}/deployment_dir"
-        Settings.offline_storage = Path(Settings.API_WORKDIR) / 'storage'
         Settings.workdir = Path(Settings.API_WORKDIR) / "git_db/mockConnector"
         Settings.secure_workdir = os.getenv("XOPERA_SECURE_WORKDIR", "True").lower() == "true"
 

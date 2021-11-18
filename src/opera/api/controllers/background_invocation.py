@@ -24,7 +24,8 @@ from werkzeug.datastructures import FileStorage
 
 from opera.api.blueprint_converters import csar_to_blueprint
 from opera.api.blueprint_converters.blueprint2CSAR import entry_definitions
-from opera.api.cli import CSAR_db, SQL_database
+from opera.api.cli import CSAR_db
+from opera.api.service.sqldb_service import PostgreSQL
 from opera.api.log import get_logger
 from opera.api.openapi.models import Invocation, InvocationState, OperationType
 from opera.api.settings import Settings
@@ -32,8 +33,10 @@ from opera.api.util import xopera_util, file_util
 
 logger = get_logger(__name__)
 
+
 class MissingDeploymentDataError(BaseException):
     pass
+
 
 class ExtendedInvocation(Invocation):
     def __init__(self, access_token=None, blueprint_id=None,
@@ -61,7 +64,7 @@ class InvocationWorkerProcess:
             inv: ExtendedInvocation = work_queue.get(block=True)
             inv.timestamp_start = datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
 
-            invocation_id = SQL_database.get_last_invocation_id(inv.deployment_id)
+            invocation_id = PostgreSQL.get_last_invocation_id(inv.deployment_id)
             location = InvocationService.deployment_location(inv.deployment_id, inv.blueprint_id)
 
             inv.state = InvocationState.IN_PROGRESS
@@ -234,9 +237,9 @@ class InvocationWorkerProcess:
         location_new = location or InvocationService.deployment_location(str(uuid.uuid4()), str(uuid.uuid4()))
 
         # old Deployed instance
-        # TODO Next line should use SQL_database.get_deployment_status(deployment_id), had to be changed since
+        # TODO Next line should use PostgreSQL.get_deployment_status(deployment_id), had to be changed since
         #  old blueprint_id is part of second to last invocation, last is already current
-        inv_old = SQL_database.get_last_completed_invocation(deployment_id)
+        inv_old = PostgreSQL.get_last_completed_invocation(deployment_id)
         CSAR_db.get_revision(inv_old.blueprint_id, location_old, inv_old.version_id)
         InvocationService.get_dot_opera_from_db(deployment_id, location_old)
         storage_old = Storage.create(str(location_old / '.opera'))
@@ -379,7 +382,7 @@ class InvocationService:
     @classmethod
     def load_invocation(cls, deployment_id: str) -> Optional[Invocation]:
         # TODO check if it can introduce errors, then catch error
-        inv = SQL_database.get_deployment_status(deployment_id)
+        inv = PostgreSQL.get_deployment_status(deployment_id)
         if not inv:
             return None
         try:
@@ -400,20 +403,20 @@ class InvocationService:
     @classmethod
     def deployment_exists(cls, inv: Invocation) -> bool:
         """Check if records about deployment exist in DB"""
-        return SQL_database.get_deployment_status(inv.deployment_id) is not None
+        return PostgreSQL.get_deployment_status(inv.deployment_id) is not None
 
     @classmethod
     def save_invocation(cls, invocation_id: uuid, inv: Invocation):
-        SQL_database.update_deployment_log(invocation_id, inv)
+        PostgreSQL.update_deployment_log(invocation_id, inv)
 
     @classmethod
     def save_dot_opera_to_db(cls, inv: Invocation, location: Path) -> None:
         data = file_util.dir_to_json((location / '.opera'))
-        SQL_database.save_opera_session_data(inv.deployment_id, data)
+        PostgreSQL.save_opera_session_data(inv.deployment_id, data)
 
     @classmethod
     def get_dot_opera_from_db(cls, deployment_id: uuid, location: Path) -> bool:
-        dot_opera_data = SQL_database.get_opera_session_data(deployment_id)
+        dot_opera_data = PostgreSQL.get_opera_session_data(deployment_id)
         if not dot_opera_data:
             logger.error(f"sqldb_service.get_opera_session_data failed: deployment_id: {deployment_id}")
             return False
@@ -426,7 +429,7 @@ class InvocationService:
         """
         Prepare location with blueprint and session_data (.opera dir)
         """
-        inv = SQL_database.get_deployment_status(deployment_id)
+        inv = PostgreSQL.get_deployment_status(deployment_id)
         if not CSAR_db.get_revision(inv.blueprint_id, location, inv.version_tag):
             logger.error(f'csardb_service.get_revision failed: blueprint_id: {inv.blueprint_id}, '
                          f'location: {location}, version_d: {inv.version_id}')

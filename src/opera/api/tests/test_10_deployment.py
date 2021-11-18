@@ -21,7 +21,8 @@ class TestDeploymentExists:
 
 class TestDeployFresh:
 
-    def test_no_blueprint(self, client, mocker):
+    def test_no_blueprint(self, client, mocker, patch_db):
+        mocker.patch('opera.api.service.csardb_service.GitDB.version_exists', return_value=False)
         mock_version_exists = mocker.MagicMock(name='version_exists', return_value=False)
         mocker.patch('opera.api.service.csardb_service.GitDB.version_exists', new=mock_version_exists)
 
@@ -31,7 +32,7 @@ class TestDeployFresh:
         assert_that(resp.json).contains('Did not find blueprint')
         mock_version_exists.assert_called_with(str(blueprint_id), None)
 
-    def test_params(self, client, mocker, generic_invocation, inputs_1):
+    def test_params(self, client, mocker, generic_invocation, inputs_1, patch_auth_wrapper):
         mock_invoke = mocker.MagicMock(name='invoke', return_value=generic_invocation)
         mocker.patch('opera.api.controllers.background_invocation.InvocationService.invoke', new=mock_invoke)
         mocker.patch('opera.api.service.csardb_service.GitDB.version_exists', return_value=True)
@@ -57,7 +58,7 @@ class TestDeployFresh:
             access_token=None
         )
 
-    def test_no_inputs(self, client, mocker, generic_invocation):
+    def test_no_inputs(self, client, mocker, generic_invocation, patch_auth_wrapper):
         mock_invoke = mocker.MagicMock(name='invoke', return_value=generic_invocation)
         mocker.patch('opera.api.controllers.background_invocation.InvocationService.invoke', new=mock_invoke)
         mocker.patch('opera.api.service.csardb_service.GitDB.version_exists', return_value=True)
@@ -79,7 +80,8 @@ class TestDeployFresh:
 
 class TestStatus:
 
-    def test_missing(self, client):
+    def test_missing(self, client, mocker):
+        mocker.patch('opera.api.service.sqldb_service.PostgreSQL.get_deployment_status', return_value=None)
         deployment_id = uuid.uuid4()
         resp = client.get(f"/deployment/{deployment_id}/status")
         assert resp.status_code == 404
@@ -136,7 +138,7 @@ class TestStatus:
 class TestHistory:
 
     def test_not_found(self, client, mocker, patch_auth_wrapper):
-        mocker.patch('opera.api.service.sqldb_service.Database.get_deployment_history', return_value=[])
+        mocker.patch('opera.api.service.sqldb_service.PostgreSQL.get_deployment_history', return_value=[])
         deployment_id = uuid.uuid4()
         resp = client.get(f"/deployment/{deployment_id}/history")
         assert resp.status_code == 404
@@ -147,7 +149,7 @@ class TestHistory:
         inv.deployment_id = uuid.uuid4()
 
         mock_log_data = mocker.MagicMock(name='invoke', return_value=[inv])
-        mocker.patch('opera.api.service.sqldb_service.Database.get_deployment_history', new=mock_log_data)
+        mocker.patch('opera.api.service.sqldb_service.PostgreSQL.get_deployment_history', new=mock_log_data)
 
         resp = client.get(f"/deployment/{inv.deployment_id}/history")
         assert resp.status_code == 200
@@ -159,7 +161,8 @@ class TestHistory:
 
 class TestDeployContinue:
 
-    def test_no_deployment(self, client):
+    def test_no_deployment(self, client, mocker):
+        mocker.patch('opera.api.service.sqldb_service.PostgreSQL.get_deployment_status', return_value=None)
         deployment_id = uuid.uuid4()
         resp = client.post(f"/deployment/{deployment_id}/deploy_continue")
         assert resp.status_code == 404
@@ -168,7 +171,7 @@ class TestDeployContinue:
     def test_still_running(self, client, mocker, generic_invocation: Invocation, patch_auth_wrapper):
         inv = generic_invocation
         inv.state = InvocationState.IN_PROGRESS
-        mocker.patch('opera.api.service.sqldb_service.Database.get_deployment_status', return_value=inv)
+        mocker.patch('opera.api.service.sqldb_service.PostgreSQL.get_deployment_status', return_value=inv)
 
         deployment_id = uuid.uuid4()
         resp = client.post(f"/deployment/{deployment_id}/deploy_continue")
@@ -238,7 +241,7 @@ class TestUpdate:
     def test_still_running(self, client, mocker, generic_invocation: Invocation, patch_auth_wrapper):
         inv = generic_invocation
         inv.state = InvocationState.IN_PROGRESS
-        mocker.patch('opera.api.service.sqldb_service.Database.get_deployment_status', return_value=inv)
+        mocker.patch('opera.api.service.sqldb_service.PostgreSQL.get_deployment_status', return_value=inv)
 
         resp = client.post(f"/deployment/{inv.deployment_id}/update"
                            f"?blueprint_id={inv.blueprint_id}"
@@ -281,7 +284,7 @@ class TestUndeploy:
     def test_still_running(self, client, mocker, generic_invocation: Invocation, patch_auth_wrapper):
         inv = generic_invocation
         inv.state = InvocationState.IN_PROGRESS
-        mocker.patch('opera.api.service.sqldb_service.Database.get_deployment_status', return_value=inv)
+        mocker.patch('opera.api.service.sqldb_service.PostgreSQL.get_deployment_status', return_value=inv)
 
         resp = client.post(f"/deployment/{inv.deployment_id}/undeploy")
         assert resp.status_code == 403
@@ -319,7 +322,7 @@ class TestDeleteDeployment:
     def test_still_running(self, client, mocker, generic_invocation: Invocation, patch_auth_wrapper):
         inv = generic_invocation
         inv.state = InvocationState.IN_PROGRESS
-        mocker.patch('opera.api.service.sqldb_service.Database.get_deployment_status', return_value=inv)
+        mocker.patch('opera.api.service.sqldb_service.PostgreSQL.get_deployment_status', return_value=inv)
 
         resp = client.delete(f"/deployment/{inv.deployment_id}")
         assert resp.status_code == 403
@@ -332,8 +335,8 @@ class TestDeleteDeployment:
         inv.state = InvocationState.SUCCESS
         inv.workers = 42
 
-        mocker.patch('opera.api.service.sqldb_service.Database.delete_deployment', return_value=False)
-        mocker.patch('opera.api.service.sqldb_service.Database.delete_opera_session_data', return_value=True)
+        mocker.patch('opera.api.service.sqldb_service.PostgreSQL.delete_deployment', return_value=False)
+        mocker.patch('opera.api.service.sqldb_service.PostgreSQL.delete_opera_session_data', return_value=True)
 
         resp = client.delete(f"/deployment/{inv.deployment_id}")
         assert resp.status_code == 500
@@ -346,8 +349,8 @@ class TestDeleteDeployment:
         inv.state = InvocationState.SUCCESS
         inv.workers = 42
 
-        mocker.patch('opera.api.service.sqldb_service.Database.delete_deployment', return_value=True)
-        mocker.patch('opera.api.service.sqldb_service.Database.delete_opera_session_data', return_value=True)
+        mocker.patch('opera.api.service.sqldb_service.PostgreSQL.delete_deployment', return_value=True)
+        mocker.patch('opera.api.service.sqldb_service.PostgreSQL.delete_opera_session_data', return_value=True)
 
         resp = client.delete(f"/deployment/{inv.deployment_id}")
         assert resp.status_code == 200

@@ -3,6 +3,7 @@ import uuid
 
 import psycopg2
 from psycopg2 import sql
+from contextlib import contextmanager
 
 from opera.api.log import get_logger
 from opera.api.openapi.models import Invocation, InvocationState, BlueprintVersion, OperationType
@@ -12,176 +13,52 @@ from opera.api.util import timestamp_util, file_util
 logger = get_logger(__name__)
 
 
-def connect(sql_config):
-    try:
-        database = PostgreSQL(sql_config)
-        logger.info('SQL_database: PostgreSQL')
-    except psycopg2.Error as e:
-        logger.error(f"Error while connecting to PostgreSQL: {str(e)}")
-        database = Database()
-        logger.info("SQL_database: NoDatabase!")
-
-    return database
+class SqlDBFailedException(Exception):
+    pass
 
 
-class Database:
+class PostgreSQL:
 
-    def __init__(self):
-        self.db_type = "unknown type of database"
-        pass
+    @classmethod
+    @contextmanager
+    def connection(cls):
+        try:
+            conn = psycopg2.connect(**Settings.sql_config)
+            yield conn
+            conn.close()
+        except psycopg2.Error as e:
+            logger.error(f"Error while connecting to PostgreSQL: {str(e)}")
+            raise SqlDBFailedException('Could not connect to PostgreSQL DB')
 
-    def disconnect(self):
-        """
-        closes database connection
-        """
-        pass
+    @classmethod
+    @contextmanager
+    def cursor(cls):
+        with cls.connection() as conn:
+            yield conn.cursor()
 
-    def version_exists(self, blueprint_id: uuid, version_id=None) -> bool:
-        """
-        Checks if, according to records in git_log table blueprint (version) exists
-        """
-        pass
+    @classmethod
+    def execute(cls, command, replacements=None):
 
-    def get_deployment_ids(self, blueprint_id: uuid, version_id: str = None):
-        """
-        Returns list of deployment_ids od all deployments created from blueprint with blueprint_id
-        """
-        pass
+        with cls.connection() as conn:
+            dbcur = conn.cursor()
+            try:
+                if replacements is not None:
+                    dbcur.execute(command, replacements)
+                else:
+                    dbcur.execute(command)
+                conn.commit()
+            except psycopg2.Error as e:
+                logger.debug(str(e))
+                dbcur.execute("ROLLBACK")
+                conn.commit()
+                return False
 
-    def blueprint_used_in_deployment(self, blueprint_id: uuid, version_id: str = None):
-        """
-        Checks if blueprint is part of any deployment. If version is specified, it checks if it is used in current
-        deployment state
-        """
-        pass
+        return True
 
-    def save_opera_session_data(self, deployment_id: uuid, tree: dict):
-        """
-        Saves .opera file tree to database
-        """
-        pass
+    @classmethod
+    def initialize(cls):
 
-    def get_opera_session_data(self, deployment_id: uuid):
-        """
-        Returns dict with keys [deployment_id, timestamp, tree], where tree is content of .opera dir
-        """
-        pass
-
-    def delete_opera_session_data(self, deployment_id: uuid):
-        """
-        Deletes opera session data
-        """
-        pass
-
-    def update_deployment_log(self, invocation_id: uuid, inv: Invocation):
-        """
-        updates deployment log with deployment_id, timestamp, invocation_id, _log
-        """
-        pass
-
-    def get_deployment_status(self, deployment_id: uuid):
-        """
-        Get last deployment log
-        """
-        pass
-
-    # TODO Implemented due to update's need for one before last invocation
-    #   remove when solved properly
-    def get_last_completed_invocation(self, deployment_id: uuid):
-        pass
-
-    def get_deployment_history(self, deployment_id: uuid):
-        """
-        Get all deployment logs for one deployment
-        """
-        pass
-
-    def get_last_invocation_id(self, deployment_id: uuid):
-        """
-        This method exists since we do not want to have invocation_id in Invocation object, to not confuse users
-        """
-        pass
-
-    def save_git_transaction_data(self, blueprint_id: uuid, revision_msg: str, job: str, git_backend: str,
-                                  repo_url: str, version_id: str = None, commit_sha: str = None):
-        """
-        Saves transaction data to database
-        """
-        pass
-
-    def get_git_transaction_data(self, blueprint_id: uuid):
-        """
-        Gets git transaction history
-        """
-        pass
-
-    def get_project_domain(self, blueprint_id: uuid):
-        """
-        Get project domain for blueprint
-        """
-        pass
-
-    def get_blueprint_name(self, blueprint_id: uuid):
-        """
-        Returns human-readable name for blueprint
-        """
-        pass
-
-    def update_blueprint_name(self, blueprint_id: uuid, name: str):
-        """
-        updates blueprint name
-        """
-        pass
-
-    def get_blueprint_meta(self, blueprint_id: uuid, version_id: str = None):
-        """
-        returns blueprint (version's) metadata
-        """
-        pass
-
-    def save_blueprint_meta(self, blueprint_meta: BlueprintVersion):
-        """
-        saves metadata of blueprint version
-        """
-        pass
-
-    def delete_blueprint_meta(self, blueprint_id: uuid, version_id: str = None):
-        """
-        deletes blueprint meta of one or all versions
-        """
-        pass
-
-    def get_inputs(self, deployment_id: uuid):
-        """
-        extracts inputs from last invocation, belonging to deployment with this deployment_id
-        """
-        pass
-
-    def get_deployments_for_blueprint(self, blueprint_id: uuid, active: bool):
-        """
-        Returns [Deployment] for every deployment, created from blueprint
-        """
-        pass
-
-    def get_blueprints_by_user_or_project(self, username: str = None, project_domain: str = None, active: bool = True):
-        """
-        Returns [blueprint_id] for every blueprint, that belongs to user or project (or both)
-        """
-        pass
-
-    def delete_deployment(self, deployment_id: uuid):
-        """
-        Deletes deployment data
-        """
-        pass
-
-
-class PostgreSQL(Database):
-    def __init__(self, settings):
-        super().__init__()
-        self.db_type = "PostgreSQL"
-        self.connection = psycopg2.connect(**settings)
-        self.execute("""
+        cls.execute("""
                         create table if not exists {} (
                         invocation_id varchar (36), 
                         deployment_id varchar (36),
@@ -194,7 +71,7 @@ class PostgreSQL(Database):
                         _log text,  
                         primary key (invocation_id)
                         );""".format(Settings.invocation_table))
-        self.execute("""
+        cls.execute("""
                         create table if not exists {} (
                         blueprint_id varchar (36),
                         version_id varchar(36),
@@ -208,7 +85,7 @@ class PostgreSQL(Database):
                         primary key (timestamp)
                         );""".format(Settings.blueprint_table))
 
-        self.execute("""
+        cls.execute("""
                         create table if not exists {} (
                         blueprint_id varchar (36),
                         version_id varchar(36),
@@ -221,7 +98,7 @@ class PostgreSQL(Database):
                         primary key (timestamp)
                         );""".format(Settings.git_log_table))
 
-        self.execute("""
+        cls.execute("""
                         create table if not exists {} (
                         deployment_id varchar (36),
                         timestamp timestamp default current_timestamp, 
@@ -229,33 +106,14 @@ class PostgreSQL(Database):
                         primary key (deployment_id)
                         );""".format(Settings.opera_session_data_table))
 
-    def disconnect(self):
-        logger.info('disconnecting PostgreSQL database')
-        self.connection.close()
-
-    def execute(self, command, replacements=None):
-        with self.connection.cursor() as dbcur:
-            try:
-                if replacements is not None:
-                    dbcur.execute(command, replacements)
-                else:
-                    dbcur.execute(command)
-                self.connection.commit()
-            except psycopg2.Error as e:
-                logger.debug(str(e))
-                dbcur.execute("ROLLBACK")
-                self.connection.commit()
-                return False
-
-        return True
-
-    def version_exists(self, blueprint_id: uuid, version_id=None) -> bool:
+    @classmethod
+    def version_exists(cls, blueprint_id: uuid, version_id=None) -> bool:
         """
         Checks if, according to records in git_log table blueprint (version) exists
         """
         # TODO change to inspect blueprint table
         # check blueprint has not been deleted
-        with self.connection.cursor() as dbcur:
+        with cls.cursor() as dbcur:
             stmt = sql.SQL("""select version_id,job  from {git_log_table} 
                                 where blueprint_id={blueprint_id} 
                                 order by timestamp desc limit 1;""").format(
@@ -299,11 +157,12 @@ class PostgreSQL(Database):
             # all checks have passed, blueprint (version) exists
             return True
 
-    def get_deployment_ids(self, blueprint_id: uuid, version_id: str = None):
+    @classmethod
+    def get_deployment_ids(cls, blueprint_id: uuid, version_id: str = None):
         """
         Returns list of deployment_ids od all deployments created from blueprint with blueprint_id (and version_id)
         """
-        with self.connection.cursor() as dbcur:
+        with cls.cursor() as dbcur:
 
             if version_id:
                 stmt = sql.SQL("""select deployment_id from {invocation_table} 
@@ -327,17 +186,18 @@ class PostgreSQL(Database):
 
             return deployment_ids
 
-    def blueprint_used_in_deployment(self, blueprint_id: uuid, version_id: str = None):
+    @classmethod
+    def blueprint_used_in_deployment(cls, blueprint_id: uuid, version_id: str = None):
         """
         Checks if blueprint is part of any deployment. If version is specified, it checks if it is used in current
         deployment state
         """
-        deployment_ids = self.get_deployment_ids(blueprint_id, version_id)
+        deployment_ids = cls.get_deployment_ids(blueprint_id, version_id)
         if not deployment_ids:
             return False
 
         if version_id:
-            with self.connection.cursor() as dbcur:
+            with cls.cursor() as dbcur:
                 for deployment_id in deployment_ids:
                     stmt = sql.SQL("""select version_id from {invocation_table} 
                                         where deployment_id = {deployment_id} 
@@ -352,13 +212,14 @@ class PostgreSQL(Database):
                 return False
         return True
 
-    def save_opera_session_data(self, deployment_id: uuid, tree: dict):
+    @classmethod
+    def save_opera_session_data(cls, deployment_id: uuid, tree: dict):
         """
         Saves .opera file tree to database
         """
         tree_str = json.dumps(tree)
         timestamp = timestamp_util.datetime_now_to_string()
-        response = self.execute(
+        response = cls.execute(
             """insert into {} (deployment_id, timestamp, tree)
                values (%s, %s, %s)
                ON CONFLICT (deployment_id) DO UPDATE
@@ -371,11 +232,12 @@ class PostgreSQL(Database):
             logger.error(f'Failed to update dot_opera_data for deployment_id={deployment_id} in PostgreSQL database')
         return response
 
-    def get_opera_session_data(self, deployment_id):
+    @classmethod
+    def get_opera_session_data(cls, deployment_id):
         """
         Returns dict with keys [deployment_id, timestamp, tree], where tree is content of .opera dir
         """
-        with self.connection.cursor() as dbcur:
+        with cls.cursor() as dbcur:
             stmt = sql.SQL("""select deployment_id, timestamp, tree from {session_data_table} 
                                 where deployment_id = {deployment_id};""").format(
                 session_data_table=sql.Identifier(Settings.opera_session_data_table),
@@ -392,7 +254,8 @@ class PostgreSQL(Database):
             }
             return session_data
 
-    def delete_opera_session_data(self, deployment_id: uuid):
+    @classmethod
+    def delete_opera_session_data(cls, deployment_id: uuid):
         """
         Deletes opera session data
         """
@@ -402,7 +265,7 @@ class PostgreSQL(Database):
             deployment_id=sql.Literal(str(deployment_id))
         )
 
-        success = self.execute(stmt)
+        success = cls.execute(stmt)
 
         if success:
             logger.debug(
@@ -413,11 +276,13 @@ class PostgreSQL(Database):
 
         return success
 
-    def update_deployment_log(self, invocation_id: uuid, inv: Invocation):
+    @classmethod
+    def update_deployment_log(cls, invocation_id: uuid, inv: Invocation):
         """
         updates deployment log with deployment_id, timestamp_submission, invocation_id, _log
         """
-        response = self.execute(
+
+        response = cls.execute(
             """insert into {} (deployment_id, deployment_label, timestamp, invocation_id, 
                               blueprint_id, version_id, state, operation, _log)
                values (%s, %s, %s, %s, %s, %s, %s, %s, %s)
@@ -440,12 +305,13 @@ class PostgreSQL(Database):
                 f'in PostgreSQL database')
         return response
 
-    def get_deployment_status(self, deployment_id: uuid):
+    @classmethod
+    def get_deployment_status(cls, deployment_id: uuid):
         """
         Get last deployment log
         """
 
-        with self.connection.cursor() as dbcur:
+        with cls.cursor() as dbcur:
             stmt = sql.SQL("""select timestamp, _log from {invocation_table} 
                                 where deployment_id = {deployment_id} 
                                 order by timestamp desc limit 1;""").format(
@@ -463,18 +329,20 @@ class PostgreSQL(Database):
 
     # TODO Implemented due to update's need for one before last invocation
     #   remove when solved properly
-    def get_last_completed_invocation(self, deployment_id: uuid):
-        history = self.get_deployment_history(deployment_id)
+    @classmethod
+    def get_last_completed_invocation(cls, deployment_id: uuid):
+        history = cls.get_deployment_history(deployment_id)
         if len(history) == 0:
             return None
         history_completed = [x for x in history if x.state in (InvocationState.SUCCESS, InvocationState.FAILED)]
         return history_completed[-1]
 
-    def get_deployment_history(self, deployment_id: uuid):
+    @classmethod
+    def get_deployment_history(cls, deployment_id: uuid):
         """
         Get all deployment logs for one deployment
         """
-        with self.connection.cursor() as dbcur:
+        with cls.cursor() as dbcur:
             stmt = sql.SQL("""select timestamp, _log from {invocation_table} 
                                 where deployment_id = {deployment_id}
                                 order by timestamp;""").format(
@@ -488,11 +356,12 @@ class PostgreSQL(Database):
 
             return history
 
-    def get_last_invocation_id(self, deployment_id: uuid):
+    @classmethod
+    def get_last_invocation_id(cls, deployment_id: uuid):
         """
         This method exists since we do not want to have invocation_id in Invocation object, to not confuse users
         """
-        with self.connection.cursor() as dbcur:
+        with cls.cursor() as dbcur:
             stmt = sql.SQL("""select timestamp, invocation_id from {invocation_table} 
                                 where deployment_id = {deployment_id} 
                                 order by timestamp desc limit 1;""").format(
@@ -508,12 +377,13 @@ class PostgreSQL(Database):
 
             return inv
 
-    def save_git_transaction_data(self, blueprint_id: uuid, revision_msg: str, job: str, git_backend: str,
+    @classmethod
+    def save_git_transaction_data(cls, blueprint_id: uuid, revision_msg: str, job: str, git_backend: str,
                                   repo_url: str, version_id: str = None, commit_sha: str = None):
         """
         Saves transaction data to database
         """
-        response = self.execute(
+        response = cls.execute(
             """insert into {} (blueprint_id, version_id, revision_msg, job, git_backend, repo_url, commit_sha) 
             values (%s, %s, %s, %s, %s, %s, %s)""".format(Settings.git_log_table),
             (str(blueprint_id), version_id, revision_msg, job, git_backend, repo_url, commit_sha))
@@ -526,11 +396,12 @@ class PostgreSQL(Database):
                 f'PostgreSQL database')
         return response
 
-    def get_git_transaction_data(self, blueprint_id: uuid):
+    @classmethod
+    def get_git_transaction_data(cls, blueprint_id: uuid):
         """
         Gets all transaction data for some blueprint
         """
-        with self.connection.cursor() as dbcur:
+        with cls.cursor() as dbcur:
             stmt = sql.SQL("""select blueprint_id, version_id, revision_msg, job, git_backend, 
                                                      repo_url, commit_sha, timestamp from {git_log_table} 
                                                      where blueprint_id = {blueprint_id}
@@ -556,11 +427,12 @@ class PostgreSQL(Database):
 
             return git_transaction_data_list
 
-    def get_project_domain(self, blueprint_id: uuid):
+    @classmethod
+    def get_project_domain(cls, blueprint_id: uuid):
         """
         returns project domain for blueprint
         """
-        with self.connection.cursor() as dbcur:
+        with cls.cursor() as dbcur:
             stmt = sql.SQL("""select blueprint_id, project_domain from {blueprint_table} 
                                where blueprint_id = {blueprint_id};""").format(
                 blueprint_table=sql.Identifier(Settings.blueprint_table),
@@ -574,11 +446,12 @@ class PostgreSQL(Database):
 
             return project_domain
 
-    def get_blueprint_name(self, blueprint_id: uuid):
+    @classmethod
+    def get_blueprint_name(cls, blueprint_id: uuid):
         """
         Returns human-readable name for blueprint
         """
-        with self.connection.cursor() as dbcur:
+        with cls.cursor() as dbcur:
             stmt = sql.SQL("""select blueprint_id, blueprint_name from {blueprint_table} 
                                where blueprint_id = {blueprint_id}""").format(
                 blueprint_table=sql.Identifier(Settings.blueprint_table),
@@ -591,7 +464,8 @@ class PostgreSQL(Database):
             name = line[1]
             return name
 
-    def update_blueprint_name(self, blueprint_id: uuid, name: str):
+    @classmethod
+    def update_blueprint_name(cls, blueprint_id: uuid, name: str):
         """
         updates blueprint name
         """
@@ -602,18 +476,19 @@ class PostgreSQL(Database):
             blueprint_name=sql.Literal(name),
             blueprint_id=sql.Literal(str(blueprint_id))
         )
-        success = self.execute(stmt)
+        success = cls.execute(stmt)
         if success:
             logger.debug(f'Updated blueprint name={name} for blueprint_id={blueprint_id} in PostgreSQL database')
         else:
             logger.error(f'Fail to update blueprint name={name} for blueprint_id={blueprint_id} in PostgreSQL database')
         return success
 
-    def get_blueprint_meta(self, blueprint_id: uuid, version_id: str = None):
+    @classmethod
+    def get_blueprint_meta(cls, blueprint_id: uuid, version_id: str = None):
         """
         returns blueprint (version's) metadata
         """
-        with self.connection.cursor() as dbcur:
+        with cls.cursor() as dbcur:
             if version_id:
                 stmt = sql.SQL("""select blueprint_id, version_id, blueprint_name, aadm_id, username, 
                                            project_domain, url, timestamp, commit_sha from {blueprint_table}
@@ -648,11 +523,12 @@ class PostgreSQL(Database):
             }
             return blueprint_meta
 
-    def save_blueprint_meta(self, blueprint_meta: BlueprintVersion):
+    @classmethod
+    def save_blueprint_meta(cls, blueprint_meta: BlueprintVersion):
         """
         saves metadata of blueprint version
         """
-        success = self.execute(
+        success = cls.execute(
             """insert into {} (blueprint_id, version_id, blueprint_name, aadm_id, username, project_domain, url, commit_sha) 
             values (%s, %s, %s, %s, %s, %s, %s, %s)""".format(Settings.blueprint_table),
             (str(blueprint_meta.blueprint_id), blueprint_meta.version_id, blueprint_meta.blueprint_name,
@@ -665,7 +541,8 @@ class PostgreSQL(Database):
             logger.error(f'Fail to update blueprint meta for blueprint_id={blueprint_id} in PostgreSQL database')
         return success
 
-    def delete_blueprint_meta(self, blueprint_id: uuid, version_id: str = None):
+    @classmethod
+    def delete_blueprint_meta(cls, blueprint_id: uuid, version_id: str = None):
         """
         deletes blueprint meta of one or all versions
         """
@@ -686,7 +563,7 @@ class PostgreSQL(Database):
 
         str_version_id = f'and version_id={version_id} ' if version_id else ''
 
-        success = self.execute(stmt)
+        success = cls.execute(stmt)
 
         if success:
             logger.debug(
@@ -697,11 +574,12 @@ class PostgreSQL(Database):
 
         return success
 
-    def get_inputs(self, deployment_id: uuid):
+    @classmethod
+    def get_inputs(cls, deployment_id: uuid):
         """
         extracts inputs from last invocation, belonging to deployment with this deployment_id
         """
-        with self.connection.cursor() as dbcur:
+        with cls.cursor() as dbcur:
             stmt = sql.SQL("""select _log::json->>'inputs' from {invocation_table}
                                 where deployment_id = {deployment_id}
                                 order by timestamp desc limit 1""").format(
@@ -717,11 +595,12 @@ class PostgreSQL(Database):
             except (json.decoder.JSONDecodeError, TypeError):
                 return None
 
-    def get_deployments_for_blueprint(self, blueprint_id: uuid, active: bool):
+    @classmethod
+    def get_deployments_for_blueprint(cls, blueprint_id: uuid, active: bool):
         """
         Returns [Deployment] for every deployment, created from blueprint
         """
-        with self.connection.cursor() as dbcur:
+        with cls.cursor() as dbcur:
             stmt = sql.SQL("""select distinct on (deployment_id) deployment_id, state, operation, 
                                 timestamp, deployment_label from {invocation_table}
                                 where deployment_id in (
@@ -741,7 +620,7 @@ class PostgreSQL(Database):
                     'state': line[1],
                     'operation': line[2],
                     'timestamp': timestamp_util.datetime_to_str(line[3]),
-                    'last_inputs': self.get_inputs(line[0]),
+                    'last_inputs': cls.get_inputs(line[0]),
                     'deployment_label': line[4]
                 } for line in lines
             ]
@@ -753,11 +632,12 @@ class PostgreSQL(Database):
 
             return deployment_list
 
-    def get_blueprints_by_user_or_project(self, username: str = None, project_domain: str = None, active: bool = True):
+    @classmethod
+    def get_blueprints_by_user_or_project(cls, username: str = None, project_domain: str = None, active: bool = True):
         """
         Returns [blueprint_id] for every blueprint, that belongs to user or project (or both)
         """
-        with self.connection.cursor() as dbcur:
+        with cls.cursor() as dbcur:
             if username and not project_domain:
                 stmt = sql.SQL("""select distinct on (blueprint_id) blueprint_id, blueprint_name, aadm_id, 
                                     username, project_domain, timestamp from {blueprint_table}
@@ -817,7 +697,8 @@ class PostgreSQL(Database):
 
             return blueprint_list
 
-    def delete_deployment(self, deployment_id: uuid):
+    @classmethod
+    def delete_deployment(cls, deployment_id: uuid):
         """
         Deletes deployment data
         """
@@ -827,7 +708,7 @@ class PostgreSQL(Database):
             deployment_id=sql.Literal(str(deployment_id))
         )
 
-        success = self.execute(stmt)
+        success = cls.execute(stmt)
 
         if success:
             logger.debug(
