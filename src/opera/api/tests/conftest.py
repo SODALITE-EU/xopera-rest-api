@@ -3,6 +3,7 @@ import shutil
 import uuid
 import base64
 from pathlib import Path
+import psycopg2
 
 import git
 import psutil
@@ -40,7 +41,6 @@ def change_API_WORKDIR(new_workdir: str):
     Settings.STDFILE_DIR = f"{Settings.API_WORKDIR}/in_progress"
     Settings.INVOCATION_DIR = f"{Settings.API_WORKDIR}/invocations"
     Settings.DEPLOYMENT_DIR = f"{Settings.API_WORKDIR}/deployment_dir"
-    Settings.offline_storage = Path(Settings.API_WORKDIR) / 'storage'
     Settings.workdir = Path(Settings.API_WORKDIR) / "git_db/mockConnector"
 
 
@@ -82,15 +82,78 @@ def generic_invocation():
     inv.timestamp_submission = timestamp_util.datetime_now_to_string()
     return inv
 
+class FakePostgres:
+    def __init__(self, **kwargs):
+        pass
+
+    @staticmethod
+    def cursor():
+        return NoneCursor()
+
+    def commit(self):
+        pass
+
+    def close(self):
+        pass
+
+# Class to be redefined with custom fetchone or fetchall function
+class NoneCursor:
+    command = ""
+    replacements = ""
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
+
+    @classmethod
+    def execute(cls, command, replacements=None):
+        if isinstance(command, psycopg2.sql.Composed):
+            cls.command = command._wrapped.__repr__()
+        else:
+            cls.command = command
+        cls.replacements = replacements
+        return None
+
+    @classmethod
+    def fetchone(cls):
+        return None
+
+    @classmethod
+    def fetchall(cls):
+        return []
+
+    @classmethod
+    def close(cls):
+        pass
+
+    @classmethod
+    def get_command(cls):
+        """This method does not exist in real Cursor object, for testing purposes only"""
+        return cls.command
+
+    @classmethod
+    def get_replacements(cls):
+        """This method does not exist in real Cursor object, for testing purposes only"""
+        return cls.replacements
+
+
+@pytest.fixture()
+def patch_db(mocker):
+    mocker.patch('psycopg2.connect', new=FakePostgres)
+
 
 @pytest.fixture()
 def patch_auth_wrapper(mocker, generic_invocation: Invocation):
+    mocker.patch('psycopg2.connect', new=FakePostgres)
     inv = generic_invocation
     inv.state = InvocationState.SUCCESS
+    mocker.patch('opera.api.service.sqldb_service.PostgreSQL.version_exists', return_value=True)
     mocker.patch('opera.api.service.csardb_service.GitDB.version_exists', return_value=True)
-    mocker.patch('opera.api.service.sqldb_service.Database.get_deployment_status',
+    mocker.patch('opera.api.service.sqldb_service.PostgreSQL.get_deployment_status',
                  return_value=inv)
-    mocker.patch('opera.api.service.sqldb_service.Database.get_project_domain', return_value=None)
+    mocker.patch('opera.api.service.sqldb_service.PostgreSQL.get_project_domain', return_value=None)
 
 
 @pytest.fixture()

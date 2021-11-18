@@ -1,6 +1,7 @@
 import connexion
 
-from opera.api.cli import CSAR_db, SQL_database
+from opera.api.cli import CSAR_db
+from opera.api.service.sqldb_service import PostgreSQL
 from opera.api.controllers import security_controller
 from opera.api.log import get_logger
 from opera.api.openapi.models import Blueprint, BlueprintVersion
@@ -45,11 +46,11 @@ def post_new_blueprint(revision_msg=None, blueprint_name=None, aadm_id=None, use
     blueprint_meta.aadm_id = aadm_id
     blueprint_meta.username = username
 
-    if not SQL_database.save_blueprint_meta(blueprint_meta):
+    if not PostgreSQL.save_blueprint_meta(blueprint_meta):
         blueprint_id = blueprint_meta.blueprint_id
         return f"Failed to save project data for blueprint_id={blueprint_id}", 500
 
-    SQL_database.save_git_transaction_data(blueprint_id=result['blueprint_id'],
+    PostgreSQL.save_git_transaction_data(blueprint_id=result['blueprint_id'],
                                            version_id=result['version_id'],
                                            revision_msg=f"Saved new blueprint: {revision_msg}",
                                            job='update',
@@ -75,7 +76,7 @@ def get_blueprints_user_domain(username=None, project_domain=None, active=True):
     if not username and not project_domain:
         return "At least on of (user, project_domain) must be present", 400
 
-    data = SQL_database.get_blueprints_by_user_or_project(username=username, project_domain=project_domain, active=active)
+    data = PostgreSQL.get_blueprints_by_user_or_project(username=username, project_domain=project_domain, active=active)
 
     if not data:
         return "Blueprints not found", 404
@@ -103,16 +104,16 @@ def post_blueprint(blueprint_id, revision_msg=None):
 
     blueprint_meta = BlueprintVersion.from_dict(result)
     # copy blueprint params from first revision
-    blueprint_meta_old = BlueprintVersion.from_dict(SQL_database.get_blueprint_meta(blueprint_id, 'v1.0'))
+    blueprint_meta_old = BlueprintVersion.from_dict(PostgreSQL.get_blueprint_meta(blueprint_id, 'v1.0'))
     blueprint_meta.blueprint_name = blueprint_meta_old.blueprint_name
     blueprint_meta.project_domain = blueprint_meta_old.project_domain
     blueprint_meta.aadm_id = blueprint_meta_old.aadm_id
     blueprint_meta.username = blueprint_meta_old.username
 
-    if not SQL_database.save_blueprint_meta(blueprint_meta):
+    if not PostgreSQL.save_blueprint_meta(blueprint_meta):
         return f"Failed to save project data for blueprint_id={blueprint_id}", 500
 
-    SQL_database.save_git_transaction_data(blueprint_id=result['blueprint_id'],
+    PostgreSQL.save_git_transaction_data(blueprint_id=result['blueprint_id'],
                                            version_id=result['version_id'],
                                            revision_msg=f"Updated blueprint: {revision_msg}",
                                            job='update',
@@ -135,7 +136,7 @@ def delete_blueprint(blueprint_id, force=None):
     :rtype: Blueprint
     """
     if not force:
-        if SQL_database.blueprint_used_in_deployment(blueprint_id):
+        if PostgreSQL.blueprint_used_in_deployment(blueprint_id):
             return "Cannot delete blueprint, deployment with this blueprint exists", 403
 
     repo_url, _ = CSAR_db.get_repo_url(blueprint_id)
@@ -144,8 +145,8 @@ def delete_blueprint(blueprint_id, force=None):
     logger.debug(f"Rows affected, status_code: {rows_affected} {status_code}")
 
     if status_code == 200:
-        SQL_database.delete_blueprint_meta(blueprint_id)
-        SQL_database.save_git_transaction_data(blueprint_id=blueprint_id,
+        PostgreSQL.delete_blueprint_meta(blueprint_id)
+        PostgreSQL.save_git_transaction_data(blueprint_id=blueprint_id,
                                                revision_msg=f"Deleted blueprint",
                                                job='delete',
                                                git_backend=str(CSAR_db.connection.git_connector),
@@ -177,7 +178,7 @@ def delete_blueprint_version(blueprint_id, version_id, force=None):
     :rtype: Blueprint
     """
     if not force:
-        if SQL_database.blueprint_used_in_deployment(blueprint_id, version_id):
+        if PostgreSQL.blueprint_used_in_deployment(blueprint_id, version_id):
             return "Cannot delete blueprint, deployment with this blueprint exists", 403
 
     repo_url, _ = CSAR_db.get_repo_url(blueprint_id)
@@ -186,8 +187,8 @@ def delete_blueprint_version(blueprint_id, version_id, force=None):
     logger.debug(f"Rows affected, status_code: {rows_affected} {status_code}")
 
     if status_code == 200:
-        SQL_database.delete_blueprint_meta(blueprint_id, version_id)
-        SQL_database.save_git_transaction_data(blueprint_id=blueprint_id,
+        PostgreSQL.delete_blueprint_meta(blueprint_id, version_id)
+        PostgreSQL.save_git_transaction_data(blueprint_id=blueprint_id,
                                                version_id=version_id,
                                                revision_msg=f"Deleted a version of blueprint",
                                                job='delete',

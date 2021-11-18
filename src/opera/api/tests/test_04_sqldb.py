@@ -5,10 +5,11 @@ import uuid
 
 import psycopg2
 from assertpy import assert_that
+import pytest
 
 from opera.api.openapi.models import BlueprintVersion, InvocationState, OperationType, Deployment, GitLog, Invocation
 from opera.api.openapi.models.base_model_ import Model as BaseModel
-from opera.api.service.sqldb_service import PostgreSQL
+from opera.api.service.sqldb_service import PostgreSQL, SqlDBFailedException
 from opera.api.util import timestamp_util
 
 
@@ -31,6 +32,8 @@ class FakePostgres:
     def commit(self):
         pass
 
+    def close(self):
+        pass
 
 # Class to be redefined with custom fetchone or fetchall function
 class NoneCursor:
@@ -50,6 +53,7 @@ class NoneCursor:
         else:
             cls.command = command
         cls.replacements = replacements
+        return None
 
     @classmethod
     def fetchone(cls):
@@ -256,13 +260,28 @@ class OperaSessionDataCursor(NoneCursor):
         ]
 
 
+class TestConnection:
+    def test_psycopg2_error(self, mocker):
+        mocker.patch('psycopg2.connect', side_effect=psycopg2.Error)
+        with pytest.raises(SqlDBFailedException):
+            # PostgreSQL.connection() is a contextmanager
+            with PostgreSQL.connection():
+                pass
+
+    def test_initialize(self, mocker):
+        mock_execute = mocker.MagicMock(name='execute')
+        mocker.patch('opera.api.service.sqldb_service.PostgreSQL.execute', new=mock_execute)
+        PostgreSQL.initialize()
+        assert mock_execute.call_count == 4
+
+
 class TestVersionExists:
 
     def test_blueprint_has_never_existed(self, mocker, caplog):
         # Test preparation
         caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
+        db = PostgreSQL()
 
         # Testing
         blueprint_id = uuid.uuid4()
@@ -275,8 +294,8 @@ class TestVersionExists:
         # test set up
         caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
-        monkeypatch.setattr(db.connection, 'cursor', BlueprintDeletedCursor)
+        monkeypatch.setattr(FakePostgres, 'cursor', BlueprintDeletedCursor)
+        db = PostgreSQL()
 
         # Testing
         blueprint_id = uuid.uuid4()
@@ -289,8 +308,8 @@ class TestVersionExists:
         # test set up
         caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
-        monkeypatch.setattr(db.connection, 'cursor', VersionNeverExistedCursor)
+        db = PostgreSQL()
+        monkeypatch.setattr(FakePostgres, 'cursor', VersionNeverExistedCursor)
 
         # testing
         blueprint_id = uuid.uuid4()
@@ -303,8 +322,8 @@ class TestVersionExists:
         # test set up
         caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
-        monkeypatch.setattr(db.connection, 'cursor', VersionDeletedCursor)
+        db = PostgreSQL()
+        monkeypatch.setattr(FakePostgres, 'cursor', VersionDeletedCursor)
 
         # testing
         blueprint_id = uuid.uuid4()
@@ -318,8 +337,8 @@ class TestVersionExists:
         # test set up
         caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
-        monkeypatch.setattr(db.connection, 'cursor', VersionExistsCursor)
+        db = PostgreSQL()
+        monkeypatch.setattr(FakePostgres, 'cursor', VersionExistsCursor)
 
         # testing
         blueprint_id = uuid.uuid4()
@@ -334,14 +353,15 @@ class TestBlueprintMeta:
     def test_save_blueprint_meta(self, mocker, monkeypatch, caplog, generic_blueprint_meta):
         # test set up
         caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
+        monkeypatch.setattr(FakePostgres, 'cursor', NoneCursor)
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
-        monkeypatch.setattr(db.connection, 'cursor', NoneCursor)
+        db = PostgreSQL()
+
 
         # testing
         blueprint_meta: BlueprintVersion = generic_blueprint_meta
         db.save_blueprint_meta(blueprint_meta)
-        replacements = db.connection.cursor().get_replacements()
+        replacements = NoneCursor.get_replacements()
         assert_that(replacements).contains_only(*[
             str(blueprint_meta.blueprint_id),
             blueprint_meta.version_id,
@@ -354,12 +374,12 @@ class TestBlueprintMeta:
         ])
         assert_that(caplog.text).contains("Updated blueprint meta", str(blueprint_meta.blueprint_id))
 
-    def test_save_blueprint_meta_exception(self, mocker, monkeypatch, caplog, generic_blueprint_meta):
+    def test_save_blueprint_meta_exception(self, mocker,  caplog, monkeypatch, generic_blueprint_meta):
         # test set up
         caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
-        monkeypatch.setattr(db.connection, 'cursor', PsycopgErrorCursor)
+        db = PostgreSQL()
+        monkeypatch.setattr(FakePostgres, 'cursor', PsycopgErrorCursor)
 
         blueprint_meta: BlueprintVersion = generic_blueprint_meta
         db.save_blueprint_meta(blueprint_meta)
@@ -382,8 +402,8 @@ class TestBlueprintMeta:
         # test set up
         caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
-        monkeypatch.setattr(db.connection, 'cursor', GetBlueprintMetaCursor)
+        db = PostgreSQL()
+        monkeypatch.setattr(FakePostgres, 'cursor', GetBlueprintMetaCursor)
 
         # test
         blueprint_meta: BlueprintVersion = self.blueprint_meta
@@ -394,8 +414,8 @@ class TestBlueprintMeta:
         # test set up
         caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
-        monkeypatch.setattr(db.connection, 'cursor', GetBlueprintMetaCursor)
+        db = PostgreSQL()
+        monkeypatch.setattr(FakePostgres, 'cursor', GetBlueprintMetaCursor)
 
         # test
         blueprint_meta: BlueprintVersion = self.blueprint_meta
@@ -408,18 +428,18 @@ class TestBlueprintMeta:
         # test set up
         caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
+        db = PostgreSQL()
 
         # test
         blueprint_meta: BlueprintVersion = generic_blueprint_meta
         assert db.get_blueprint_meta(blueprint_meta.blueprint_id) is None
 
-    def test_get_project_domain(self, mocker, monkeypatch, caplog, generic_blueprint_meta):
+    def test_get_project_domain(self, mocker,  caplog, monkeypatch, generic_blueprint_meta):
         # test set up
         caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
-        monkeypatch.setattr(db.connection, 'cursor', GetBlueprintMetaCursor)
+        db = PostgreSQL()
+        monkeypatch.setattr(FakePostgres, 'cursor', GetBlueprintMetaCursor)
 
         # test
         blueprint_meta: BlueprintVersion = generic_blueprint_meta
@@ -429,18 +449,18 @@ class TestBlueprintMeta:
         # test set up
         caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
+        db = PostgreSQL()
 
         # test
         blueprint_meta: BlueprintVersion = generic_blueprint_meta
         assert db.get_project_domain(blueprint_meta.blueprint_id) is None
 
-    def test_get_blueprint_name(self, mocker, monkeypatch, caplog, generic_blueprint_meta):
+    def test_get_blueprint_name(self, mocker,  caplog, monkeypatch, generic_blueprint_meta):
         # test set up
         caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
-        monkeypatch.setattr(db.connection, 'cursor', GetBlueprintMetaCursor)
+        db = PostgreSQL()
+        monkeypatch.setattr(FakePostgres, 'cursor', GetBlueprintMetaCursor)
 
         # test
         blueprint_meta: BlueprintVersion = generic_blueprint_meta
@@ -450,14 +470,14 @@ class TestBlueprintMeta:
         # test set up
         caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
-        monkeypatch.setattr(db.connection, 'cursor', NoneCursor)
+        db = PostgreSQL()
+        monkeypatch.setattr(FakePostgres, 'cursor', NoneCursor)
 
         # test
         blueprint_meta: BlueprintVersion = generic_blueprint_meta
         new_name = 'new_name'
         db.update_blueprint_name(blueprint_meta.blueprint_id, new_name)
-        command = db.connection.cursor().get_command()
+        command = NoneCursor.get_command()
         assert_that(command).contains(blueprint_meta.blueprint_name, new_name)
         assert_that(caplog.text).contains("Updated blueprint name", new_name, str(blueprint_meta.blueprint_id))
 
@@ -465,8 +485,8 @@ class TestBlueprintMeta:
         # test set up
         caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
-        monkeypatch.setattr(db.connection, 'cursor', PsycopgErrorCursor)
+        db = PostgreSQL()
+        monkeypatch.setattr(FakePostgres, 'cursor', PsycopgErrorCursor)
 
         blueprint_meta: BlueprintVersion = generic_blueprint_meta
         new_name = 'new_name'
@@ -478,7 +498,7 @@ class TestBlueprintMeta:
         # test set up
         caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
+        db = PostgreSQL()
 
         # test
         blueprint_meta: BlueprintVersion = generic_blueprint_meta
@@ -488,13 +508,13 @@ class TestBlueprintMeta:
         # test set up
         caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
-        monkeypatch.setattr(db.connection, 'cursor', NoneCursor)
+        db = PostgreSQL()
+        monkeypatch.setattr(FakePostgres, 'cursor', NoneCursor)
 
         # testing
         blueprint_id = uuid.uuid4()
         assert db.delete_blueprint_meta(blueprint_id)
-        command = db.connection.cursor().get_command()
+        command = NoneCursor.get_command()
         assert_that(command).contains("delete")
         assert_that(caplog.text).contains("Deleted blueprint meta", str(blueprint_id))
 
@@ -502,14 +522,14 @@ class TestBlueprintMeta:
         # test set up
         caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
-        monkeypatch.setattr(db.connection, 'cursor', NoneCursor)
+        db = PostgreSQL()
+        monkeypatch.setattr(FakePostgres, 'cursor', NoneCursor)
 
         # testing
         blueprint_id = uuid.uuid4()
         version_id = 'v1.0'
         assert db.delete_blueprint_meta(blueprint_id, version_id)
-        command = db.connection.cursor().get_command()
+        command = NoneCursor.get_command()
         assert_that(command).contains("delete")
         assert_that(caplog.text).contains("Deleted blueprint meta", str(blueprint_id), str(version_id))
 
@@ -517,8 +537,8 @@ class TestBlueprintMeta:
         # test set up
         caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
-        monkeypatch.setattr(db.connection, 'cursor', PsycopgErrorCursor)
+        db = PostgreSQL()
+        monkeypatch.setattr(FakePostgres, 'cursor', PsycopgErrorCursor)
 
         # testing
         blueprint_id = uuid.uuid4()
@@ -530,11 +550,11 @@ class TestBlueprintMeta:
         'foo2': 'bar2'
     }
 
-    def test_get_inputs(self, mocker, monkeypatch):
+    def test_get_inputs(self, monkeypatch, mocker):
         # test set up
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
-        monkeypatch.setattr(db.connection, 'cursor', GetInputsCursor)
+        db = PostgreSQL()
+        monkeypatch.setattr(FakePostgres, 'cursor', GetInputsCursor)
 
         deployment_id = uuid.uuid4()
         assert_that(db.get_inputs(deployment_id=deployment_id)).is_equal_to(self.inputs)
@@ -542,15 +562,15 @@ class TestBlueprintMeta:
     def test_get_inputs_missing(self, mocker):
         # test set up
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
+        db = PostgreSQL()
 
         deployment_id = uuid.uuid4()
         assert_that(db.get_inputs(deployment_id=deployment_id)).is_none()
 
-    def test_get_inputs_exception(self, mocker, monkeypatch):
+    def test_get_inputs_exception(self, monkeypatch, mocker):
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
-        monkeypatch.setattr(db.connection, 'cursor', GetStringCursor)
+        db = PostgreSQL()
+        monkeypatch.setattr(FakePostgres, 'cursor', GetStringCursor)
 
         deployment_id = uuid.uuid4()
         assert_that(db.get_inputs(deployment_id=deployment_id)).is_none()
@@ -564,11 +584,11 @@ class TestBlueprintMeta:
         'deployment_label': 'label'
     }
 
-    def test_get_deployments(self, mocker, monkeypatch):
+    def test_get_deployments(self, monkeypatch, mocker):
         # test set up
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
-        monkeypatch.setattr(db.connection, 'cursor', GetBlueprintMetaCursor)
+        db = PostgreSQL()
+        monkeypatch.setattr(FakePostgres, 'cursor', GetBlueprintMetaCursor)
 
         blueprint_id = uuid.uuid4()
         assert_that(db.get_deployments_for_blueprint(blueprint_id, active=False)).is_equal_to([self.deployment])
@@ -592,11 +612,11 @@ class TestBlueprintMeta:
         }
     ]
 
-    def test_get_active_deployments(self, mocker, monkeypatch):
+    def test_get_active_deployments(self, monkeypatch, mocker):
         # test set up
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
-        monkeypatch.setattr(db.connection, 'cursor', GetDeploymentsCursor)
+        db = PostgreSQL()
+        monkeypatch.setattr(FakePostgres, 'cursor', GetDeploymentsCursor)
 
         blueprint_id = uuid.uuid4()
         assert_that(db.get_deployments_for_blueprint(blueprint_id, active=False)).is_equal_to(self.deployments)
@@ -655,39 +675,39 @@ class TestGetBlueprint:
         }
     ]
 
-    def test_user(self, mocker, monkeypatch):
+    def test_user(self, monkeypatch, mocker):
         # test set up
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
-        monkeypatch.setattr(db.connection, 'cursor', GetBlueprintCursor)
+        db = PostgreSQL()
+        monkeypatch.setattr(FakePostgres, 'cursor', GetBlueprintCursor)
 
         # testing
         assert db.get_blueprints_by_user_or_project(username='username', active=False) == self.blueprints
 
-    def test_project_domain(self, mocker, monkeypatch):
+    def test_project_domain(self, monkeypatch, mocker):
         # test set up
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
-        monkeypatch.setattr(db.connection, 'cursor', GetBlueprintCursor)
+        db = PostgreSQL()
+        monkeypatch.setattr(FakePostgres, 'cursor', GetBlueprintCursor)
 
         # testing
         assert db.get_blueprints_by_user_or_project(project_domain='project_domain', active=False) == self.blueprints
 
-    def test_user_and_project_domain(self, mocker, monkeypatch):
+    def test_user_and_project_domain(self, monkeypatch, mocker):
         # test set up
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
-        monkeypatch.setattr(db.connection, 'cursor', GetBlueprintCursor)
+        db = PostgreSQL()
+        monkeypatch.setattr(FakePostgres, 'cursor', GetBlueprintCursor)
 
         # testing
         assert db.get_blueprints_by_user_or_project(username='username',
                                                     project_domain='project_domain', active=False) == self.blueprints
 
-    def test_active(self, mocker, monkeypatch):
+    def test_active(self, monkeypatch, mocker):
         # test set up
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
-        monkeypatch.setattr(db.connection, 'cursor', GetBlueprintCursor)
+        db = PostgreSQL()
+        monkeypatch.setattr(FakePostgres, 'cursor', GetBlueprintCursor)
 
         # testing
         assert db.get_blueprints_by_user_or_project(username='username', active=True) == [self.blueprints[0]]
@@ -707,11 +727,11 @@ class TestGitTransactionData:
         }
     )
 
-    def test_get(self, mocker, monkeypatch):
+    def test_get(self, monkeypatch, mocker):
         # test set up
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
-        monkeypatch.setattr(db.connection, 'cursor', GitTransactionDataCursor)
+        db = PostgreSQL()
+        monkeypatch.setattr(FakePostgres, 'cursor', GitTransactionDataCursor)
 
         # testing
         assert_that(db.get_git_transaction_data(
@@ -722,7 +742,7 @@ class TestGitTransactionData:
         # test set up
         caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
+        db = PostgreSQL()
 
         # testing
         assert_that(db.save_git_transaction_data(
@@ -742,8 +762,8 @@ class TestGitTransactionData:
         # test set up
         caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
-        monkeypatch.setattr(db.connection, 'cursor', PsycopgErrorCursor)
+        db = PostgreSQL()
+        monkeypatch.setattr(FakePostgres, 'cursor', PsycopgErrorCursor)
 
         # testing
         assert_that(db.save_git_transaction_data(
@@ -779,53 +799,53 @@ class TestInvocation:
     def test_get_last_invocation_id_fail(self, mocker):
         # test set up
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
+        db = PostgreSQL()
 
         assert_that(db.get_last_invocation_id(uuid.uuid4())).is_none()
 
-    def test_get_last_invocation_id_success(self, mocker, monkeypatch):
+    def test_get_last_invocation_id_success(self, monkeypatch, mocker):
         # test set up
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
-        monkeypatch.setattr(db.connection, 'cursor', InvocationCursor)
+        db = PostgreSQL()
+        monkeypatch.setattr(FakePostgres, 'cursor', InvocationCursor)
 
         assert_that(db.get_last_invocation_id(uuid.uuid4())).is_equal_to(self.invocation_id)
 
-    def test_get_deployment_history(self, mocker, monkeypatch):
+    def test_get_deployment_history(self, monkeypatch, mocker):
         # test set up
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
-        monkeypatch.setattr(db.connection, 'cursor', InvocationCursor)
+        db = PostgreSQL()
+        monkeypatch.setattr(FakePostgres, 'cursor', InvocationCursor)
 
         assert_that([obj_to_json(x) for x in db.get_deployment_history(uuid.uuid4())]).is_equal_to([self.inv.to_dict()])
 
-    def test_get_last_completed_invocation(self, mocker, monkeypatch):
+    def test_get_last_completed_invocation(self, monkeypatch, mocker):
         # test set up
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
-        monkeypatch.setattr(db.connection, 'cursor', InvocationCursor)
+        db = PostgreSQL()
+        monkeypatch.setattr(FakePostgres, 'cursor', InvocationCursor)
 
         assert_that(obj_to_json(db.get_last_completed_invocation(uuid.uuid4()))).is_equal_to(self.inv.to_dict())
 
     def test_get_last_completed_invocation_fail(self, mocker):
         # test set up
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
+        db = PostgreSQL()
 
         assert_that(db.get_last_completed_invocation(uuid.uuid4())).is_none()
 
-    def test_get_deployment_status(self, mocker, monkeypatch):
+    def test_get_deployment_status(self, monkeypatch, mocker):
         # test set up
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
-        monkeypatch.setattr(db.connection, 'cursor', InvocationCursor)
+        db = PostgreSQL()
+        monkeypatch.setattr(FakePostgres, 'cursor', InvocationCursor)
 
         assert_that(obj_to_json(db.get_deployment_status(uuid.uuid4()))).is_equal_to(self.inv.to_dict())
 
     def test_get_deployment_status_fail(self, mocker):
         # test set up
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
+        db = PostgreSQL()
 
         assert_that(db.get_deployment_status(uuid.uuid4())).is_none()
 
@@ -833,7 +853,7 @@ class TestInvocation:
         # test set up
         caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
+        db = PostgreSQL()
 
         assert_that(db.update_deployment_log(self.invocation_id, self.inv)).is_true()
 
@@ -845,8 +865,8 @@ class TestInvocation:
         # test set up
         caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
-        monkeypatch.setattr(db.connection, 'cursor', PsycopgErrorCursor)
+        db = PostgreSQL()
+        monkeypatch.setattr(FakePostgres, 'cursor', PsycopgErrorCursor)
 
         assert_that(db.update_deployment_log(self.invocation_id, self.inv)).is_false()
 
@@ -854,51 +874,51 @@ class TestInvocation:
                                           str(self.inv.deployment_id),
                                           str(self.invocation_id))
 
-    def test_get_deployment_ids(self, mocker, monkeypatch):
+    def test_get_deployment_ids(self, monkeypatch, mocker):
         # test set up
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
-        monkeypatch.setattr(db.connection, 'cursor', InvocationCursor)
+        db = PostgreSQL()
+        monkeypatch.setattr(FakePostgres, 'cursor', InvocationCursor)
 
         assert_that(db.get_deployment_ids(uuid.uuid4())).is_equal_to([self.inv.deployment_id])
 
-    def test_get_deployment_ids_version(self, mocker, monkeypatch):
+    def test_get_deployment_ids_version(self, monkeypatch, mocker):
         # test set up
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
-        monkeypatch.setattr(db.connection, 'cursor', InvocationCursor)
+        db = PostgreSQL()
+        monkeypatch.setattr(FakePostgres, 'cursor', InvocationCursor)
 
         assert_that(db.get_deployment_ids(uuid.uuid4(), 'v1.0')).is_equal_to([self.inv.deployment_id])
 
     def test_blueprint_used_in_deployment_no_deployment_ids(self, mocker):
         # test set up
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        mocker.patch('opera.api.service.sqldb_service.Database.get_deployment_ids', return_value=None)
-        db = PostgreSQL({})
+        mocker.patch('opera.api.service.sqldb_service.PostgreSQL.get_deployment_ids', return_value=None)
+        db = PostgreSQL()
 
         assert_that(db.blueprint_used_in_deployment(uuid.uuid4(), 'v1.0')).is_false()
 
-    def test_blueprint_used_in_deployment(self, mocker, monkeypatch):
+    def test_blueprint_used_in_deployment(self, monkeypatch, mocker):
         # test set up
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
-        monkeypatch.setattr(db.connection, 'cursor', InvocationCursor)
+        db = PostgreSQL()
+        monkeypatch.setattr(FakePostgres, 'cursor', InvocationCursor)
 
         assert_that(db.blueprint_used_in_deployment(uuid.uuid4())).is_true()
 
-    def test_blueprint_used_in_deployment_version(self, mocker, monkeypatch):
+    def test_blueprint_used_in_deployment_version(self, monkeypatch, mocker):
         # test set up
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
-        monkeypatch.setattr(db.connection, 'cursor', InvocationCursor)
+        db = PostgreSQL()
+        monkeypatch.setattr(FakePostgres, 'cursor', InvocationCursor)
 
         assert_that(db.blueprint_used_in_deployment(uuid.uuid4(), self.inv.version_id)).is_true()
 
-    def test_blueprint_used_in_deployment_version_no_ids(self, mocker, monkeypatch):
+    def test_blueprint_used_in_deployment_version_no_ids(self, monkeypatch, mocker):
         # test set up
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
-        monkeypatch.setattr(db.connection, 'cursor', InvocationCursor)
+        db = PostgreSQL()
+        monkeypatch.setattr(FakePostgres, 'cursor', InvocationCursor)
 
         assert_that(db.blueprint_used_in_deployment(uuid.uuid4(), 'blah')).is_false()
 
@@ -906,7 +926,7 @@ class TestInvocation:
         # test set up
         caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
+        db = PostgreSQL()
 
         deployment_id = uuid.uuid4()
         assert_that(db.delete_deployment(deployment_id)).is_true()
@@ -916,8 +936,8 @@ class TestInvocation:
         # test set up
         caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
-        monkeypatch.setattr(db.connection, 'cursor', PsycopgErrorCursor)
+        db = PostgreSQL()
+        monkeypatch.setattr(FakePostgres, 'cursor', PsycopgErrorCursor)
 
         deployment_id = uuid.uuid4()
         assert_that(db.delete_deployment(deployment_id)).is_false()
@@ -935,7 +955,7 @@ class TestSessionData:
         # test set up
         caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
+        db = PostgreSQL()
         deployment_id = uuid.uuid4()
         assert_that(db.save_opera_session_data(deployment_id, {})).is_true()
         assert_that(caplog.text).contains("Updated dot_opera_data", str(deployment_id))
@@ -944,24 +964,24 @@ class TestSessionData:
         # test set up
         caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
-        monkeypatch.setattr(db.connection, 'cursor', PsycopgErrorCursor)
+        db = PostgreSQL()
+        monkeypatch.setattr(FakePostgres, 'cursor', PsycopgErrorCursor)
         deployment_id = uuid.uuid4()
         assert_that(db.save_opera_session_data(deployment_id, {})).is_false()
         assert_that(caplog.text).contains("Failed to update dot_opera_data", str(deployment_id))
 
-    def test_get_opera_session_data(self, mocker, monkeypatch):
+    def test_get_opera_session_data(self, monkeypatch, mocker):
         # test set up
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
-        monkeypatch.setattr(db.connection, 'cursor', OperaSessionDataCursor)
+        db = PostgreSQL()
+        monkeypatch.setattr(FakePostgres, 'cursor', OperaSessionDataCursor)
 
         assert_that(db.get_opera_session_data(self.session_data['deployment_id'])).is_equal_to(self.session_data)
 
     def test_get_opera_session_data_fail(self, mocker):
         # test set up
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
+        db = PostgreSQL()
 
         assert_that(db.get_opera_session_data(self.session_data['deployment_id'])).is_none()
 
@@ -969,7 +989,7 @@ class TestSessionData:
         # test set up
         caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
+        db = PostgreSQL()
 
         deployment_id = uuid.uuid4()
         assert_that(db.delete_opera_session_data(deployment_id)).is_true()
@@ -979,8 +999,8 @@ class TestSessionData:
         # test set up
         caplog.set_level(logging.DEBUG, logger="opera.api.service.sqldb_service")
         mocker.patch('psycopg2.connect', new=FakePostgres)
-        db = PostgreSQL({})
-        monkeypatch.setattr(db.connection, 'cursor', PsycopgErrorCursor)
+        db = PostgreSQL()
+        monkeypatch.setattr(FakePostgres, 'cursor', PsycopgErrorCursor)
 
         deployment_id = uuid.uuid4()
         assert_that(db.delete_opera_session_data(deployment_id)).is_false()

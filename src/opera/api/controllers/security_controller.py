@@ -6,7 +6,8 @@ from base64 import b64encode
 import connexion
 import requests
 
-from opera.api.cli import CSAR_db, SQL_database
+from opera.api.cli import CSAR_db
+from opera.api.service.sqldb_service import PostgreSQL
 from opera.api.settings import Settings
 
 # use connection pool for OAuth tokeninfo
@@ -114,11 +115,11 @@ def check_role_auth_blueprint(func):
             return f"Authorization configuration error", 401
 
         version_id = kwargs.get("version_id")
-        if not SQL_database.version_exists(blueprint_id, version_id) and not CSAR_db.version_exists(blueprint_id,
-                                                                                                    version_id):
+        if not PostgreSQL.version_exists(blueprint_id, version_id) and not CSAR_db.version_exists(blueprint_id,
+                                                                                                  version_id):
             return f"Did not find blueprint with id: {blueprint_id} and version_id: {version_id or 'any'}", 404
 
-        project_domain = SQL_database.get_project_domain(blueprint_id)
+        project_domain = PostgreSQL.get_project_domain(blueprint_id)
         if project_domain and not check_roles(project_domain):
             return f"Unauthorized request for project: {project_domain}", 401
 
@@ -134,7 +135,7 @@ def check_role_auth_project_domain(func):
         if not blueprint_id:
             return f"Authorization configuration error", 401
 
-        project_domain = SQL_database.get_project_domain(blueprint_id)
+        project_domain = PostgreSQL.get_project_domain(blueprint_id)
         if project_domain and not check_roles(project_domain):
             return f"Unauthorized request for project: {project_domain}", 401
 
@@ -150,15 +151,15 @@ def check_role_auth_deployment(func):
         if not deployment_id:
             return f"Authorization configuration error", 401
 
-        inv = SQL_database.get_deployment_status(deployment_id)
+        inv = PostgreSQL.get_deployment_status(deployment_id)
         if not inv:
             return f"Deployment with id: {deployment_id} does not exist", 404
 
-        if not SQL_database.version_exists(inv.blueprint_id, inv.version_id) and not CSAR_db.version_exists(
+        if not PostgreSQL.version_exists(inv.blueprint_id, inv.version_id) and not CSAR_db.version_exists(
                 inv.blueprint_id, inv.version_id):
             return f"Did not find blueprint with id: {inv.blueprint_id} and version_id: {inv.version_id or 'any'}", 404
 
-        project_domain = SQL_database.get_project_domain(inv.blueprint_id)
+        project_domain = PostgreSQL.get_project_domain(inv.blueprint_id)
         if project_domain and not check_roles(project_domain):
             return f"Unauthorized request for project: {project_domain}", 401
 

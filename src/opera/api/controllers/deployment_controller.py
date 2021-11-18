@@ -1,4 +1,4 @@
-from opera.api.cli import SQL_database
+from opera.api.service.sqldb_service import PostgreSQL
 from opera.api.controllers import security_controller
 from opera.api.controllers.background_invocation import InvocationService
 from opera.api.controllers.background_invocation import InvocationWorkerProcess
@@ -21,7 +21,7 @@ def get_deploy_log(deployment_id):
 
     :rtype: List[Invocation]
     """
-    history = SQL_database.get_deployment_history(deployment_id)
+    history = PostgreSQL.get_deployment_history(deployment_id)
     if not history:
         return "History not found", 404
     return history, 200
@@ -59,7 +59,7 @@ def post_deploy_continue(deployment_id, workers=1, clean_state=False):
     inputs = xopera_util.get_preprocessed_inputs()
     username = security_controller.get_username()
 
-    inv = SQL_database.get_deployment_status(deployment_id)
+    inv = PostgreSQL.get_deployment_status(deployment_id)
 
     if inv.state in [InvocationState.PENDING, InvocationState.IN_PROGRESS]:
         return f"Previous operation on this deployment still running", 403
@@ -149,7 +149,7 @@ def post_undeploy(deployment_id, workers=1, force=False):
     inputs = xopera_util.get_preprocessed_inputs()
     username = security_controller.get_username()
 
-    inv = SQL_database.get_deployment_status(deployment_id)
+    inv = PostgreSQL.get_deployment_status(deployment_id)
     if not force:
         if inv.state in [InvocationState.PENDING, InvocationState.IN_PROGRESS]:
             return f"Previous operation on this deployment still running", 403
@@ -190,7 +190,7 @@ def post_update(deployment_id, blueprint_id, version_id=None, workers=1):
     inputs = xopera_util.get_preprocessed_inputs()
     username = security_controller.get_username()
 
-    inv = SQL_database.get_deployment_status(deployment_id)
+    inv = PostgreSQL.get_deployment_status(deployment_id)
     if inv.state in [InvocationState.PENDING, InvocationState.IN_PROGRESS]:
         return f"Previous operation on this deployment still running", 403
 
@@ -223,13 +223,13 @@ def delete_deployment(deployment_id, force=False):
     :rtype: str
     """
 
-    inv = SQL_database.get_deployment_status(deployment_id)
+    inv = PostgreSQL.get_deployment_status(deployment_id)
     if not force:
         if inv.state in [InvocationState.PENDING, InvocationState.IN_PROGRESS]:
             return f"Previous operation on this deployment still running", 403
 
-    success_deployment = SQL_database.delete_deployment(deployment_id)
-    success_session_data = SQL_database.delete_opera_session_data(deployment_id)
+    success_deployment = PostgreSQL.delete_deployment(deployment_id)
+    success_session_data = PostgreSQL.delete_opera_session_data(deployment_id)
     if not (success_deployment and success_session_data):
         return "Failed to delete deployment", 500
 

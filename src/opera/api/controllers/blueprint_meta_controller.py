@@ -1,4 +1,4 @@
-from opera.api.cli import SQL_database
+from opera.api.service.sqldb_service import PostgreSQL
 from opera.api.controllers import security_controller
 from opera.api.log import get_logger
 from opera.api.openapi.models import BlueprintVersion, GitLog, Deployment
@@ -17,7 +17,7 @@ def get_blueprint_meta(blueprint_id):  # noqa: E501
 
     :rtype: Blueprint
     """
-    data = SQL_database.get_blueprint_meta(blueprint_id)
+    data = PostgreSQL.get_blueprint_meta(blueprint_id)
     if not data:
         return "Blueprint meta not found", 404
     return BlueprintVersion.from_dict(data), 200
@@ -36,7 +36,7 @@ def get_blueprint_version_meta(blueprint_id, version_id):  # noqa: E501
 
     :rtype: Blueprint
     """
-    data = SQL_database.get_blueprint_meta(blueprint_id, version_id)
+    data = PostgreSQL.get_blueprint_meta(blueprint_id, version_id)
     if not data:
         return "Blueprint meta not found", 404
     return BlueprintVersion.from_dict(data), 200
@@ -53,7 +53,7 @@ def get_blueprint_name(blueprint_id):  # noqa: E501
 
     :rtype: str
     """
-    name = SQL_database.get_blueprint_name(blueprint_id)
+    name = PostgreSQL.get_blueprint_name(blueprint_id)
     if not name:
         return "Blueprint name not found", 404
     return name, 200
@@ -72,7 +72,7 @@ def post_blueprint_name(blueprint_id, name):  # noqa: E501
 
     :rtype: str
     """
-    if not SQL_database.update_blueprint_name(blueprint_id, name):
+    if not PostgreSQL.update_blueprint_name(blueprint_id, name):
         return f"Failed to save project data for blueprint_id={blueprint_id}", 500
     return "Successfully changed name", 201
 
@@ -90,7 +90,7 @@ def get_blueprint_deployments(blueprint_id, active=True):  # noqa: E501
 
     :rtype: List[Deployment]
     """
-    data = SQL_database.get_deployments_for_blueprint(blueprint_id, active)
+    data = PostgreSQL.get_deployments_for_blueprint(blueprint_id, active)
     if not data:
         return "Deployments not found", 404
     return [Deployment.from_dict(item) for item in data], 200
@@ -105,7 +105,7 @@ def get_git_log(blueprint_id):
 
     :rtype: List[GitLog]
     """
-    data = SQL_database.get_git_transaction_data(blueprint_id)
+    data = PostgreSQL.get_git_transaction_data(blueprint_id)
     if not data:
         return "Log not found", 404
     return [GitLog.from_dict(item) for item in data], 200

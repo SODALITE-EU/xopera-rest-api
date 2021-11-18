@@ -5,7 +5,7 @@ from assertpy import assert_that
 
 class TestValidateExisting:
 
-    def test_no_blueprint(self, client, mocker):
+    def test_no_blueprint(self, client, mocker, patch_db):
         blueprint_id = uuid.uuid4()
         mock_version_exists = mocker.MagicMock(name='version_exists', return_value=False)
         mocker.patch('opera.api.service.csardb_service.GitDB.version_exists', new=mock_version_exists)
@@ -14,7 +14,7 @@ class TestValidateExisting:
         assert resp.status_code == 404
         mock_version_exists.assert_called_with(str(blueprint_id), None)
 
-    def test_exception(self, client, mocker):
+    def test_exception(self, client, mocker, patch_db):
         blueprint_id = uuid.uuid4()
         mocker.patch('opera.api.service.csardb_service.GitDB.version_exists', return_value=True)
         mock_validate = mocker.MagicMock(name='validate',
@@ -30,7 +30,7 @@ class TestValidateExisting:
         assert_that(resp.json['error']).contains("Exception stacktrace")
         mock_validate.assert_called_with(str(blueprint_id), None, None)
 
-    def test_ok(self, client, mocker, inputs_1):
+    def test_ok(self, client, mocker, inputs_1, patch_db):
         blueprint_token = uuid.uuid4()
         mocker.patch('opera.api.service.csardb_service.GitDB.version_exists', return_value=True)
         mock_validate = mocker.MagicMock(name='validate', return_value=None)
@@ -45,7 +45,7 @@ class TestValidateExisting:
 
 class TestValidateExistingVersion:
 
-    def test_no_blueprint(self, client, mocker):
+    def test_no_blueprint(self, client, mocker, patch_db):
         blueprint_id = uuid.uuid4()
         version_id = 'v1.0'
         mock_version_exists = mocker.MagicMock(name='version_exists', return_value=False)
@@ -55,7 +55,7 @@ class TestValidateExistingVersion:
         assert resp.status_code == 404
         mock_version_exists.assert_called_with(str(blueprint_id), version_id)
 
-    def test_exception(self, client, mocker):
+    def test_exception(self, client, mocker, patch_db):
         blueprint_id = uuid.uuid4()
         version_id = 'v1.0'
         mocker.patch('opera.api.service.csardb_service.GitDB.version_exists', return_value=True)
@@ -71,7 +71,7 @@ class TestValidateExistingVersion:
         assert_that(resp.json['error']).contains("Exception stacktrace")
         mock_validate.assert_called_with(str(blueprint_id), version_id, None)
 
-    def test_ok(self, client, mocker, inputs_1):
+    def test_ok(self, client, mocker, inputs_1, patch_db):
         blueprint_token = uuid.uuid4()
         version_id = 'v1.0'
         mocker.patch('opera.api.service.csardb_service.GitDB.version_exists', return_value=True)
