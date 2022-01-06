@@ -2,7 +2,6 @@ username: [current - username]
 # DOCKER SETTINGS
 docker-network: sodalite
 docker-public-registry-url: registry.hub.docker.com
-docker-private-registry-url: [PRIVATE REGISTRY IP/URL]
 docker-registry-cert-country-name: SI
 docker-registry-cert-organization-name: XLAB
 docker-registry-cert-email-address: [MAIL - OPTIONAL]

@@ -39,9 +39,6 @@ topology_template:
     docker-public-registry-url: 
       type: string
       default: ""
-    docker-private-registry-url: 
-      type: string
-      default: ""
     docker-registry-cert-country-name:
       type: string
       default: ""
@@ -135,25 +132,6 @@ topology_template:
         - host: sodalite-vm
         - dependency: docker-host
 
-    docker-private-registry:
-      type: sodalite.nodes.DockerRegistry
-      properties:
-        docker_registry_url: { get_input: docker-private-registry-url }
-      requirements:
-        - host: sodalite-vm
-        - dependency: docker-host
-
-    docker-registry-certificate:
-      type: sodalite.nodes.RegistryCertificate
-      properties:  
-        registry_ip:         { get_input: docker-private-registry-url }
-        country_name:        { get_input: docker-registry-cert-country-name }
-        organization_name:   { get_input: docker-registry-cert-organization-name }
-        email_address:       { get_input: docker-registry-cert-email-address }
-      requirements:
-        - host: sodalite-vm 
-        - dependency: docker-host        
-
     # xopera-rest-api
     # https://github.com/SODALITE-EU/xopera-rest-api        
     openstack-keys:
@@ -217,7 +195,7 @@ topology_template:
       properties:
         alias: xopera-rest-api
         docker_network_name:  { get_property: [ SELF, network, name ] }
-        image_name: xopera-rest-api:latest
+        image_name: sodaliteh2020/xopera-rest-api:latest
         restart_policy: always
         volumes:
           - /var/run/docker.sock:/var/run/docker.sock
@@ -235,7 +213,7 @@ topology_template:
         env: { get_input: xopera_env }
       requirements:
         - host: docker-host
-        - registry: docker-private-registry
+        - registry: docker-public-registry
         - network: docker-network
         - dependency: docker-registry-certificate
         - dependency: openstack-keys
