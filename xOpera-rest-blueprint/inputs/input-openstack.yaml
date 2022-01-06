@@ -11,7 +11,6 @@ docker-network: sodalite
 dockerhub-user:
 dockerhub-pass:
 docker-public-registry-url: registry.hub.docker.com
-docker-private-registry-url: [PRIVATE REGISTRY IP/URL]
 docker-registry-cert-country-name: SI
 docker-registry-cert-organization-name: XLAB
 docker-registry-cert-email-address: [MAIL - OPTIONAL]

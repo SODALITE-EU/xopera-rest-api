@@ -142,20 +142,20 @@ pipeline {
                     """
             }
         }
-        stage('Push xopera-rest-api to sodalite-private-registry') {
+        stage('Push xopera-rest-api to DockerHub for staging') {
             // Push during staging and production
             when {
                 allOf {
                     expression{tag "*"}
                     expression{
-                        TAG_STAGING == 'true' || TAG_PRODUCTION == 'true'
+                        TAG_STAGING == 'true'
                     }
                 }
             }
             steps {
                 withDockerRegistry(credentialsId: 'jenkins-sodalite.docker_token', url: '') {
                     sh  """#!/bin/bash
-                        ./make_docker.sh push xopera-rest-api staging
+                        ./make_docker.sh push xopera-rest-api sodaliteh2020 staging
                         """
                 }
             }
@@ -173,7 +173,7 @@ pipeline {
             steps {
                 withDockerRegistry(credentialsId: 'jenkins-sodalite.docker_token', url: '') {
                     sh  """#!/bin/bash
-                            ./make_docker.sh push xopera-rest-api production
+                            ./make_docker.sh push xopera-rest-api sodaliteh2020 production
                         """
                 }
             }
