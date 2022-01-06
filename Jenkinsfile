@@ -13,7 +13,7 @@ pipeline {
        docker_network = "sodalite"
        dockerhub_user = " "
        dockerhub_pass = " "
-       docker_registry_ip = credentials('jenkins-docker-registry-ip')
+       //docker_registry_ip = credentials('jenkins-docker-registry-ip')
        docker_registry_cert_country_name = "SI"
        docker_registry_cert_organization_name = "XLAB"
        docker_public_registry_url = "registry.hub.docker.com"
