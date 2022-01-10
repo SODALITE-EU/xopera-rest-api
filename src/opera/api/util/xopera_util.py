@@ -12,12 +12,27 @@ from cryptography.hazmat.primitives import serialization
 
 import connexion
 import yaml
+import regex
+import json
 
 from opera.api.log import get_logger
 from opera.api.settings import Settings
 from opera.api.util.vault_client import get_secret, list_secrets
 
 logger = get_logger(__name__)
+
+regex_json = r"""
+            (?(DEFINE)
+            (?<json>(?>\s*(?&object)\s*|\s*(?&array)\s*))
+            (?<object>(?>\{\s*(?>(?&pair)(?>\s*,\s*(?&pair))*)?\s*\}))
+            (?<pair>(?>(?&STRING)\s*:\s*(?&value)))
+            (?<array>(?>\[\s*(?>(?&value)(?>\s*,\s*(?&value))*)?\s*\]))
+            (?<value>(?>true|false|null|(?&STRING)|(?&NUMBER)|(?&object)|(?&array)))
+            (?<STRING>(?>"(?>\\(?>["\\\/bfnrt]|u[a-fA-F0-9]{4})|[^"\\\0-\x1F\x7F]+)*"))
+            (?<NUMBER>(?>-?(?>0|[1-9][0-9]*)(?>\.[0-9]+)?(?>[eE][+-]?[0-9]+)?))
+            )
+            (?&json)
+            """
 
 
 @contextmanager
@@ -294,3 +309,26 @@ def validate_username(username: str):
     if re.match(r"^[a-zA-Z0-9_-]*$", username):
         return True
     return False
+
+
+def try_get_failed_tasks(stdout: str):
+    failed_tasks = {}
+    try:
+        matches = regex.findall(regex_json, stdout, regex.VERBOSE | regex.MULTILINE | regex.IGNORECASE)
+
+        for match in matches:
+            parsed_json = json.loads(match)
+            if "stats" in parsed_json and "opera" in parsed_json["stats"] and "failures" in parsed_json["stats"]["opera"]:
+                failed_tasks_num = parsed_json["stats"]["opera"]["failures"]
+            else:
+                continue
+            for play in parsed_json["plays"]:
+                for task in play["tasks"]:
+                    for host in task["hosts"].values():
+                        if "failed" in host and host["failed"] == True:
+                            failed_tasks[task["task"]["name"]] = {
+                                "msg": host.get("msg"),
+                                "stderr": host.get("stderr")}
+        return failed_tasks
+    except Exception:
+        return failed_tasks

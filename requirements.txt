@@ -31,3 +31,4 @@ pytest-mock
 assertpy
 validators
 psutil
+regex
