@@ -1616,6 +1616,9 @@ components:
         clean_state:
           description: Clean previous state and start over
           type: boolean
+        node_error:
+          description: Additional error information
+          type: object
     InvocationState:
       type: string
       enum:
@@ -1639,11 +1642,11 @@ components:
       in: header
     oauth2:
       flows:
-        password: 
+        password:
           tokenUrl: http://keycloak:8080/auth/realms/SODALITE/protocol/openid-connect/token
           scopes:
             email: Email of the user accessing the service.
       type: oauth2
       x-tokenInfoFunc: opera.api.controllers.security_controller.token_info
-      x-scopeValidateFunc: opera.api.controllers.security_controller.validate_scope   
+      x-scopeValidateFunc: opera.api.controllers.security_controller.validate_scope
 

@@ -141,7 +141,7 @@ class TestEntryDefinitions:
 
     def test_no_meta_success(self, csar_unpacked):
         csar_path = csar_unpacked / 'CSAR-no-meta-ok'
-        assert blueprint2CSAR.entry_definitions(csar_path) == 'service.yaml'
+        assert blueprint2CSAR.entry_definitions(csar_path) == Path(csar_path) / 'service.yaml'
 
     def test_meta_no_entry_definitions(self, csar_unpacked):
         csar_path = csar_unpacked / 'CSAR-broken-meta'
@@ -149,7 +149,7 @@ class TestEntryDefinitions:
 
     def test_meta_success(self, csar_unpacked):
         csar_path = csar_unpacked / 'CSAR-ok'
-        assert blueprint2CSAR.entry_definitions(csar_path) == 'service.yaml'
+        assert blueprint2CSAR.entry_definitions(csar_path) == Path(csar_path) / 'service.yaml'
 
 
 class TestToCsarSimple:

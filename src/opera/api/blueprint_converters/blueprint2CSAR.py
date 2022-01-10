@@ -247,7 +247,7 @@ def entry_definitions(csar: Path):
         if len(yaml_files) != 1:
             return None
 
-        return Path(yaml_files[0]).name
+        return Path(csar) / Path(yaml_files[0])
 
     else:
         metadata_yaml = yaml.safe_load(open(tosca_meta_path, 'r').read())
@@ -255,7 +255,7 @@ def entry_definitions(csar: Path):
         if 'Entry-Definitions' not in metadata_yaml:
             return None
 
-        return metadata_yaml['Entry-Definitions']
+        return Path(csar) / metadata_yaml['Entry-Definitions']
 
 
 def main(args):

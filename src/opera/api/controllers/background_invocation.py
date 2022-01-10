@@ -7,6 +7,7 @@ import sys
 import tempfile
 import traceback
 import uuid
+import re
 from pathlib import Path
 from typing import Optional
 
@@ -18,7 +19,7 @@ from opera.commands.update import update as opera_update
 from opera.commands.validate import validate_service_template as opera_validate
 from opera.compare.instance_comparer import InstanceComparer as opera_InstanceComparer
 from opera.compare.template_comparer import TemplateComparer as opera_TemplateComparer
-from opera.error import ParseError
+from opera.error import ParseError, AggregatedOperationError, OperationError
 from opera.storage import Storage
 from werkzeug.datastructures import FileStorage
 
@@ -104,6 +105,11 @@ class InvocationWorkerProcess:
                 inv.state = InvocationState.FAILED
                 inv.exception = "{}: {}: {}\n\n{}".format(e.__class__.__name__, e.loc, str(e),
                                                           traceback.format_exc())
+            except AggregatedOperationError as e:
+                inv.state = InvocationState.FAILED
+                inv.exception = "{}: {}\n\n{}".format(e.__class__.__name__, str(e), traceback.format_exc())
+                operation_exception = e
+
             except BaseException as e:
                 inv.state = InvocationState.FAILED
                 inv.exception = "{}: {}\n\n{}".format(e.__class__.__name__, str(e), traceback.format_exc())
@@ -118,7 +124,8 @@ class InvocationWorkerProcess:
                 inv.stderr = InvocationWorkerProcess.read_file(InvocationService.stderr_file(inv.deployment_id))
                 file_stdout.close()
                 file_stderr.close()
-
+                if operation_exception:
+                    inv.node_error = InvocationWorkerProcess.try_extract_error(inv, operation_exception)
                 # Restore stdout&&err
                 os.dup2(stdout_copy, 1)
                 os.dup2(stderr_copy, 2)
@@ -146,7 +153,7 @@ class InvocationWorkerProcess:
                 if inv.user_id and Settings.secure_workdir:
                     xopera_util.setup_user([location], inv.user_id, inv.access_token)
                 opera_storage = Storage.create(".opera")
-                service_template = str(entry_definitions(location))
+                service_template = entry_definitions(location)
                 opera_deploy(service_template, inv.inputs, opera_storage,
                              verbose_mode=False, num_workers=inv.workers, delete_existing_state=True)
 
@@ -169,7 +176,7 @@ class InvocationWorkerProcess:
                 if inv.user_id and Settings.secure_workdir:
                     xopera_util.setup_user([location], inv.user_id, inv.access_token)
                 opera_storage = Storage.create(".opera")
-                service_template = str(entry_definitions(location))
+                service_template = entry_definitions(location)
                 opera_deploy(service_template, inv.inputs, opera_storage,
                              verbose_mode=False, num_workers=inv.workers, delete_existing_state=inv.clean_state)
                 outputs = opera_outputs(opera_storage)
@@ -250,7 +257,7 @@ class InvocationWorkerProcess:
         storage_new.write_json(inputs or {}, "inputs")
         storage_new.write(str(entry_definitions(location_new)), "root_file")
 
-        return storage_old, str(location_old), storage_new, str(location_new)
+        return storage_old, location_old, storage_new, location_new
 
     @staticmethod
     def diff(deployment_id: str, blueprint_id: str, version_id: str, inputs: dict):
@@ -273,8 +280,9 @@ class InvocationWorkerProcess:
             CSAR_db.get_revision(blueprint_id, location, version_tag)
             try:
                 with xopera_util.cwd(location):
+                    opera_storage = Storage.create(".opera")
                     service_template = Path(location) / entry_definitions(location)
-                    opera_validate(service_template, inputs)
+                    opera_validate(service_template, inputs, opera_storage, verbose=False, executors=False)
                 return None
             except Exception as e:
                 return "{}: {}".format(e.__class__.__name__, xopera_util.mask_workdir(location, str(e)))
@@ -289,8 +297,9 @@ class InvocationWorkerProcess:
                     csar_to_blueprint(csar=csar_path, dst=location)
 
                 with xopera_util.cwd(location):
+                    opera_storage = Storage.create(".opera")
                     service_template = Path(location) / entry_definitions(location)
-                    opera_validate(service_template, inputs)
+                    opera_validate(service_template, inputs, opera_storage, verbose=False, executors=False)
                 return None
         except Exception as e:
             return "{}: {}".format(e.__class__.__name__, xopera_util.mask_workdirs([location, csar_workdir], str(e)), )
@@ -314,6 +323,34 @@ class InvocationWorkerProcess:
     @staticmethod
     def rm_file(filename):
         Path(filename).unlink(missing_ok=True)
+
+    @staticmethod
+    def try_extract_error(invocation, exception: AggregatedOperationError):
+        try:
+            failed_tasks = {}
+            matches = re.findall(r"{.+}", invocation.stdout, re.DOTALL)
+            for match in matches:
+                parsed_json = json.loads(match)
+                if "stats" in parsed_json and "opera" in parsed_json["stats"] and "failures" in parsed_json["stats"]["opera"]:
+                    failed_tasks_num = parsed_json["stats"]["opera"]["failures"]
+
+                for play in parsed_json["plays"]:
+                    for task in play["tasks"]:
+                        for host in task["hosts"].values():
+                            if "failed" in host and host["failed"] == True:
+                                failed_tasks[task["task"]["name"]] = {
+                                    "msg": host.get("msg"),
+                                    "stderr": host.get("stderr")}
+        except Exception as e:
+            return None
+
+        result = {}
+        for _, inner_ex in exception.inner_exceptions.items():
+            if isinstance(inner_ex, OperationError):
+               result[inner_ex.tosca_name] = {inner_ex.operation:failed_tasks}
+        if len(result) > 0:
+            return result
+        return None
 
 
 class InvocationService:
@@ -391,7 +428,6 @@ class InvocationService:
                 inv.stderr = InvocationWorkerProcess.read_file(cls.stderr_file(inv.deployment_id))
                 location = InvocationService.deployment_location(inv.deployment_id, inv.blueprint_id)
                 inv.instance_state = InvocationService.get_instance_state(location)
-
         except BaseException as e:
             if not isinstance(e, FileNotFoundError) and not isinstance(e, AttributeError):
                 logger.error(str(e))

@@ -11,7 +11,6 @@ RUN export BUILD_PREREQS="gcc musl-dev libffi-dev openssl-dev postgresql-dev car
     && pip3 install --no-cache-dir wheel \
     && pip3 install --user --no-warn-script-location -r requirements.txt
 
-
 FROM python:3.10-alpine3.13
 
 ARG HELM_VERSION=3.5.3
@@ -50,6 +49,9 @@ RUN apk add --update --no-cache curl ca-certificates bash git \
 COPY requirements.yml .
 RUN ansible-galaxy install -r requirements.yml \
     && rm requirements.yml
+
+# temporary fix for pre release opera
+RUN pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ opera==0.6.9.dev2
 
 # grant access to all users for root bin and lib
 RUN chmod 755 /root
