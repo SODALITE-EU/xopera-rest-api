@@ -107,6 +107,7 @@ pipeline {
                         . venv-test/bin/activate
                         python3 -m pip install --upgrade pip
                         python3 -m pip install --no-cache-dir -r requirements.txt
+                        python3 -m pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ opera==0.6.9.dev2
                         ./generate.sh
                         cd src/
                         python3 -m pytest --junitxml=results.xml --cov=./opera/api/ --cov=./opera/api/gitCsarDB --cov=./opera/api/blueprint_converters --cov=./opera/api/settings --cov=./opera/api/service --cov=./opera/api/util --cov=./opera/api/controllers --cov-report xml
