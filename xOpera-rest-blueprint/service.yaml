@@ -215,7 +215,6 @@ topology_template:
         - host: docker-host
         - registry: docker-public-registry
         - network: docker-network
-        - dependency: docker-registry-certificate
         - dependency: openstack-keys
         - dependency: postgres
 
