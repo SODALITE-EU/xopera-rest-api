@@ -3,10 +3,11 @@ from pathlib import Path
 
 from assertpy import assert_that
 
-from opera.api.controllers.background_invocation import InvocationService
+from opera.api.controllers.background_invocation import InvocationService, InvocationWorkerProcess
 from opera.api.openapi.models import OperationType
 from opera.api.openapi.models.invocation import Invocation, InvocationState
 from opera.api.settings import Settings
+from opera.error import AggregatedOperationError, OperationError
 
 
 class TestDeploymentExists:
@@ -134,6 +135,14 @@ class TestStatus:
         assert resp.json['state'] == inv.state
         assert resp.status_code == 200
 
+    def test_execution_error(self, mocker, generic_invocation: Invocation):
+        inv = generic_invocation
+        inv.state = InvocationState.FAILED
+        mocker.patch('opera.api.util.xopera_util.try_get_failed_tasks', return_value={"task": "error"})
+        exception = AggregatedOperationError("Failed", {"worker1": OperationError("Failed", "node", "Standard", "create")})
+        result = InvocationWorkerProcess.try_extract_error(inv, exception)
+        assert len(result) == 1
+        assert result["node"] == {"create": {"task": "error"}}
 
 class TestHistory:
 

@@ -195,6 +195,10 @@ class TestXoperaUtil:
         secret_mock.assert_called_once_with(Settings.ssh_key_path_template.format(username='test') + '/secret', 'test', 'ACCESS_TOKEN')
         add_mock.assert_not_called()
 
+    def test_try_get_failed_tasks(self, error_stdout):
+        failed_tasks = xopera_util.try_get_failed_tasks(error_stdout)
+        assert len(failed_tasks) == 1
+        assert failed_tasks['Fail'] == {'msg': 'Failed.', 'stderr': None}
 
 class TestTimestampUtil:
 

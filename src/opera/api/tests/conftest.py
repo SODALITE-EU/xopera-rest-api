@@ -355,3 +355,68 @@ def invalid_ssh_key():
 MIIEowIBAAKCAQEAxaaVUp8OMqtPnYfF8qmJc8RutAyw4uvzqLWDby6vofKnk6OJ
 """
     return key
+
+
+@pytest.fixture
+def error_stdout():
+    stdout = """
+            [Worker_0]   Deploying my-workstation_0
+            [Worker_0]   Deployment of my-workstation_0 complete
+            [Worker_0]   Deploying hello1_0
+            [Worker_0]     Executing create on hello1_0
+            ***inputs***
+            []
+            ***inputs***
+            [Worker_0] ------------
+            {
+                "custom_stats": {},
+                "global_custom_stats": {},
+                "plays": [
+                    {
+                        "play": {
+                            "duration": {
+                                "end": "2022-02-16T14:21:13.002675Z",
+                                "start": "2022-02-16T14:21:12.992821Z"
+                            },
+                            "id": "00155db4-d52f-9190-65bb-000000000006",
+                            "name": "all"
+                        },
+                        "tasks": [
+                            {
+                                "hosts": {
+                                    "opera": {
+                                        "_ansible_no_log": false,
+                                        "action": "fail",
+                                        "changed": false,
+                                        "failed": true,
+                                        "msg": "Failed."
+                                    }
+                                },
+                                "task": {
+                                    "duration": {
+                                        "end": "2022-02-16T14:21:13.002675Z",
+                                        "start": "2022-02-16T14:21:12.998542Z"
+                                    },
+                                    "id": "00155db4-d52f-9190-65bb-000000000008",
+                                    "name": "Fail"
+                                }
+                            }
+                        ]
+                    }
+                ],
+                "stats": {
+                    "opera": {
+                        "changed": 0,
+                        "failures": 1,
+                        "ignored": 0,
+                        "ok": 0,
+                        "rescued": 0,
+                        "skipped": 0,
+                        "unreachable": 0
+                    }
+                }
+            }
+            [Worker_0] ------------
+            [Worker_0] ============
+            """
+    return stdout
