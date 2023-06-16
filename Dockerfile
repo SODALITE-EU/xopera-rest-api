@@ -11,7 +11,7 @@ RUN export BUILD_PREREQS="gcc musl-dev libffi-dev openssl-dev postgresql-dev car
     && pip3 install --no-cache-dir wheel \
     && pip3 install --user --no-warn-script-location -r requirements.txt
 
-FROM python:3.10.2-alpine3.15
+FROM python:3.12.0a1-alpine3.15
 
 ARG HELM_VERSION=3.5.3
 ARG KUBECTL_VERSION=1.20.4
