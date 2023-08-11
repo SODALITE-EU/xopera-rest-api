@@ -17,7 +17,7 @@ python-dateutil >= 2.8.1
 tornado==6.1
 
 # GitCSARdb
-GitPython==3.1.14
+GitPython==3.1.32
 PyGithub==1.54.1
 python-gitlab==2.6.0
 
