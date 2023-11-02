@@ -14,7 +14,7 @@ boto3==1.17.25
 # openapi
 connexion[swagger-ui] == 2.7.0
 python-dateutil >= 2.8.1
-tornado==6.1
+tornado==6.3.3
 
 # GitCSARdb
 GitPython==3.1.14
@@ -32,3 +32,4 @@ assertpy
 validators
 psutil
 regex
+werkzeug>=3.0.1 # not directly required, pinned by Snyk to avoid a vulnerability
