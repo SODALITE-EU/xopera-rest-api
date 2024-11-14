@@ -32,3 +32,5 @@ assertpy
 validators
 psutil
 regex
+ansible>=7.0.0 # not directly required, pinned by Snyk to avoid a vulnerability
+ansible-core>=2.18.0 # not directly required, pinned by Snyk to avoid a vulnerability
